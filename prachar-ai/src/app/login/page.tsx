@@ -28,6 +28,10 @@ export default function LoginPage() {
     setError('');
 
     try {
+      if (!process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID) {
+        throw new Error('Deployment Error: Cognito User Pool ID is missing. The AWS Amplify build did not inject the environment variables.');
+      }
+
       const { isSignedIn } = await signIn({ username: email, password });
       if (isSignedIn) router.push('/');
     } catch (err: any) {
