@@ -18,7 +18,7 @@ export function configureAuth() {
         userAttributes: {
           email: { required: true },
           'custom:brand_name': { required: false }, // Custom field for brand name
-        },
+        } as any,
         passwordFormat: {
           minLength: 8,
           requireLowercase: true,
