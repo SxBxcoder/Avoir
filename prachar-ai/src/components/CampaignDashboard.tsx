@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence, useSpring, useTransform } from 'framer-motion';
-import { Send, Sparkles, Terminal, Activity, Database, Globe, Copy, Check, Zap, LogOut, Menu, X, Plus, Download, BookOpen, Crown, CreditCard, Flame, Radio } from 'lucide-react';
+import { Send, Sparkles, Terminal, Activity, Database, Globe, Copy, Check, Zap, LogOut, Menu, X, Plus, Download, BookOpen, Crown, CreditCard, Flame, Radio, ChevronRight, MessageSquare, Target, Rocket, TrendingUp, Shield, Eye } from 'lucide-react';
 import UpgradeModal from './UpgradeModal';
 import { type UserSubscription, canGenerateCampaign, getRemainingCampaigns, PLANS, DEFAULT_SUBSCRIPTION } from '@/lib/stripe';
 
@@ -38,29 +38,83 @@ interface CampaignDashboardProps {
 }
 
 // ============================================================================
-// SPRING ANIMATION CONFIGS (Framer Motion physics)
+// SPRING ANIMATION CONFIGS
 // ============================================================================
 
 const springConfig = { type: 'spring' as const, stiffness: 300, damping: 30 };
 const bouncySpring = { type: 'spring' as const, stiffness: 400, damping: 20 };
 const gentleSpring = { type: 'spring' as const, stiffness: 200, damping: 25 };
+const smoothSpring = { type: 'spring' as const, stiffness: 100, damping: 30 };
 
-// Stagger children
 const staggerContainer = {
   hidden: { opacity: 0 },
-  show: {
-    opacity: 1,
-    transition: { staggerChildren: 0.08 },
-  },
+  show: { opacity: 1, transition: { staggerChildren: 0.08 } },
 };
-
 const staggerItem = {
   hidden: { opacity: 0, y: 20, scale: 0.95 },
   show: { opacity: 1, y: 0, scale: 1, transition: springConfig },
 };
 
 // ============================================================================
-// COOKING STATUS COMPONENT — The "AI is Cooking" experience
+// ANIMATED GRID BACKGROUND
+// ============================================================================
+
+function AnimatedGridBG() {
+  return (
+    <div className="fixed inset-0 pointer-events-none overflow-hidden">
+      {/* Radial gradient orbs */}
+      <motion.div
+        animate={{ x: [0, 40, 0], y: [0, -30, 0] }}
+        transition={{ duration: 15, repeat: Infinity, ease: 'easeInOut' }}
+        className="absolute top-1/4 left-1/3 w-[600px] h-[600px] bg-gradient-radial from-indigo-500/8 via-purple-500/4 to-transparent rounded-full blur-3xl"
+      />
+      <motion.div
+        animate={{ x: [0, -30, 0], y: [0, 40, 0] }}
+        transition={{ duration: 18, repeat: Infinity, ease: 'easeInOut' }}
+        className="absolute bottom-1/4 right-1/4 w-[500px] h-[500px] bg-gradient-radial from-cyan-500/5 via-transparent to-transparent rounded-full blur-3xl"
+      />
+      <motion.div
+        animate={{ x: [0, 20, 0], y: [0, -20, 0] }}
+        transition={{ duration: 12, repeat: Infinity, ease: 'easeInOut' }}
+        className="absolute top-1/2 right-1/3 w-[400px] h-[400px] bg-gradient-radial from-purple-500/5 via-transparent to-transparent rounded-full blur-3xl"
+      />
+      {/* Subtle grid overlay */}
+      <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.015)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.015)_1px,transparent_1px)] bg-[size:48px_48px]" />
+    </div>
+  );
+}
+
+// ============================================================================
+// FLOATING PARTICLES
+// ============================================================================
+
+function FloatingParticles() {
+  return (
+    <div className="fixed inset-0 overflow-hidden pointer-events-none">
+      {[...Array(15)].map((_, i) => (
+        <motion.div
+          key={i}
+          className="absolute w-1 h-1 rounded-full bg-indigo-400/20"
+          style={{ left: `${Math.random() * 100}%`, top: `${Math.random() * 100}%` }}
+          animate={{
+            y: [0, -40, 0],
+            opacity: [0.1, 0.4, 0.1],
+            scale: [1, 1.5, 1],
+          }}
+          transition={{
+            duration: 4 + Math.random() * 5,
+            repeat: Infinity,
+            delay: Math.random() * 3,
+            ease: 'easeInOut',
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
+// ============================================================================
+// COOKING STATUS COMPONENT
 // ============================================================================
 
 function CookingStatus({ messages }: { messages: string[] }) {
@@ -169,6 +223,95 @@ function MagneticButton({
 }
 
 // ============================================================================
+// WELCOME SCREEN — Shown when no messages
+// ============================================================================
+
+function WelcomeScreen({ onQuickAction }: { onQuickAction: (text: string) => void }) {
+  const quickActions = [
+    { icon: <Rocket className="w-4 h-4" />, label: 'Product Launch', prompt: 'Create a viral campaign for my new product launch targeting Gen-Z in India', color: 'from-indigo-500/20 to-purple-500/20', border: 'border-indigo-500/20', iconColor: 'text-indigo-400' },
+    { icon: <TrendingUp className="w-4 h-4" />, label: 'Brand Awareness', prompt: 'Generate a Hinglish brand awareness campaign for Instagram and YouTube', color: 'from-purple-500/20 to-pink-500/20', border: 'border-purple-500/20', iconColor: 'text-purple-400' },
+    { icon: <Target className="w-4 h-4" />, label: 'Event Promotion', prompt: 'Create a social media campaign to promote my upcoming event in Delhi', color: 'from-cyan-500/20 to-blue-500/20', border: 'border-cyan-500/20', iconColor: 'text-cyan-400' },
+    { icon: <Flame className="w-4 h-4" />, label: 'Viral Content', prompt: 'Generate viral Hinglish meme-worthy captions for my streetwear brand', color: 'from-orange-500/20 to-red-500/20', border: 'border-orange-500/20', iconColor: 'text-orange-400' },
+  ];
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.6 }}
+      className="flex-1 flex flex-col items-center justify-center px-6"
+    >
+      {/* Animated logo */}
+      <motion.div
+        initial={{ scale: 0, rotate: -20 }}
+        animate={{ scale: 1, rotate: 0 }}
+        transition={bouncySpring}
+        className="mb-8"
+      >
+        <motion.div
+          animate={{ 
+            boxShadow: [
+              '0 0 20px rgba(99,102,241,0.1)',
+              '0 0 40px rgba(99,102,241,0.2)',
+              '0 0 20px rgba(99,102,241,0.1)',
+            ]
+          }}
+          transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
+          className="w-20 h-20 rounded-2xl bg-gradient-to-br from-indigo-500/10 to-purple-500/10 border border-indigo-500/20 flex items-center justify-center"
+        >
+          <motion.div
+            animate={{ rotate: [0, 5, -5, 0] }}
+            transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
+          >
+            <Sparkles className="w-10 h-10 text-indigo-400" />
+          </motion.div>
+        </motion.div>
+      </motion.div>
+
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ ...smoothSpring, delay: 0.2 }}
+        className="text-center mb-10"
+      >
+        <h2 className="text-3xl lg:text-4xl font-bold tracking-tight mb-3">
+          What would you like to{' '}
+          <span className="fluid-text-hero">create?</span>
+        </h2>
+        <p className="text-zinc-500 text-sm max-w-md mx-auto">
+          Enter your campaign goal below or pick a quick action to get started
+        </p>
+      </motion.div>
+
+      {/* Quick Action Cards */}
+      <motion.div
+        variants={staggerContainer}
+        initial="hidden"
+        animate="show"
+        className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full max-w-lg"
+      >
+        {quickActions.map((action) => (
+          <motion.button
+            key={action.label}
+            variants={staggerItem}
+            whileHover={{ y: -4, scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={() => onQuickAction(action.prompt)}
+            className={`group glass-card glow-border rounded-xl p-4 text-left cursor-pointer transition-all hover:border-white/20`}
+          >
+            <div className={`w-9 h-9 rounded-lg bg-gradient-to-br ${action.color} flex items-center justify-center mb-3 border ${action.border} ${action.iconColor}`}>
+              {action.icon}
+            </div>
+            <p className="text-sm font-semibold text-white mb-1">{action.label}</p>
+            <p className="text-xs text-zinc-500 leading-relaxed line-clamp-2">{action.prompt}</p>
+          </motion.button>
+        ))}
+      </motion.div>
+    </motion.div>
+  );
+}
+
+// ============================================================================
 // JSON PARSER — Extract campaign data
 // ============================================================================
 
@@ -229,8 +372,10 @@ export default function CampaignDashboard({ accessToken, userEmail, onLogout }: 
   });
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   // Fetch subscription state on mount
   useEffect(() => {
@@ -260,19 +405,21 @@ export default function CampaignDashboard({ accessToken, userEmail, onLogout }: 
   const isPaidUser = currentTier !== 'free';
   const remaining = subscription ? getRemainingCampaigns(subscription) : 3;
   const planName = PLANS[currentTier]?.name || 'Starter';
+  const sidebarWidth = sidebarCollapsed ? 'w-[72px]' : 'w-[300px]';
 
   // ========================================================================
   // SSE STREAMING GENERATE
   // ========================================================================
-  const handleGenerate = async () => {
-    if (!inputValue.trim() || isGenerating) return;
+  const handleGenerate = async (overrideInput?: string) => {
+    const goal = overrideInput || inputValue;
+    if (!goal.trim() || isGenerating) return;
 
     if (subscription && !canGenerateCampaign(subscription)) {
       setShowUpgradeModal(true);
       return;
     }
 
-    const userMessage: Message = { role: 'user', content: inputValue };
+    const userMessage: Message = { role: 'user', content: goal };
     setMessages(prev => [...prev, userMessage]);
     setInputValue('');
     setIsGenerating(true);
@@ -280,7 +427,6 @@ export default function CampaignDashboard({ accessToken, userEmail, onLogout }: 
     setSystemStatus(prev => ({ ...prev, tier: 'TIER_1' }));
 
     try {
-      // Try SSE streaming first
       const response = await fetch('/api/generate/stream', {
         method: 'POST',
         headers: {
@@ -288,14 +434,13 @@ export default function CampaignDashboard({ accessToken, userEmail, onLogout }: 
           'Authorization': `Bearer ${accessToken}`,
         },
         body: JSON.stringify({
-          goal: inputValue,
+          goal,
           messages: messages.concat(userMessage),
           userId: userEmail || 'anonymous',
         }),
       });
 
       if (!response.ok) {
-        // If stream endpoint fails, fall back to regular generate
         const errorData = await response.json();
         if (errorData.upgradeRequired) {
           setShowUpgradeModal(true);
@@ -305,11 +450,9 @@ export default function CampaignDashboard({ accessToken, userEmail, onLogout }: 
         throw new Error(errorData.error || 'Generation failed');
       }
 
-      // Check if it's actually an SSE stream
       const contentType = response.headers.get('content-type') || '';
       
       if (contentType.includes('text/event-stream') && response.body) {
-        // SSE streaming mode
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
         let buffer = '';
@@ -357,15 +500,12 @@ export default function CampaignDashboard({ accessToken, userEmail, onLogout }: 
                     case 'done':
                       break;
                   }
-                } catch (parseErr) {
-                  // Skip unparseable lines
-                }
+                } catch (parseErr) { /* skip */ }
               }
             }
           }
         }
 
-        // Add assistant message
         const assistantMessage: Message = {
           role: 'assistant',
           content: '✅ Strategic Campaign Compiled.',
@@ -373,14 +513,12 @@ export default function CampaignDashboard({ accessToken, userEmail, onLogout }: 
         };
         setMessages(prev => [...prev, assistantMessage]);
       } else {
-        // Fallback: non-streaming JSON response
         const data = await response.json();
         handleNonStreamingResponse(data, userMessage);
       }
     } catch (error: any) {
       console.error('Generation failed:', error);
       
-      // Try fallback to regular /api/generate
       try {
         const fallbackResponse = await fetch('/api/generate', {
           method: 'POST',
@@ -389,7 +527,7 @@ export default function CampaignDashboard({ accessToken, userEmail, onLogout }: 
             'Authorization': `Bearer ${accessToken}`,
           },
           body: JSON.stringify({
-            goal: inputValue || messages[messages.length - 1]?.content,
+            goal: goal || messages[messages.length - 1]?.content,
             messages: messages,
             userId: userEmail || 'anonymous',
           }),
@@ -416,7 +554,6 @@ export default function CampaignDashboard({ accessToken, userEmail, onLogout }: 
     }
   };
 
-  // Handle non-streaming response (fallback)
   const handleNonStreamingResponse = (data: any, userMessage: Message) => {
     let campaignData: CampaignData | null = null;
     let displayMessage = '';
@@ -455,19 +592,21 @@ export default function CampaignDashboard({ accessToken, userEmail, onLogout }: 
     setTimeout(() => setCopied(null), 2000);
   };
 
+  const handleQuickAction = (prompt: string) => {
+    setInputValue(prompt);
+    handleGenerate(prompt);
+  };
+
   // ========================================================================
   // RENDER
   // ========================================================================
   return (
-    <div className="min-h-screen bg-black text-white flex flex-col" style={{ fontFamily: "'Inter', sans-serif" }}>
-      {/* Radial Glow Background */}
-      <div className="fixed inset-0 pointer-events-none">
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-gradient-radial from-indigo-500/8 via-purple-500/4 to-transparent blur-3xl"></div>
-        <div className="absolute bottom-0 right-0 w-[600px] h-[600px] bg-gradient-radial from-cyan-500/5 via-transparent to-transparent blur-3xl"></div>
-      </div>
+    <div className="h-screen bg-black text-white flex flex-col overflow-hidden" style={{ fontFamily: "'Inter', sans-serif" }}>
+      <AnimatedGridBG />
+      <FloatingParticles />
 
       {/* Mobile Header */}
-      <div className="lg:hidden fixed top-0 left-0 right-0 z-40 bg-zinc-900/95 backdrop-blur-xl border-b border-zinc-800">
+      <div className="lg:hidden fixed top-0 left-0 right-0 z-40 bg-zinc-950/90 backdrop-blur-2xl border-b border-zinc-800/50">
         <div className="flex items-center justify-between px-4 py-3">
           <button
             onClick={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}
@@ -479,7 +618,7 @@ export default function CampaignDashboard({ accessToken, userEmail, onLogout }: 
           <div className="flex items-center gap-2">
             <Flame className="w-4 h-4 text-indigo-400" />
             <span className="text-xs font-tactical font-bold fluid-text-hero">PRACHAR.AI</span>
-            <span className="text-[10px] font-tactical text-zinc-500">// WAR ROOM</span>
+            <span className="text-[10px] font-tactical text-zinc-500">// COMMAND</span>
           </div>
 
           <div className="flex items-center gap-3 text-xs font-tactical">
@@ -499,143 +638,177 @@ export default function CampaignDashboard({ accessToken, userEmail, onLogout }: 
       </div>
 
       {/* Mobile Overlay */}
-      {isMobileSidebarOpen && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          className="fixed inset-0 bg-black/80 z-40 lg:hidden"
-          onClick={() => setIsMobileSidebarOpen(false)}
-        />
-      )}
+      <AnimatePresence>
+        {isMobileSidebarOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/80 z-40 lg:hidden"
+            onClick={() => setIsMobileSidebarOpen(false)}
+          />
+        )}
+      </AnimatePresence>
 
-      {/* LEFT SIDEBAR */}
-      <div 
-        onClick={(e) => e.stopPropagation()}
-        className={`fixed inset-y-0 lg:bottom-[44px] left-0 z-50 w-[80%] max-w-[400px] transform transition-transform duration-300 lg:fixed lg:translate-x-0 lg:w-[400px] border-r border-zinc-800/50 flex flex-col bg-zinc-900/80 lg:bg-zinc-900/40 backdrop-blur-2xl ${
-          isMobileSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
-        }`}
-      >
-        {/* Sidebar Header */}
-        <div className="p-5 border-b border-zinc-800/50">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-lg bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center">
-                <Terminal className="w-4 h-4 text-indigo-400" />
-              </div>
-              <h2 className="text-sm font-tactical font-bold text-white tracking-wider">DIRECTOR'S TERMINAL</h2>
-            </div>
-            <div className="flex items-center gap-2">
-              {onLogout && (
-                <button
-                  onClick={onLogout}
-                  className="p-1.5 rounded-lg hover:bg-zinc-800 transition-colors text-zinc-400 hover:text-red-400"
-                  title="Logout"
-                >
-                  <LogOut className="w-4 h-4" />
-                </button>
-              )}
-              <button
-                onClick={() => setIsMobileSidebarOpen(false)}
-                className="lg:hidden p-1.5 rounded-lg hover:bg-zinc-800 transition-colors text-zinc-400"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-          
-          <div className="flex items-center gap-2">
-            <p className="text-xs text-zinc-400 font-medium truncate">{userEmail}</p>
-            <span className={`text-[10px] font-tactical font-bold px-2 py-0.5 rounded-md ${
-              isPaidUser ? 'bg-indigo-500/15 text-indigo-400 border border-indigo-500/25' : 'bg-zinc-800 text-zinc-500 border border-zinc-700'
-            }`}>
-              {planName.toUpperCase()}
-            </span>
-          </div>
-          
-          {/* Usage indicator */}
-          {!isPaidUser && remaining >= 0 && (
-            <div className="mt-3">
-              <div className="flex items-center justify-between text-[10px] font-tactical text-zinc-500 mb-1.5">
-                <span>CAMPAIGNS</span>
-                <span className={remaining === 0 ? 'text-red-400' : ''}>{subscription?.campaignsUsedThisMonth || 0}/{PLANS.free.campaignsPerMonth}</span>
-              </div>
-              <div className="w-full h-1.5 bg-zinc-800/80 rounded-full overflow-hidden">
-                <motion.div
-                  initial={{ width: 0 }}
-                  animate={{ width: `${((subscription?.campaignsUsedThisMonth || 0) / PLANS.free.campaignsPerMonth) * 100}%` }}
-                  transition={gentleSpring}
-                  className={`h-full rounded-full ${
-                    remaining === 0 ? 'bg-gradient-to-r from-red-500 to-orange-500' :
-                    remaining === 1 ? 'bg-gradient-to-r from-amber-500 to-yellow-500' :
-                    'bg-gradient-to-r from-indigo-500 to-purple-500'
-                  }`}
-                />
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Navigation Menu */}
-        <motion.div
-          variants={staggerContainer}
-          initial="hidden"
-          animate="show"
-          className="p-4 space-y-2"
+      {/* MAIN LAYOUT */}
+      <div className="flex flex-1 overflow-hidden pt-14 lg:pt-0">
+        
+        {/* ================================================================
+            LEFT SIDEBAR — Scrollable, collapsible
+            ================================================================ */}
+        <motion.aside 
+          onClick={(e) => e.stopPropagation()}
+          animate={{ width: sidebarCollapsed ? 72 : 300 }}
+          transition={smoothSpring}
+          className={`fixed inset-y-0 left-0 z-50 flex flex-col bg-zinc-950/80 backdrop-blur-2xl border-r border-zinc-800/50 overflow-hidden
+            lg:relative lg:translate-x-0
+            ${isMobileSidebarOpen ? 'translate-x-0 w-[80%] max-w-[300px]' : '-translate-x-full lg:translate-x-0'}
+            transition-transform duration-300 lg:transition-none
+          `}
         >
-          <motion.div variants={staggerItem}>
-            <button 
-              onClick={() => {
-                setMessages([]);
-                setCurrentCampaign(null);
-                setInputValue('');
-                setCookingMessages([]);
-                setIsMobileSidebarOpen(false);
-                setSystemStatus({ tier: 'STANDBY', dbSync: 'OK', region: 'US-EAST-1' });
-              }}
-              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl glass-card hover:border-indigo-500/30 cursor-pointer transition-all group"
-            >
-              <Plus className="w-4 h-4 text-indigo-400 group-hover:text-indigo-300 transition-colors" />
-              <span className="text-sm font-medium text-zinc-300 group-hover:text-white transition-colors">New Directive</span>
-            </button>
-          </motion.div>
-          
-          <motion.div variants={staggerItem}>
-            <button 
-              onClick={() => {
-                if (messages.length > 0) {
-                  const blob = new Blob([JSON.stringify(messages, null, 2)], { type: 'application/json' });
-                  const url = URL.createObjectURL(blob);
-                  const a = document.createElement('a');
-                  a.href = url;
-                  a.download = 'prachar_campaign.json';
-                  a.click();
-                  URL.revokeObjectURL(url);
-                  setIsMobileSidebarOpen(false);
-                }
-              }}
-              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl glass-card hover:border-purple-500/30 cursor-pointer transition-all group"
-            >
-              <Download className="w-4 h-4 text-purple-400 group-hover:text-purple-300 transition-colors" />
-              <span className="text-sm font-medium text-zinc-300 group-hover:text-white transition-colors">Export Campaign</span>
-            </button>
-          </motion.div>
-          
-          <motion.div variants={staggerItem}>
-            <button 
-              onClick={() => {
-                window.open('https://github.com/SxBxcoder/Prachar.ai', '_blank');
-                setIsMobileSidebarOpen(false);
-              }}
-              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl glass-card hover:border-cyan-500/30 cursor-pointer transition-all group"
-            >
-              <BookOpen className="w-4 h-4 text-cyan-400 group-hover:text-cyan-300 transition-colors" />
-              <span className="text-sm font-medium text-zinc-300 group-hover:text-white transition-colors">View Architecture</span>
-            </button>
-          </motion.div>
-          
-          {/* Plan Action */}
-          <motion.div variants={staggerItem} className="pt-2">
+          {/* Sidebar Header */}
+          <div className="p-4 border-b border-zinc-800/50 flex-shrink-0">
+            <div className="flex items-center justify-between mb-2">
+              <AnimatePresence mode="wait">
+                {!sidebarCollapsed && (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="flex items-center gap-2.5"
+                  >
+                    <div className="w-8 h-8 rounded-lg bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center flex-shrink-0">
+                      <Terminal className="w-4 h-4 text-indigo-400" />
+                    </div>
+                    <h2 className="text-sm font-tactical font-bold text-white tracking-wider whitespace-nowrap">COMMAND CENTER</h2>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+              <div className="flex items-center gap-1 flex-shrink-0">
+                <button
+                  onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+                  className="hidden lg:block p-1.5 rounded-lg hover:bg-zinc-800 transition-colors text-zinc-400 hover:text-white"
+                  title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+                >
+                  <motion.div animate={{ rotate: sidebarCollapsed ? 0 : 180 }} transition={smoothSpring}>
+                    <ChevronRight className="w-4 h-4" />
+                  </motion.div>
+                </button>
+                {onLogout && (
+                  <button
+                    onClick={onLogout}
+                    className="p-1.5 rounded-lg hover:bg-zinc-800 transition-colors text-zinc-400 hover:text-red-400"
+                    title="Logout"
+                  >
+                    <LogOut className="w-4 h-4" />
+                  </button>
+                )}
+                <button
+                  onClick={() => setIsMobileSidebarOpen(false)}
+                  className="lg:hidden p-1.5 rounded-lg hover:bg-zinc-800 transition-colors text-zinc-400"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+            
+            {!sidebarCollapsed && (
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                <div className="flex items-center gap-2">
+                  <p className="text-xs text-zinc-400 font-medium truncate">{userEmail}</p>
+                  <span className={`text-[10px] font-tactical font-bold px-2 py-0.5 rounded-md whitespace-nowrap ${
+                    isPaidUser ? 'bg-indigo-500/15 text-indigo-400 border border-indigo-500/25' : 'bg-zinc-800 text-zinc-500 border border-zinc-700'
+                  }`}>
+                    {planName.toUpperCase()}
+                  </span>
+                </div>
+                
+                {/* Usage indicator */}
+                {!isPaidUser && remaining >= 0 && (
+                  <div className="mt-3">
+                    <div className="flex items-center justify-between text-[10px] font-tactical text-zinc-500 mb-1.5">
+                      <span>CAMPAIGNS</span>
+                      <span className={remaining === 0 ? 'text-red-400' : ''}>{subscription?.campaignsUsedThisMonth || 0}/{PLANS.free.campaignsPerMonth}</span>
+                    </div>
+                    <div className="w-full h-1.5 bg-zinc-800/80 rounded-full overflow-hidden">
+                      <motion.div
+                        initial={{ width: 0 }}
+                        animate={{ width: `${((subscription?.campaignsUsedThisMonth || 0) / PLANS.free.campaignsPerMonth) * 100}%` }}
+                        transition={gentleSpring}
+                        className={`h-full rounded-full ${
+                          remaining === 0 ? 'bg-gradient-to-r from-red-500 to-orange-500' :
+                          remaining === 1 ? 'bg-gradient-to-r from-amber-500 to-yellow-500' :
+                          'bg-gradient-to-r from-indigo-500 to-purple-500'
+                        }`}
+                      />
+                    </div>
+                  </div>
+                )}
+              </motion.div>
+            )}
+          </div>
+
+          {/* Scrollable Navigation */}
+          <div className="flex-1 overflow-y-auto p-3 space-y-1.5">
+            <motion.div variants={staggerContainer} initial="hidden" animate="show" className="space-y-1.5">
+              <motion.div variants={staggerItem}>
+                <button 
+                  onClick={() => {
+                    setMessages([]);
+                    setCurrentCampaign(null);
+                    setInputValue('');
+                    setCookingMessages([]);
+                    setIsMobileSidebarOpen(false);
+                    setSystemStatus({ tier: 'STANDBY', dbSync: 'OK', region: 'US-EAST-1' });
+                  }}
+                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl glass-card hover:border-indigo-500/30 cursor-pointer transition-all group"
+                  title="New Directive"
+                >
+                  <Plus className="w-4 h-4 text-indigo-400 group-hover:text-indigo-300 transition-colors flex-shrink-0" />
+                  {!sidebarCollapsed && <span className="text-sm font-medium text-zinc-300 group-hover:text-white transition-colors whitespace-nowrap">New Directive</span>}
+                </button>
+              </motion.div>
+              
+              <motion.div variants={staggerItem}>
+                <button 
+                  onClick={() => {
+                    if (messages.length > 0) {
+                      const blob = new Blob([JSON.stringify(messages, null, 2)], { type: 'application/json' });
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement('a');
+                      a.href = url;
+                      a.download = 'prachar_campaign.json';
+                      a.click();
+                      URL.revokeObjectURL(url);
+                      setIsMobileSidebarOpen(false);
+                    }
+                  }}
+                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl glass-card hover:border-purple-500/30 cursor-pointer transition-all group"
+                  title="Export Campaign"
+                >
+                  <Download className="w-4 h-4 text-purple-400 group-hover:text-purple-300 transition-colors flex-shrink-0" />
+                  {!sidebarCollapsed && <span className="text-sm font-medium text-zinc-300 group-hover:text-white transition-colors whitespace-nowrap">Export Campaign</span>}
+                </button>
+              </motion.div>
+              
+              <motion.div variants={staggerItem}>
+                <button 
+                  onClick={() => {
+                    window.open('https://github.com/SxBxcoder/Prachar.ai', '_blank');
+                    setIsMobileSidebarOpen(false);
+                  }}
+                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl glass-card hover:border-cyan-500/30 cursor-pointer transition-all group"
+                  title="View Architecture"
+                >
+                  <BookOpen className="w-4 h-4 text-cyan-400 group-hover:text-cyan-300 transition-colors flex-shrink-0" />
+                  {!sidebarCollapsed && <span className="text-sm font-medium text-zinc-300 group-hover:text-white transition-colors whitespace-nowrap">View Architecture</span>}
+                </button>
+              </motion.div>
+            </motion.div>
+          </div>
+
+          {/* Bottom Action — Upgrade / Billing */}
+          <div className="flex-shrink-0 p-3 border-t border-zinc-800/50">
             {isPaidUser ? (
               <button 
                 onClick={async () => {
@@ -653,107 +826,54 @@ export default function CampaignDashboard({ accessToken, userEmail, onLogout }: 
                     }
                   }
                 }}
-                className="w-full flex items-center justify-between px-4 py-3 rounded-xl glass-card hover:border-indigo-500/30 cursor-pointer transition-all group"
+                className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl glass-card hover:border-indigo-500/30 cursor-pointer transition-all group"
+                title="Manage Billing"
               >
                 <div className="flex items-center gap-3">
-                  <CreditCard className="w-4 h-4 text-indigo-400" />
-                  <span className="text-sm font-medium text-zinc-300">Manage Billing</span>
+                  <CreditCard className="w-4 h-4 text-indigo-400 flex-shrink-0" />
+                  {!sidebarCollapsed && <span className="text-sm font-medium text-zinc-300 whitespace-nowrap">Manage Billing</span>}
                 </div>
-                <span className="text-[10px] bg-green-500/15 text-green-400 px-2 py-0.5 rounded-md font-tactical font-bold border border-green-500/20">ACTIVE</span>
+                {!sidebarCollapsed && <span className="text-[10px] bg-green-500/15 text-green-400 px-2 py-0.5 rounded-md font-tactical font-bold border border-green-500/20">ACTIVE</span>}
               </button>
             ) : (
               <button 
                 onClick={() => setShowUpgradeModal(true)}
-                className="w-full flex items-center justify-between px-4 py-3.5 rounded-xl bg-gradient-to-r from-indigo-500/10 to-purple-500/10 border border-indigo-500/20 hover:border-indigo-500/50 hover:from-indigo-500/20 hover:to-purple-500/20 cursor-pointer transition-all group"
+                className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl bg-gradient-to-r from-indigo-500/10 to-purple-500/10 border border-indigo-500/20 hover:border-indigo-500/50 hover:from-indigo-500/20 hover:to-purple-500/20 cursor-pointer transition-all group"
+                title="Upgrade to Pro"
               >
                 <div className="flex items-center gap-3">
-                  <Crown className="w-4 h-4 text-yellow-400" />
-                  <span className="text-sm font-medium text-white">Pro Plan</span>
+                  <Crown className="w-4 h-4 text-yellow-400 flex-shrink-0" />
+                  {!sidebarCollapsed && <span className="text-sm font-medium text-white whitespace-nowrap">Pro Plan</span>}
                 </div>
-                <span className="text-xs bg-indigo-500 text-white px-2.5 py-1 rounded-lg font-bold">Upgrade</span>
+                {!sidebarCollapsed && <span className="text-xs bg-indigo-500 text-white px-2.5 py-1 rounded-lg font-bold">Upgrade</span>}
               </button>
             )}
-          </motion.div>
-        </motion.div>
-
-        {/* Spacer — Desktop Only */}
-        <div className="hidden lg:flex flex-1 items-center justify-center p-6">
-          <div className="text-center space-y-4">
-            <motion.div
-              animate={{ rotate: [0, 5, -5, 0] }}
-              transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
-              className="w-16 h-16 rounded-2xl bg-indigo-500/8 border border-indigo-500/15 flex items-center justify-center mx-auto"
-            >
-              <Sparkles className="w-8 h-8 text-indigo-400/60" />
-            </motion.div>
-            <div className="space-y-2">
-              <p className="text-sm font-tactical text-zinc-500">COMMAND CENTER</p>
-              <p className="text-xs text-zinc-700">Enter directive below</p>
-            </div>
           </div>
-        </div>
+        </motion.aside>
 
-        {/* Input Area — Desktop Only */}
-        <div className="hidden lg:flex flex-col p-4 border-t border-zinc-800/50">
-          <div className="space-y-3">
-            <label className="text-xs font-tactical text-indigo-400/80 uppercase tracking-wider">Campaign Directive</label>
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={inputValue}
-                onChange={(e) => setInputValue(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && handleGenerate()}
-                placeholder="Enter campaign directive..."
-                disabled={isGenerating}
-                className="flex-1 bg-zinc-800/50 border border-zinc-700/50 rounded-xl px-4 py-3 text-sm text-white placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/30 disabled:opacity-50 transition-all"
-              />
-              <MagneticButton
-                onClick={handleGenerate}
-                disabled={isGenerating || !inputValue.trim()}
-                className="!px-4 !rounded-xl"
-              >
-                <Send className="w-5 h-5" />
-              </MagneticButton>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Main Split-Pane Layout */}
-      <div className="flex-1 flex relative z-10 pt-14 lg:pt-0 lg:pl-0 overflow-hidden">
-        <div className="hidden lg:block w-[400px] flex-shrink-0"></div>
-
-        {/* RIGHT CANVAS */}
-        <div className="flex-1 h-full overflow-y-auto p-4 lg:p-8 pb-32 lg:pb-8 flex flex-col bg-black relative">
-          {messages.length === 0 && cookingMessages.length === 0 ? (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={gentleSpring}
-              className="flex-1 flex flex-col items-center justify-center m-auto min-h-[50vh]"
-            >
-              <motion.div
-                animate={{ scale: [1, 1.05, 1], opacity: [0.3, 0.5, 0.3] }}
-                transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
-              >
-                <Sparkles className="w-12 h-12 mb-4 text-zinc-700" />
-              </motion.div>
-              <p className="tracking-widest text-sm text-zinc-600 font-tactical">AWAITING DIRECTIVE...</p>
-              <p className="text-xs mt-2 text-zinc-700">Enter a campaign goal to begin</p>
-            </motion.div>
-          ) : (
-            <div className="flex flex-col w-full h-auto">
-              <motion.div
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={springConfig}
-                className="flex items-center space-x-2 text-cyan-500 mb-8 shrink-0"
-              >
-                <Activity className="w-5 h-5" />
-                <span className="text-sm tracking-widest font-bold font-tactical">ACTIVE INTELLIGENCE FEED</span>
-              </motion.div>
-              
-              <div className="flex flex-col w-full space-y-4 shrink-0">
+        {/* ================================================================
+            MAIN CONTENT — Chat + Canvas + Input
+            ================================================================ */}
+        <div className="flex-1 flex flex-col min-w-0 relative z-10 overflow-hidden">
+          
+          {/* Chat / Canvas Area — Scrollable */}
+          <div className="flex-1 overflow-y-auto">
+            {messages.length === 0 && cookingMessages.length === 0 ? (
+              <WelcomeScreen onQuickAction={handleQuickAction} />
+            ) : (
+              <div className="p-4 lg:p-8 space-y-4">
+                {/* Feed header */}
+                <motion.div
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={springConfig}
+                  className="flex items-center space-x-2 text-cyan-500 mb-6"
+                >
+                  <Activity className="w-5 h-5" />
+                  <span className="text-sm tracking-widest font-bold font-tactical">ACTIVE INTELLIGENCE FEED</span>
+                </motion.div>
+                
+                {/* Messages */}
                 <AnimatePresence mode="popLayout">
                   {messages.map((msg, idx) => (
                     <motion.div
@@ -778,185 +898,196 @@ export default function CampaignDashboard({ accessToken, userEmail, onLogout }: 
                     </motion.div>
                   ))}
                   
-                  {/* Cooking Status (SSE streaming) */}
                   {isGenerating && (
                     <CookingStatus messages={cookingMessages.length > 0 ? cookingMessages : ['🔥 Initializing Diamond Cascade Engine...']} />
                   )}
                 </AnimatePresence>
                 <div ref={chatEndRef} />
-              </div>
 
-              {/* Campaign Asset Canvas */}
-              {currentCampaign && (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ duration: 0.5 }}
-                  className="space-y-6 pt-8 border-t border-zinc-800/50 mt-8"
-                >
+                {/* Campaign Asset Canvas */}
+                {currentCampaign && (
                   <motion.div
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={springConfig}
-                    className="flex items-center gap-2 mb-6"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ duration: 0.5 }}
+                    className="space-y-6 pt-8 border-t border-zinc-800/50 mt-8"
                   >
-                    <Zap className="w-4 h-4 text-indigo-400" />
-                    <h3 className="text-xs font-tactical text-indigo-400 uppercase tracking-wider">Campaign Assets</h3>
-                  </motion.div>
-                    
-                  {/* Strategy Cards Grid */}
-                  <motion.div
-                    variants={staggerContainer}
-                    initial="hidden"
-                    animate="show"
-                    className="grid grid-cols-1 md:grid-cols-3 gap-4"
-                  >
-                    {/* Hook Card */}
                     <motion.div
-                      variants={staggerItem}
-                      whileHover={{ y: -4, transition: { duration: 0.2 } }}
-                      className="group relative glass-card scan-line glow-border rounded-2xl p-6 cursor-default"
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={springConfig}
+                      className="flex items-center gap-2 mb-6"
                     >
-                      <div className="relative z-10">
-                        <div className="flex items-center justify-between mb-3">
-                          <span className="text-xs font-tactical text-indigo-400 uppercase tracking-wider">THE HOOK</span>
-                          <button
-                            onClick={() => copyToClipboard(currentCampaign.plan.hook, 'hook')}
-                            className="p-1.5 hover:bg-zinc-800 rounded-lg transition-colors"
-                          >
-                            {copied === 'hook' ? (
-                              <Check className="w-4 h-4 text-green-400" />
-                            ) : (
-                              <Copy className="w-4 h-4 text-zinc-500" />
-                            )}
-                          </button>
-                        </div>
-                        <p className="text-lg font-bold text-white leading-tight">{currentCampaign.plan.hook}</p>
-                      </div>
+                      <Zap className="w-4 h-4 text-indigo-400" />
+                      <h3 className="text-xs font-tactical text-indigo-400 uppercase tracking-wider">Campaign Assets</h3>
                     </motion.div>
-
-                    {/* Offer Card */}
-                    <motion.div
-                      variants={staggerItem}
-                      whileHover={{ y: -4, transition: { duration: 0.2 } }}
-                      className="group relative glass-card scan-line glow-border rounded-2xl p-6 cursor-default"
-                    >
-                      <div className="relative z-10">
-                        <div className="flex items-center justify-between mb-3">
-                          <span className="text-xs font-tactical text-purple-400 uppercase tracking-wider">THE OFFER</span>
-                          <button
-                            onClick={() => copyToClipboard(currentCampaign.plan.offer, 'offer')}
-                            className="p-1.5 hover:bg-zinc-800 rounded-lg transition-colors"
-                          >
-                            {copied === 'offer' ? (
-                              <Check className="w-4 h-4 text-green-400" />
-                            ) : (
-                              <Copy className="w-4 h-4 text-zinc-500" />
-                            )}
-                          </button>
-                        </div>
-                        <p className="text-base text-zinc-300 leading-tight">{currentCampaign.plan.offer}</p>
-                      </div>
-                    </motion.div>
-
-                    {/* CTA Card */}
-                    <motion.div
-                      variants={staggerItem}
-                      whileHover={{ y: -4, transition: { duration: 0.2 } }}
-                      className="group relative glass-card scan-line glow-border rounded-2xl p-6 cursor-default"
-                    >
-                      <div className="relative z-10">
-                        <div className="flex items-center justify-between mb-3">
-                          <span className="text-xs font-tactical text-pink-400 uppercase tracking-wider">ACTION</span>
-                          <button
-                            onClick={() => copyToClipboard(currentCampaign.plan.cta, 'cta')}
-                            className="p-1.5 hover:bg-zinc-800 rounded-lg transition-colors"
-                          >
-                            {copied === 'cta' ? (
-                              <Check className="w-4 h-4 text-green-400" />
-                            ) : (
-                              <Copy className="w-4 h-4 text-zinc-500" />
-                            )}
-                          </button>
-                        </div>
-                        <p className="text-base text-zinc-300 leading-tight">{currentCampaign.plan.cta}</p>
-                      </div>
-                    </motion.div>
-                  </motion.div>
-
-                  {/* Captions Grid */}
-                  {currentCampaign.captions && currentCampaign.captions.length > 0 && (
+                      
+                    {/* Strategy Cards Grid */}
                     <motion.div
                       variants={staggerContainer}
                       initial="hidden"
                       animate="show"
                       className="grid grid-cols-1 md:grid-cols-3 gap-4"
                     >
-                      {currentCampaign.captions.map((caption, idx) => (
-                        <motion.div
-                          key={idx}
-                          variants={staggerItem}
-                          whileHover={{ y: -4, scale: 1.02, transition: { duration: 0.2 } }}
-                          className="group relative glass-card scan-line glow-border rounded-2xl p-6 cursor-default"
-                        >
-                          <div className="relative z-10">
-                            <div className="flex items-center justify-between mb-3">
-                              <span className="text-xs font-tactical text-cyan-400 uppercase tracking-wider">CAPTION {idx + 1}</span>
-                              <button
-                                onClick={() => copyToClipboard(caption, `caption-${idx}`)}
-                                className="p-1.5 hover:bg-zinc-800 rounded-lg transition-colors"
-                              >
-                                {copied === `caption-${idx}` ? (
-                                  <Check className="w-4 h-4 text-green-400" />
-                                ) : (
-                                  <Copy className="w-4 h-4 text-zinc-500" />
-                                )}
-                              </button>
-                            </div>
-                            <p className="text-sm text-zinc-300 leading-relaxed">{caption}</p>
+                      {/* Hook Card */}
+                      <motion.div
+                        variants={staggerItem}
+                        whileHover={{ y: -4, transition: { duration: 0.2 } }}
+                        className="group relative glass-card scan-line glow-border rounded-2xl p-6 cursor-default"
+                      >
+                        <div className="relative z-10">
+                          <div className="flex items-center justify-between mb-3">
+                            <span className="text-xs font-tactical text-indigo-400 uppercase tracking-wider">THE HOOK</span>
+                            <button
+                              onClick={() => copyToClipboard(currentCampaign.plan.hook, 'hook')}
+                              className="p-1.5 hover:bg-zinc-800 rounded-lg transition-colors"
+                            >
+                              {copied === 'hook' ? (
+                                <Check className="w-4 h-4 text-green-400" />
+                              ) : (
+                                <Copy className="w-4 h-4 text-zinc-500" />
+                              )}
+                            </button>
                           </div>
-                        </motion.div>
-                      ))}
-                    </motion.div>
-                  )}
-                </motion.div>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
+                          <p className="text-lg font-bold text-white leading-tight">{currentCampaign.plan.hook}</p>
+                        </div>
+                      </motion.div>
 
-      {/* Mobile Bottom Input Bar */}
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-30 bg-zinc-900/95 backdrop-blur-xl border-t border-zinc-800/50">
-        <div className="p-4">
-          <div className="space-y-3">
-            <label className="text-xs font-tactical text-indigo-400/80 uppercase tracking-wider">Campaign Directive</label>
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={inputValue}
-                onChange={(e) => setInputValue(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && handleGenerate()}
-                placeholder="Enter campaign directive..."
-                disabled={isGenerating}
-                className="flex-1 bg-zinc-800/50 border border-zinc-700/50 rounded-xl px-4 py-3 text-sm text-white placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 disabled:opacity-50 transition-all"
-              />
-              <MagneticButton
-                onClick={handleGenerate}
-                disabled={isGenerating || !inputValue.trim()}
-                className="!px-4 !rounded-xl"
-              >
-                <Send className="w-5 h-5" />
-              </MagneticButton>
+                      {/* Offer Card */}
+                      <motion.div
+                        variants={staggerItem}
+                        whileHover={{ y: -4, transition: { duration: 0.2 } }}
+                        className="group relative glass-card scan-line glow-border rounded-2xl p-6 cursor-default"
+                      >
+                        <div className="relative z-10">
+                          <div className="flex items-center justify-between mb-3">
+                            <span className="text-xs font-tactical text-purple-400 uppercase tracking-wider">THE OFFER</span>
+                            <button
+                              onClick={() => copyToClipboard(currentCampaign.plan.offer, 'offer')}
+                              className="p-1.5 hover:bg-zinc-800 rounded-lg transition-colors"
+                            >
+                              {copied === 'offer' ? (
+                                <Check className="w-4 h-4 text-green-400" />
+                              ) : (
+                                <Copy className="w-4 h-4 text-zinc-500" />
+                              )}
+                            </button>
+                          </div>
+                          <p className="text-base text-zinc-300 leading-tight">{currentCampaign.plan.offer}</p>
+                        </div>
+                      </motion.div>
+
+                      {/* CTA Card */}
+                      <motion.div
+                        variants={staggerItem}
+                        whileHover={{ y: -4, transition: { duration: 0.2 } }}
+                        className="group relative glass-card scan-line glow-border rounded-2xl p-6 cursor-default"
+                      >
+                        <div className="relative z-10">
+                          <div className="flex items-center justify-between mb-3">
+                            <span className="text-xs font-tactical text-pink-400 uppercase tracking-wider">ACTION</span>
+                            <button
+                              onClick={() => copyToClipboard(currentCampaign.plan.cta, 'cta')}
+                              className="p-1.5 hover:bg-zinc-800 rounded-lg transition-colors"
+                            >
+                              {copied === 'cta' ? (
+                                <Check className="w-4 h-4 text-green-400" />
+                              ) : (
+                                <Copy className="w-4 h-4 text-zinc-500" />
+                              )}
+                            </button>
+                          </div>
+                          <p className="text-base text-zinc-300 leading-tight">{currentCampaign.plan.cta}</p>
+                        </div>
+                      </motion.div>
+                    </motion.div>
+
+                    {/* Captions Grid */}
+                    {currentCampaign.captions && currentCampaign.captions.length > 0 && (
+                      <motion.div
+                        variants={staggerContainer}
+                        initial="hidden"
+                        animate="show"
+                        className="grid grid-cols-1 md:grid-cols-3 gap-4"
+                      >
+                        {currentCampaign.captions.map((caption, idx) => (
+                          <motion.div
+                            key={idx}
+                            variants={staggerItem}
+                            whileHover={{ y: -4, scale: 1.02, transition: { duration: 0.2 } }}
+                            className="group relative glass-card scan-line glow-border rounded-2xl p-6 cursor-default"
+                          >
+                            <div className="relative z-10">
+                              <div className="flex items-center justify-between mb-3">
+                                <span className="text-xs font-tactical text-cyan-400 uppercase tracking-wider">CAPTION {idx + 1}</span>
+                                <button
+                                  onClick={() => copyToClipboard(caption, `caption-${idx}`)}
+                                  className="p-1.5 hover:bg-zinc-800 rounded-lg transition-colors"
+                                >
+                                  {copied === `caption-${idx}` ? (
+                                    <Check className="w-4 h-4 text-green-400" />
+                                  ) : (
+                                    <Copy className="w-4 h-4 text-zinc-500" />
+                                  )}
+                                </button>
+                              </div>
+                              <p className="text-sm text-zinc-300 leading-relaxed">{caption}</p>
+                            </div>
+                          </motion.div>
+                        ))}
+                      </motion.div>
+                    )}
+                  </motion.div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* ================================================================
+              BOTTOM INPUT BAR — Always visible, glassmorphism
+              ================================================================ */}
+          <div className="flex-shrink-0 border-t border-zinc-800/50 bg-zinc-950/60 backdrop-blur-2xl p-4 relative z-20">
+            <div className="max-w-4xl mx-auto">
+              <div className="flex gap-3 items-center">
+                <div className="flex-1 relative">
+                  <MessageSquare className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+                  <input
+                    ref={inputRef}
+                    type="text"
+                    value={inputValue}
+                    onChange={(e) => setInputValue(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleGenerate()}
+                    placeholder="Enter your campaign directive..."
+                    disabled={isGenerating}
+                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3.5 pl-11 text-sm text-white placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/30 disabled:opacity-50 transition-all"
+                  />
+                </div>
+                <MagneticButton
+                  onClick={() => handleGenerate()}
+                  disabled={isGenerating || !inputValue.trim()}
+                  className="!px-5 !py-3.5 !rounded-xl"
+                >
+                  {isGenerating ? (
+                    <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }} className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full" />
+                  ) : (
+                    <Send className="w-5 h-5" />
+                  )}
+                </MagneticButton>
+              </div>
+              {/* Hint text */}
+              <div className="flex items-center justify-between mt-2 px-1">
+                <p className="text-[10px] text-zinc-600 font-tactical">POWERED BY DIAMOND CASCADE ENGINE</p>
+                <p className="text-[10px] text-zinc-600">Press <kbd className="px-1.5 py-0.5 bg-zinc-800 rounded text-zinc-500 font-mono text-[9px]">Enter</kbd> to send</p>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
       {/* Status Bar — Desktop Only */}
-      <div className="hidden lg:flex fixed bottom-0 left-0 right-0 h-[44px] z-[60] border-t border-zinc-800/50 bg-zinc-900/90 backdrop-blur-xl px-6 items-center justify-between text-xs font-tactical overflow-hidden">
-        <div className="flex items-center gap-6 shrink-0">
-          <div className="flex items-center gap-2 shrink-0">
+      <div className="hidden lg:flex h-[36px] z-[60] border-t border-zinc-800/50 bg-zinc-950/90 backdrop-blur-xl px-6 items-center justify-between text-xs font-tactical flex-shrink-0">
+        <div className="flex items-center gap-6">
+          <div className="flex items-center gap-2">
             <Activity className="w-3 h-3 text-indigo-400" />
             <span className="text-zinc-500">TIER:</span>
             <span className={`font-bold ${
@@ -969,7 +1100,7 @@ export default function CampaignDashboard({ accessToken, userEmail, onLogout }: 
             </span>
           </div>
           
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-2">
             <Database className="w-3 h-3 text-purple-400" />
             <span className="text-zinc-500">DB_SYNC:</span>
             <span className={`font-bold ${
@@ -979,14 +1110,14 @@ export default function CampaignDashboard({ accessToken, userEmail, onLogout }: 
             </span>
           </div>
           
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-2">
             <Globe className="w-3 h-3 text-cyan-400" />
             <span className="text-zinc-500">REGION:</span>
             <span className="text-cyan-400 font-bold">{systemStatus.region}</span>
           </div>
         </div>
 
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex items-center gap-2">
           <div className="relative flex h-2 w-2">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
             <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
