@@ -612,10 +612,8 @@ export default function Home() {
               <Link href="/register" className="hover:text-white transition-colors">Get Started</Link>
             </div>
 
-            <div className="flex items-center gap-2 text-xs text-zinc-600">
-              <span>© 2026 Prachar.ai</span>
-              <span>·</span>
-              <span>Built with ❤️ for India</span>
+            <div className="flex items-center gap-2 text-[10px] text-zinc-600 font-tactical tracking-widest uppercase">
+              <span>© 2026 PRACHAR.AI // ALL SYSTEMS NOMINAL</span>
             </div>
           </div>
         </div>
