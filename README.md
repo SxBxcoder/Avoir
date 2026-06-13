@@ -10,7 +10,7 @@
 
   <br/>
 
-  <a href="https://main.d168pkgc3x4eic.amplifyapp.com/"><img src="https://img.shields.io/badge/🌐_Live_Demo-Try_It_Now-6366f1?style=for-the-badge" alt="Live Demo" /></a>
+  <a href="https://main.d2u0mm6cr1j81.amplifyapp.com/"><img src="https://img.shields.io/badge/🌐_Live_Demo-Try_It_Now-6366f1?style=for-the-badge" alt="Live Demo" /></a>
   &nbsp;
   <a href="#-quick-start"><img src="https://img.shields.io/badge/⚡_Quick_Start-Setup_Guide-22c55e?style=for-the-badge" alt="Quick Start" /></a>
 
@@ -50,8 +50,9 @@ Marketing to Indian Gen-Z requires deep understanding of local pop culture, slan
 |---------|-------------|
 | **Diamond Cascade Engine** | Proprietary 6-tier AI architecture orchestrating multiple models in sequence — each one refining the output. No single AI can match this. |
 | **Hinglish Mastery** | Generates viral copy with authentic power words (Aukaat, Bawaal, Main Character Energy, Level Up) — not generic English translations. |
+| **God-Tier Dashboard UX** | Multi-million dollar SaaS aesthetic: Real-time SSE Streaming, Framer Motion spring physics, slide-out sidebars, and an ChatGPT-style floating chat interface. |
+| **Mobile-First Domination** | 100% responsive fluid typography, native-feeling mobile drawers, and stacked UI cards for seamless execution on iPhones/Androids. |
 | **Complete Campaigns** | Hook → Offer → CTA strategy + 3 platform-ready captions + visual direction. Everything in one click. |
-| **Real-time SSE Streaming** | Watch the AI work in real-time with the "Diamond Cascade Active" status stream. No blank loading screens. |
 | **Trend Sniper** *(Coming)* | Auto-detect viral trends across Instagram, YouTube, and X. Get campaign suggestions in real-time. |
 | **Aukaat Engine** *(Coming)* | Competitive intelligence that shows exactly where you stand against competitors in your niche. |
 
@@ -240,7 +241,7 @@ aws lambda update-function-code \
 git push origin main
 ```
 
-**Live Demo:** [https://main.d168pkgc3x4eic.amplifyapp.com/](https://main.d168pkgc3x4eic.amplifyapp.com/)
+**Live Demo:** [https://main.d2u0mm6cr1j81.amplifyapp.com/](https://main.d2u0mm6cr1j81.amplifyapp.com/)
 
 ---
 
@@ -315,7 +316,7 @@ git push origin main
 <div align="center">
   <img src="docs/logo.png" alt="Prachar.ai" width="48" />
   <br/><br/>
-  <a href="https://main.d168pkgc3x4eic.amplifyapp.com/">Live Demo</a> · <a href="#-quick-start">Quick Start</a> · <a href="#-documentation">Documentation</a>
+  <a href="https://main.d2u0mm6cr1j81.amplifyapp.com/">Live Demo</a> · <a href="#-quick-start">Quick Start</a> · <a href="#-documentation">Documentation</a>
   <br/><br/>
   <sub>© 2026 Team NEONX</sub>
 </div>
