@@ -9,6 +9,7 @@ import { isAuthenticated, getUser, logout, getAccessToken } from '@/lib/authHelp
 import Link from 'next/link';
 import Image from 'next/image';
 import CampaignDashboard from '@/components/CampaignDashboard';
+import TechGeometryCanvas from '@/components/TechGeometryCanvas';
 
 // ============================================================================
 // SPRING CONFIGS
@@ -269,9 +270,11 @@ export default function Home() {
   ];
 
   return (
-    <div className="min-h-screen bg-black text-white overflow-x-hidden" style={{ fontFamily: "'Inter', sans-serif" }}>
-      <Navbar />
-      <FloatingParticles />
+    <div className="min-h-screen bg-transparent text-white overflow-x-hidden relative" style={{ fontFamily: "'Inter', sans-serif" }}>
+      <TechGeometryCanvas />
+      
+      <div className="relative z-10">
+        <Navbar />
 
       {/* ================================================================
           HERO SECTION — Full viewport with parallax
@@ -612,12 +615,14 @@ export default function Home() {
               <Link href="/register" className="hover:text-white transition-colors">Get Started</Link>
             </div>
 
-            <div className="flex items-center gap-2 text-[10px] text-zinc-600 font-tactical tracking-widest uppercase">
-              <span>© 2026 PRACHAR.AI // ALL SYSTEMS NOMINAL</span>
-            </div>
+            {/* Coded with precision by Prachar.ai */}
+            <p className="text-zinc-500 text-sm mt-12 font-tactical tracking-widest text-center">
+              © 2026 PRACHAR.AI // ALL SYSTEMS NOMINAL
+            </p>
           </div>
         </div>
       </footer>
+      </div>
     </div>
   );
 }

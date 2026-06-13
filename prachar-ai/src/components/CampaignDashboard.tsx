@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence, useSpring, useTransform } from 'framer-motion';
 import { Send, Sparkles, Terminal, Activity, Database, Globe, Copy, Check, Zap, LogOut, Menu, X, Plus, Download, BookOpen, Crown, CreditCard, Flame, Radio, ChevronRight, MessageSquare, Target, Rocket, TrendingUp, Shield, Eye } from 'lucide-react';
 import UpgradeModal from './UpgradeModal';
+import NeuralNetworkCanvas from './NeuralNetworkCanvas';
 import { type UserSubscription, canGenerateCampaign, getRemainingCampaigns, PLANS, DEFAULT_SUBSCRIPTION } from '@/lib/stripe';
 
 // ============================================================================
@@ -239,8 +240,12 @@ function WelcomeScreen({ onQuickAction }: { onQuickAction: (text: string) => voi
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.6 }}
-      className="flex-1 flex flex-col items-center justify-center px-6"
+      className="absolute inset-0 flex flex-col items-center justify-center px-6 overflow-hidden"
     >
+      <NeuralNetworkCanvas />
+      
+      <div className="relative z-10 flex flex-col items-center w-full max-w-4xl">
+
       {/* Animated logo */}
       <motion.div
         initial={{ scale: 0, rotate: -20 }}
@@ -307,6 +312,7 @@ function WelcomeScreen({ onQuickAction }: { onQuickAction: (text: string) => voi
           </motion.button>
         ))}
       </motion.div>
+      </div>
     </motion.div>
   );
 }
@@ -857,7 +863,7 @@ export default function CampaignDashboard({ accessToken, userEmail, onLogout }: 
         <div className="flex-1 flex flex-col min-w-0 relative z-10 overflow-hidden">
           
           {/* Chat / Canvas Area — Scrollable */}
-          <div className="flex-1 overflow-y-auto">
+          <div className="flex-1 overflow-y-auto relative flex flex-col">
             {messages.length === 0 && cookingMessages.length === 0 ? (
               <WelcomeScreen onQuickAction={handleQuickAction} />
             ) : (
