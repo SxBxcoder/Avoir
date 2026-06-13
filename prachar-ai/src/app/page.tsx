@@ -97,23 +97,25 @@ function Navbar() {
           : 'bg-transparent'
       }`}
     >
-      <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-        <Link href="/" className="flex items-center gap-3 group">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
+        <Link href="/" className="flex items-center gap-2 sm:gap-3 group shrink-0">
           <motion.div whileHover={{ rotate: 12, scale: 1.1 }} transition={springBouncy}>
-            <Image src="/logo.png" alt="Prachar.ai" width={36} height={36} className="rounded-lg" />
+            <Image src="/logo.png" alt="Prachar.ai" width={32} height={32} className="rounded-lg sm:w-9 sm:h-9" />
           </motion.div>
-          <span className="text-lg font-bold tracking-tight">
+          <span className="text-base sm:text-lg font-bold tracking-tight">
             Prachar<span className="text-indigo-400">.ai</span>
           </span>
         </Link>
 
+        {/* Desktop Links */}
         <div className="hidden md:flex items-center gap-8">
           <Link href="#features" className="text-sm text-zinc-400 hover:text-white transition-colors">Features</Link>
           <Link href="#how-it-works" className="text-sm text-zinc-400 hover:text-white transition-colors">How It Works</Link>
           <Link href="/pricing" className="text-sm text-zinc-400 hover:text-white transition-colors">Pricing</Link>
         </div>
 
-        <div className="flex items-center gap-3">
+        {/* Desktop Auth */}
+        <div className="hidden sm:flex items-center gap-3">
           <Link href="/login" className="text-sm text-zinc-400 hover:text-white transition-colors px-4 py-2">
             Sign In
           </Link>
@@ -125,6 +127,19 @@ function Navbar() {
               Get Started Free
             </Link>
           </motion.div>
+        </div>
+
+        {/* Mobile Auth (Simplified) */}
+        <div className="flex sm:hidden items-center gap-2">
+          <Link href="/login" className="text-xs font-medium text-zinc-300 hover:text-white px-3 py-2">
+            Sign In
+          </Link>
+          <Link
+            href="/register"
+            className="text-xs font-semibold bg-white text-black px-4 py-2 rounded-full"
+          >
+            Start
+          </Link>
         </div>
       </div>
     </motion.nav>
