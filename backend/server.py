@@ -7,8 +7,8 @@ Local web server for testing the Creative Director Agent
 from dotenv import load_dotenv
 load_dotenv()
 
-from fastapi import FastAPI, HTTPException
-from fastapi.responses import StreamingResponse
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.responses import StreamingResponse, PlainTextResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import json
@@ -18,6 +18,8 @@ import uvicorn
 from aws_lambda_handler import lambda_handler
 from trends_sniper import sniper
 from shadow_clone import clone_engine
+from authority_defender import defender
+from agency_bridge import agency_bridge
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -249,7 +251,88 @@ async def generate_shadow_clone(request: ShadowCloneRequest):
     )
 
 
+# Sprint 5: Authority Defender (Meta Webhooks & Live Engagement)
+
+@app.get("/api/webhooks/meta")
+async def verify_meta_webhook(request: Request):
+    """
+    Handles Meta webhook verification (hub.challenge)
+    """
+    params = request.query_params
+    mode = params.get("hub.mode")
+    token = params.get("hub.verify_token")
+    challenge = params.get("hub.challenge")
+
+    if mode and token:
+        valid_challenge = defender.verify_webhook(mode, token, challenge)
+        if valid_challenge:
+            return PlainTextResponse(content=valid_challenge, status_code=200)
+    
+    raise HTTPException(status_code=403, detail="Verification failed")
+
+@app.post("/api/webhooks/meta")
+async def receive_meta_webhook(request: Request):
+    """
+    Receives incoming webhook payloads from Meta (e.g., new comments).
+    Passes them to the Authority Defender for sentiment analysis and auto-reply.
+    """
+    try:
+        payload = await request.json()
+        # Process asynchronously in the background
+        import asyncio
+        asyncio.create_task(defender.process_webhook_payload(payload))
+        return {"status": "EVENT_RECEIVED"}
+    except Exception as e:
+        print(f"Error receiving webhook: {e}")
+        return {"status": "ERROR"}
+
+@app.get("/api/engagement/stream")
+async def stream_engagements():
+    """
+    Streams live engagements from the Authority Defender to the frontend.
+    """
+    async def event_generator():
+        import asyncio
+        while True:
+            # Poll for new engagements
+            engagements = defender.get_latest_engagements()
+            if engagements:
+                for engagement in engagements:
+                    yield f"data: {json.dumps(engagement)}\n\n"
+            # Wait a bit before polling again
+            await asyncio.sleep(1.0)
+            
+    return StreamingResponse(event_generator(), media_type="text/event-stream")
+
+
 # Run server
+@app.get("/api/agency/clients")
+async def get_agency_clients(agency_id: str = "default_agency"):
+    """Fetch all clients managed by the agency."""
+    clients = agency_bridge.get_clients(agency_id)
+    return {"clients": clients}
+
+
+class ShareLinkRequest(BaseModel):
+    agency_id: str = "default_agency"
+    campaign_data: dict
+
+
+@app.post("/api/agency/share-link")
+async def generate_share_link(request: ShareLinkRequest):
+    """Generate a white-labeled share link for a client."""
+    link = agency_bridge.generate_share_link(request.agency_id, request.campaign_data)
+    return {"share_url": link}
+
+
+@app.get("/api/public/campaign/{link_id}")
+async def get_public_campaign(link_id: str):
+    """Public route for clients to view white-labeled campaign."""
+    campaign = agency_bridge.get_shared_campaign(link_id)
+    if not campaign:
+        raise HTTPException(status_code=404, detail="Campaign not found or expired")
+    return {"campaign": campaign}
+
 if __name__ == "__main__":
     print("🚀 Starting Prachar.ai Development Server...")
     print("📍 API will be available at: http://localhost:8000")

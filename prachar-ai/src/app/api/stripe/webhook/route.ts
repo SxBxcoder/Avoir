@@ -88,6 +88,8 @@ export async function POST(req: Request) {
         const priceId = subscription.items.data[0]?.price?.id || '';
         const tier = resolveTier(priceId);
 
+        const creditsToAdd = tier === 'enterprise' ? 5000 : tier === 'pro' ? 1000 : 0;
+
         await upsertSubscription(userId, {
           tier,
           stripeCustomerId: customerId,
@@ -95,7 +97,7 @@ export async function POST(req: Request) {
           status: 'active',
           currentPeriodEnd: new Date((subscription as any).current_period_end * 1000).toISOString(),
           cancelAtPeriodEnd: (subscription as any).cancel_at_period_end,
-          campaignsUsedThisMonth: 0, // Reset on new subscription
+          credits: creditsToAdd, // Assign new credits
           lastResetDate: new Date().toISOString(),
         });
 
@@ -121,10 +123,16 @@ export async function POST(req: Request) {
         const userId = (customer as Stripe.Customer).metadata?.cognitoUserId;
 
         if (userId) {
+          // Note: In a metered billing setup without separate invoices for credits, 
+          // a recurring invoice payment would refill the credits.
+          const priceId = subscription.items.data[0]?.price?.id || '';
+          const tier = resolveTier(priceId);
+          const creditsToAdd = tier === 'enterprise' ? 5000 : tier === 'pro' ? 1000 : 0;
+
           await upsertSubscription(userId, {
             status: 'active',
             currentPeriodEnd: new Date((subscription as any).current_period_end * 1000).toISOString(),
-            campaignsUsedThisMonth: 0, // Reset counter on new billing period
+            credits: creditsToAdd, // Refill credits
             lastResetDate: new Date().toISOString(),
           });
           console.log(`[Webhook] ✅ Invoice paid for user ${userId}. Counter reset.`);
@@ -196,6 +204,7 @@ export async function POST(req: Request) {
             stripeSubscriptionId: null,
             currentPeriodEnd: null,
             cancelAtPeriodEnd: false,
+            // We do not strip credits away, they keep what they paid for until they use them
           });
           console.log(`[Webhook] ✅ Subscription deleted for user ${userId}. Downgraded to free.`);
         }

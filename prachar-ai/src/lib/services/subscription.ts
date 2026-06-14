@@ -11,12 +11,8 @@
 import {
   getSubscription as dbGetSubscription,
   upsertSubscription as dbUpsertSubscription,
-  incrementCampaignCount as dbIncrementCampaignCount,
+  deductCredits as dbDeductCredits,
 } from '@/lib/db';
-import {
-  setCachedQuota,
-  incrementCachedQuota,
-} from '@/lib/db/cache';
 import { PLANS, type UserSubscription } from '@/lib/stripe';
 
 /**
@@ -36,23 +32,13 @@ export async function upsertSubscription(
   updates: Partial<UserSubscription>
 ): Promise<UserSubscription> {
   const result = await dbUpsertSubscription(userId, updates);
-
-  // Update cache with new quota
-  const plan = PLANS[result.tier];
-  await setCachedQuota(userId, result.campaignsUsedThisMonth, plan.campaignsPerMonth);
-
   return result;
 }
 
 /**
- * Increment campaign count atomically.
- * Updates both DynamoDB (source of truth) and Redis cache.
+ * Deduct credits atomically.
+ * Updates DynamoDB (source of truth).
  */
-export async function incrementCampaignCount(userId: string): Promise<UserSubscription> {
-  const result = await dbIncrementCampaignCount(userId);
-
-  // Update cache
-  await incrementCachedQuota(userId);
-
-  return result;
+export async function deductCredits(userId: string, amount: number): Promise<UserSubscription> {
+  return await dbDeductCredits(userId, amount);
 }

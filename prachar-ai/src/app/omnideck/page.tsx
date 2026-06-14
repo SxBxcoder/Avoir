@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Radar, Target, Instagram, Youtube, ArrowRight, Zap, RefreshCw, Send, CheckCircle2 } from 'lucide-react';
+import { Radar, Target, Instagram, Youtube, ArrowRight, Zap, RefreshCw, Send, CheckCircle2, Shield, MessageCircle, AlertCircle, User, MessageSquare, Building, Link as LinkIcon, Copy, CalendarClock } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 // Spring physics
@@ -41,6 +41,88 @@ export default function OmniDeckPage() {
   const [selectedTrend, setSelectedTrend] = useState<any | null>(null);
   const [publishing, setPublishing] = useState(false);
   const [published, setPublished] = useState(false);
+  const [credits, setCredits] = useState<number | null>(null);
+  
+  // Scheduling State
+  const [isScheduling, setIsScheduling] = useState(false);
+  const [scheduleTime, setScheduleTime] = useState<string>('');
+  const [scheduled, setScheduled] = useState(false);
+
+  // Authority Defender Stream
+  const [engagements, setEngagements] = useState<any[]>([]);
+
+  // B2B Bridge / Agency Mode
+  const [agencyMode, setAgencyMode] = useState(false);
+  const [clients, setClients] = useState<any[]>([]);
+  const [selectedClient, setSelectedClient] = useState<any | null>(null);
+  const [shareLink, setShareLink] = useState<string | null>(null);
+  const [copiedLink, setCopiedLink] = useState(false);
+
+  useEffect(() => {
+    if (agencyMode) {
+      fetch('http://localhost:8000/api/agency/clients')
+        .then(res => res.json())
+        .then(data => {
+          setClients(data.clients);
+          if (data.clients.length > 0) setSelectedClient(data.clients[0]);
+        })
+        .catch(console.error);
+    } else {
+      setShareLink(null);
+    }
+  }, [agencyMode]);
+
+  useEffect(() => {
+    const fetchCredits = async () => {
+      try {
+        const userId = localStorage.getItem('cognitoUserId') || 'anonymous';
+        if (userId !== 'anonymous') {
+          const res = await fetch(`/api/stripe/subscription?userId=${userId}`);
+          const data = await res.json();
+          if (data.credits !== undefined) {
+            setCredits(data.credits);
+          }
+        } else {
+          setCredits(10);
+        }
+      } catch(e) {}
+    };
+    fetchCredits();
+  }, []);
+
+  const handleGenerateShareLink = async () => {
+    try {
+      const res = await fetch('http://localhost:8000/api/agency/share-link', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          agency_id: 'default_agency',
+          campaign_data: selectedTrend
+        })
+      });
+      const data = await res.json();
+      setShareLink(`http://localhost:3000${data.share_url}`);
+    } catch(e) {}
+  };
+
+  const copyToClipboard = () => {
+    if (shareLink) {
+      navigator.clipboard.writeText(shareLink);
+      setCopiedLink(true);
+      setTimeout(() => setCopiedLink(false), 2000);
+    }
+  };
+
+  useEffect(() => {
+    const eventSource = new EventSource('/api/engagement/stream');
+    eventSource.onmessage = (event) => {
+      try {
+        const newEngagement = JSON.parse(event.data);
+        setEngagements(prev => [newEngagement, ...prev].slice(0, 20)); // keep last 20
+      } catch (err) {}
+    };
+    return () => eventSource.close();
+  }, []);
 
   // Cross-platform toggles
   const [platforms, setPlatforms] = useState({
@@ -70,33 +152,96 @@ export default function OmniDeckPage() {
   };
 
   const handleAutoPublish = async () => {
+    const userId = localStorage.getItem('cognitoUserId') || 'anonymous';
     setPublishing(true);
     try {
-      const activePlatforms = Object.entries(platforms)
-        .filter(([_, active]) => active)
-        .map(([key]) => key);
+      const res = await fetch('/api/publish', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: userId,
+          campaign_id: `campaign_${Date.now()}`,
+          platforms: Object.keys(platforms).filter(k => platforms[k as keyof typeof platforms])
+        }),
+      });
 
-      const res = await fetch('http://localhost:8000/api/publish', {
+      if (res.status === 402) {
+        alert("Not enough credits! Publishing costs 5 credits.");
+        setPublishing(false);
+        return;
+      }
+
+      const data = await res.json();
+      if (data.status === 'success') {
+        setPublishing(false);
+        setPublished(true);
+        // fetch fresh credits
+        if (userId !== 'anonymous') {
+            const subRes = await fetch(`/api/stripe/subscription?userId=${userId}`);
+            if (subRes.ok) {
+                const subData = await subRes.json();
+                setCredits(subData.credits);
+            }
+        } else {
+            setCredits((prev) => prev !== null ? prev - 5 : 5);
+        }
+        setTimeout(() => {
+          setPublished(false);
+        }, 3000);
+      }
+    } catch (e) {
+      console.error(e);
+      setPublishing(false);
+    }
+  };
+
+  const handleSchedulePublish = async () => {
+    if (!scheduleTime) {
+      alert("Please select a date and time first!");
+      return;
+    }
+    const userId = localStorage.getItem('cognitoUserId') || 'anonymous';
+    setPublishing(true);
+    try {
+      const res = await fetch('/api/publish', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          campaign_id: selectedTrend.id,
-          platforms: activePlatforms
-        })
+          userId: userId,
+          campaign_id: `campaign_${Date.now()}_scheduled`,
+          platforms: Object.keys(platforms).filter(k => platforms[k as keyof typeof platforms]),
+          schedule_time: scheduleTime
+        }),
       });
+
+      if (res.status === 402) {
+        alert("Not enough credits! Scheduling costs 5 credits.");
+        setPublishing(false);
+        return;
+      }
+
       const data = await res.json();
       if (data.status === 'success') {
+        setPublishing(false);
+        setScheduled(true);
+        setIsScheduling(false);
+        if (userId !== 'anonymous') {
+            const subRes = await fetch(`/api/stripe/subscription?userId=${userId}`);
+            if (subRes.ok) {
+                const subData = await subRes.json();
+                setCredits(subData.credits);
+            }
+        } else {
+            setCredits((prev) => prev !== null ? prev - 5 : 5);
+        }
         setTimeout(() => {
-          setPublishing(false);
-          setPublished(true);
-          setTimeout(() => {
-            setPublished(false);
-            setSelectedTrend(null);
-          }, 3000);
-        }, 2000);
+          setScheduled(false);
+        }, 4000);
       }
-    } catch (err) {
-      console.error(err);
+    } catch (e) {
+      console.error(e);
       setPublishing(false);
     }
   };
@@ -134,15 +279,71 @@ export default function OmniDeckPage() {
             </p>
           </div>
 
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={() => router.push('/')}
-            className="px-6 py-3 rounded-xl bg-white/5 border border-white/10 text-white font-medium hover:bg-white/10 transition-colors flex items-center gap-2 glass-card"
-          >
-            Back to War Room
-          </motion.button>
+          <div className="flex items-center gap-4">
+            {/* Credits Badge */}
+            <div className="flex items-center gap-3 bg-white/5 border border-white/10 px-4 py-2 rounded-xl glass-card">
+              <Zap className="w-5 h-5 text-yellow-400" />
+              <span className="text-sm font-bold text-yellow-400">
+                {credits !== null ? `${credits.toLocaleString()} CREDITS` : 'LOADING...'}
+              </span>
+            </div>
+
+            {/* Agency Mode Toggle */}
+            <div className="flex items-center gap-3 bg-white/5 border border-white/10 px-4 py-2 rounded-xl glass-card">
+              <Building className={`w-5 h-5 ${agencyMode ? 'text-indigo-400' : 'text-gray-400'}`} />
+              <span className={`text-sm font-bold ${agencyMode ? 'text-indigo-400' : 'text-gray-400'}`}>AGENCY MODE</span>
+              <button
+                onClick={() => setAgencyMode(!agencyMode)}
+                className={`w-12 h-6 rounded-full relative transition-colors ${agencyMode ? 'bg-indigo-500' : 'bg-gray-700'}`}
+              >
+                <motion.div
+                  animate={{ x: agencyMode ? 24 : 4 }}
+                  className="w-4 h-4 bg-white rounded-full absolute top-1 shadow-sm"
+                />
+              </button>
+            </div>
+
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => router.push('/')}
+              className="px-6 py-3 rounded-xl bg-white/5 border border-white/10 text-white font-medium hover:bg-white/10 transition-colors flex items-center gap-2 glass-card"
+            >
+              Back to War Room
+            </motion.button>
+          </div>
         </div>
+
+        {/* Agency Client Selector */}
+        <AnimatePresence>
+          {agencyMode && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              className="mb-8 overflow-hidden"
+            >
+              <div className="flex items-center gap-4 bg-indigo-500/10 border border-indigo-500/20 p-4 rounded-xl">
+                <span className="text-indigo-400 font-bold">ACTIVE CLIENT:</span>
+                <div className="flex gap-2">
+                  {clients.map(client => (
+                    <button
+                      key={client.id}
+                      onClick={() => setSelectedClient(client)}
+                      className={`px-4 py-2 rounded-lg text-sm font-bold transition-colors ${
+                        selectedClient?.id === client.id 
+                          ? 'bg-indigo-500 text-white' 
+                          : 'bg-white/5 text-gray-400 hover:bg-white/10'
+                      }`}
+                    >
+                      {client.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           
@@ -356,10 +557,65 @@ export default function OmniDeckPage() {
                           </>
                         ) : (
                           <>
-                            <Send className="w-5 h-5" /> Execute Zero-Click Publish
+                            <Send className="w-5 h-5" /> Execute Zero-Click Publish (5 Credits)
                           </>
                         )}
                       </motion.button>
+                      
+                      <AnimatePresence>
+                        {isScheduling ? (
+                          <motion.div
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: 'auto' }}
+                            exit={{ opacity: 0, height: 0 }}
+                            className="bg-black/40 border border-white/10 rounded-xl p-4 space-y-3 overflow-hidden"
+                          >
+                            <div className="flex items-center gap-2 mb-2">
+                              <CalendarClock className="w-4 h-4 text-purple-400" />
+                              <span className="text-sm font-bold text-white">Select Broadcast Time</span>
+                            </div>
+                            <input
+                              type="datetime-local"
+                              value={scheduleTime}
+                              onChange={(e) => setScheduleTime(e.target.value)}
+                              className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm outline-none focus:border-purple-500/50 transition-colors"
+                            />
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => setIsScheduling(false)}
+                                className="flex-1 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-xs font-bold transition-all text-gray-300"
+                              >
+                                Cancel
+                              </button>
+                              <button
+                                onClick={handleSchedulePublish}
+                                disabled={publishing || !scheduleTime}
+                                className="flex-1 py-2 rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 text-white text-xs font-bold shadow-[0_0_15px_rgba(168,85,247,0.3)] hover:shadow-[0_0_25px_rgba(168,85,247,0.5)] transition-all disabled:opacity-50"
+                              >
+                                {publishing ? "Scheduling..." : "Confirm Schedule (5 Credits)"}
+                              </button>
+                            </div>
+                          </motion.div>
+                        ) : scheduled ? (
+                          <motion.div
+                            initial={{ scale: 0.9, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            className="w-full py-3 rounded-xl bg-purple-500/20 border border-purple-500/30 text-purple-300 font-bold flex items-center justify-center gap-2"
+                          >
+                            <CalendarClock className="w-5 h-5" /> Campaign Queued Successfully
+                          </motion.div>
+                        ) : (
+                          <motion.button
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
+                            onClick={() => setIsScheduling(true)}
+                            disabled={publishing || (!platforms.instagram && !platforms.tiktok && !platforms.youtube)}
+                            className="w-full py-3 rounded-xl bg-white/5 border border-white/10 text-white font-bold flex items-center justify-center gap-2 hover:bg-white/10 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            <CalendarClock className="w-5 h-5 text-purple-400" /> Schedule for Later
+                          </motion.button>
+                        )}
+                      </AnimatePresence>
                       
                       <motion.button
                         whileHover={{ scale: 1.02 }}
@@ -370,6 +626,43 @@ export default function OmniDeckPage() {
                       >
                         Edit Campaign in War Room
                       </motion.button>
+
+                      {agencyMode && (
+                        <div className="mt-4 p-4 rounded-xl bg-indigo-500/10 border border-indigo-500/20">
+                          <div className="flex items-center gap-2 mb-3">
+                            <Building className="w-4 h-4 text-indigo-400" />
+                            <span className="text-sm font-bold text-indigo-400">AGENCY ACTION:</span>
+                          </div>
+                          {!shareLink ? (
+                            <motion.button
+                              whileHover={{ scale: 1.02 }}
+                              whileTap={{ scale: 0.98 }}
+                              onClick={handleGenerateShareLink}
+                              className="w-full py-3 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-bold flex items-center justify-center gap-2 transition-all shadow-[0_0_15px_rgba(99,102,241,0.4)]"
+                            >
+                              <LinkIcon className="w-4 h-4" /> Share for Client Approval
+                            </motion.button>
+                          ) : (
+                            <div className="flex flex-col gap-2">
+                              <span className="text-xs text-green-400 font-bold">✓ Share Link Generated</span>
+                              <div className="flex items-center gap-2">
+                                <input 
+                                  readOnly 
+                                  value={shareLink} 
+                                  className="flex-1 bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-xs text-gray-300 outline-none"
+                                />
+                                <button 
+                                  onClick={copyToClipboard}
+                                  className="p-2 bg-white/10 hover:bg-white/20 rounded-lg transition-colors text-white"
+                                >
+                                  {copiedLink ? <CheckCircle2 className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4" />}
+                                </button>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
                       <p className="text-center text-xs text-gray-500 mt-3 font-tactical">DIAMOND CASCADE WILL AUTONOMOUSLY OPTIMIZE CAPTIONS FOR EACH PLATFORM</p>
                     </div>
 
@@ -380,6 +673,95 @@ export default function OmniDeckPage() {
           </div>
 
         </div>
+
+        {/* ========================================================= */}
+        {/* SPRINT 5: THE AUTHORITY DEFENDER - LIVE ENGAGEMENT RADAR */}
+        {/* ========================================================= */}
+        <div className="mt-8 glass-card rounded-2xl border border-white/10 p-6 relative overflow-hidden">
+          {/* Animated scanline effect for the radar */}
+          <motion.div
+            className="absolute inset-0 bg-gradient-to-b from-transparent via-cyan-500/5 to-transparent h-20 w-full z-0 pointer-events-none"
+            animate={{ y: [-100, 800] }}
+            transition={{ duration: 4, repeat: Infinity, ease: 'linear' }}
+          />
+          
+          <div className="flex items-center justify-between mb-6 relative z-10">
+            <h2 className="text-2xl font-bold flex items-center gap-2">
+              <Shield className="w-6 h-6 text-cyan-400" />
+              Authority Defender <span className="text-sm font-tactical text-gray-500 tracking-widest ml-2">LIVE LISTENING RADAR</span>
+            </h2>
+            <div className="flex items-center gap-2 text-xs font-tactical text-gray-400">
+              <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+              SYSTEM ACTIVE
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 relative z-10 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
+            <AnimatePresence>
+              {engagements.length === 0 ? (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="col-span-full h-40 flex flex-col items-center justify-center text-gray-500 border border-dashed border-white/10 rounded-xl"
+                >
+                  <MessageSquare className="w-8 h-8 mb-2 opacity-50" />
+                  <p>Monitoring Meta Webhooks for incoming comments...</p>
+                </motion.div>
+              ) : (
+                engagements.map((eng) => (
+                  <motion.div
+                    key={eng.id}
+                    initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    className={`rounded-xl border p-4 shadow-lg flex flex-col justify-between ${
+                      eng.sentiment === 'NEGATIVE' || eng.sentiment === 'TROLL' 
+                        ? 'bg-red-500/5 border-red-500/20' 
+                        : eng.sentiment === 'POSITIVE' 
+                          ? 'bg-green-500/5 border-green-500/20' 
+                          : 'bg-white/5 border-white/10'
+                    }`}
+                  >
+                    <div>
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-2">
+                          <User className="w-4 h-4 text-gray-400" />
+                          <span className="font-bold text-sm text-gray-300">@{eng.username}</span>
+                        </div>
+                        <span className={`text-[10px] px-2 py-1 rounded font-bold tracking-wider ${
+                          eng.sentiment === 'NEGATIVE' || eng.sentiment === 'TROLL' 
+                            ? 'bg-red-500/20 text-red-400' 
+                            : eng.sentiment === 'POSITIVE' 
+                              ? 'bg-green-500/20 text-green-400' 
+                              : 'bg-blue-500/20 text-blue-400'
+                        }`}>
+                          {eng.sentiment}
+                        </span>
+                      </div>
+                      
+                      <p className="text-sm text-white mb-4 italic">"{eng.comment}"</p>
+                      
+                      <div className="bg-black/30 rounded-lg p-3 border border-white/5">
+                        <div className="flex items-center gap-2 mb-1">
+                          <Shield className="w-3 h-3 text-indigo-400" />
+                          <span className="text-[10px] text-gray-500 font-tactical">AI AUTO-REPLY DRAFT</span>
+                        </div>
+                        <p className="text-xs text-indigo-300 font-medium leading-relaxed">{eng.ai_reply}</p>
+                      </div>
+                    </div>
+                    
+                    <div className="mt-4 pt-3 border-t border-white/5 flex items-center justify-between">
+                      <span className="text-xs text-gray-500">{new Date(eng.timestamp).toLocaleTimeString()}</span>
+                      <button className="text-xs font-bold bg-indigo-500/20 text-indigo-400 px-3 py-1.5 rounded hover:bg-indigo-500/30 transition-colors">
+                        Approve & Send
+                      </button>
+                    </div>
+                  </motion.div>
+                ))
+              )}
+            </AnimatePresence>
+          </div>
+        </div>
+
       </main>
     </div>
   );

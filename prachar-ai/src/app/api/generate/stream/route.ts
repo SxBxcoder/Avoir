@@ -18,7 +18,7 @@
  *   - done       → Stream complete
  */
 
-import { getSubscription, incrementCampaignCount } from '@/lib/services/subscription';
+import { deductCredits } from '@/lib/db/users';
 import { canGenerateCampaign, PLANS } from '@/lib/stripe';
 import { createCampaign } from '@/lib/db/campaigns';
 import { checkRateLimit } from '@/lib/db/cache';
@@ -84,8 +84,12 @@ function createSSEStream(
           status: 'completed',
         });
 
-        // Increment usage
-        await incrementCampaignCount(userId);
+        // Deduct 1 credit for standard stream generation
+        const deductionSuccess = await deductCredits(userId, 1);
+        if (!deductionSuccess) {
+            console.error(`[STREAM API] Failed to deduct credits for user ${userId}`);
+            // Non-fatal, but we log it
+        }
 
         send('status', { message: '✅ Campaign compiled. Deploying assets...', timestamp: Date.now() });
 

@@ -15,7 +15,7 @@
  */
 
 import { NextResponse } from 'next/server';
-import { getSubscription, incrementCampaignCount } from '@/lib/services/subscription';
+import { getSubscription, deductCredits } from '@/lib/services/subscription';
 import { canGenerateCampaign, PLANS } from '@/lib/stripe';
 import { createCampaign } from '@/lib/db/campaigns';
 import { checkRateLimit } from '@/lib/db/cache';
@@ -64,17 +64,16 @@ export async function POST(req: Request) {
     const sub = await getSubscription(userId);
 
     if (!canGenerateCampaign(sub)) {
-      const plan = PLANS[sub.tier];
-      console.log(`[Generate] 🚫 User ${userId} blocked. Used ${sub.campaignsUsedThisMonth}/${plan.campaignsPerMonth} campaigns.`);
+      console.log(`[Generate] 🚫 User ${userId} blocked. Insufficient credits: ${sub.credits}.`);
       return NextResponse.json(
         { 
-          error: 'Campaign limit reached',
-          message: `You've used all ${plan.campaignsPerMonth} campaigns for this month. Upgrade to Pro for unlimited campaigns.`,
+          error: 'Insufficient Credits',
+          message: `You don't have enough credits to run this operation (Cost: 1 Credit). Please upgrade to Pro or Enterprise.`,
           upgradeRequired: true,
-          currentUsage: sub.campaignsUsedThisMonth,
-          limit: plan.campaignsPerMonth,
+          currentCredits: sub.credits,
+          cost: 1,
         },
-        { status: 429 } // Too Many Requests
+        { status: 402 } // Payment Required
       );
     }
 
@@ -88,7 +87,7 @@ export async function POST(req: Request) {
       throw new Error("NEXT_PUBLIC_API_URL is missing from .env.local");
     }
 
-    console.log(`[Generate] 🚀 User ${userId} (${sub.tier}) — ${sub.campaignsUsedThisMonth}/${PLANS[sub.tier].campaignsPerMonth === -1 ? '∞' : PLANS[sub.tier].campaignsPerMonth} campaigns used`);
+    console.log(`[Generate] 🚀 User ${userId} (${sub.tier}) — ${sub.credits} credits remaining`);
     console.log(`[Generate] Firing payload to AWS Lambda: ${apiUrl}`);
 
     // CALL THE LIVE AWS LAMBDA AGENT with stateful messages
@@ -140,10 +139,10 @@ export async function POST(req: Request) {
     });
 
     // ========================================================================
-    // INCREMENT USAGE COUNTER (Atomic — DynamoDB)
+    // DEDUCT 1 CREDIT (Atomic — DynamoDB)
     // ========================================================================
-    await incrementCampaignCount(userId);
-    console.log(`[Generate] ✅ Campaign ${campaign.campaignId} generated for ${userId}. Persisted to DynamoDB.`);
+    await deductCredits(userId, 1);
+    console.log(`[Generate] ✅ Campaign ${campaign.campaignId} generated for ${userId}. Persisted to DynamoDB. Deducted 1 Credit.`);
 
     // Map Python Agent response back to your Next.js UI format
     return NextResponse.json({

@@ -32,9 +32,9 @@ export const PLANS: Record<PlanTier, PlanConfig> = {
     name: 'Starter',
     monthlyPriceId: '',
     annualPriceId: '',
-    campaignsPerMonth: 3,
+    campaignsPerMonth: 0,
     features: [
-      '3 campaigns / month',
+      '10 Trial Credits',
       'Standard AI models',
       'Community support',
     ],
@@ -46,7 +46,7 @@ export const PLANS: Record<PlanTier, PlanConfig> = {
     annualPriceId: process.env.NEXT_PUBLIC_STRIPE_PRO_ANNUAL_PRICE_ID || 'price_pro_annual',
     campaignsPerMonth: -1, // unlimited
     features: [
-      'Unlimited campaigns',
+      '+1,000 Credits',
       '6-Tier Diamond Cascade AI',
       'Priority support',
       'Custom brand guidelines',
@@ -60,7 +60,7 @@ export const PLANS: Record<PlanTier, PlanConfig> = {
     annualPriceId: process.env.NEXT_PUBLIC_STRIPE_ENT_ANNUAL_PRICE_ID || 'price_ent_annual',
     campaignsPerMonth: -1,
     features: [
-      'Everything in Pro',
+      '+5,000 Credits',
       'White-label branding',
       'Team collaboration (5 seats)',
       'API access',
@@ -129,7 +129,8 @@ export interface UserSubscription {
   status: 'active' | 'trialing' | 'past_due' | 'canceled' | 'unpaid' | 'incomplete' | 'none';
   currentPeriodEnd: string | null; // ISO date
   cancelAtPeriodEnd: boolean;
-  campaignsUsedThisMonth: number;
+  credits: number;
+  campaignsUsedThisMonth?: number; // Kept for backwards compatibility if needed, but deprecated
   lastResetDate: string; // ISO date — when the monthly counter was last reset
 }
 
@@ -143,6 +144,7 @@ export const DEFAULT_SUBSCRIPTION: Omit<UserSubscription, 'userId'> = {
   status: 'none',
   currentPeriodEnd: null,
   cancelAtPeriodEnd: false,
+  credits: 10,
   campaignsUsedThisMonth: 0,
   lastResetDate: new Date().toISOString(),
 };
@@ -152,19 +154,15 @@ export const DEFAULT_SUBSCRIPTION: Omit<UserSubscription, 'userId'> = {
 // ============================================================================
 
 /**
- * Given a user's subscription, determine if they can generate another campaign.
+ * Given a user's subscription, determine if they can generate a campaign (costs 1 credit)
  */
 export function canGenerateCampaign(sub: UserSubscription): boolean {
-  const plan = PLANS[sub.tier];
-  if (plan.campaignsPerMonth === -1) return true; // unlimited
-  return sub.campaignsUsedThisMonth < plan.campaignsPerMonth;
+  return sub.credits >= 1;
 }
 
 /**
- * Returns the remaining campaign count, or -1 for unlimited.
+ * Returns the remaining credits
  */
 export function getRemainingCampaigns(sub: UserSubscription): number {
-  const plan = PLANS[sub.tier];
-  if (plan.campaignsPerMonth === -1) return -1;
-  return Math.max(0, plan.campaignsPerMonth - sub.campaignsUsedThisMonth);
+  return sub.credits;
 }

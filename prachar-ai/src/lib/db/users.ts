@@ -11,8 +11,7 @@
  *               lastResetDate, createdAt, updatedAt
  * 
  * Features:
- *   - Auto-reset monthly campaign counter on new billing period
- *   - Atomic increment for campaign usage (no race conditions)
+ *   - Atomic decrement for credit usage (no race conditions)
  *   - TTL support for temporary rate-limit entries
  */
 
@@ -37,23 +36,6 @@ export async function getSubscription(userId: string): Promise<UserSubscription>
 
     if (result.Item) {
       const sub = result.Item as UserSubscription;
-
-      // Auto-reset monthly counter if a new month has started
-      const lastReset = new Date(sub.lastResetDate);
-      const now = new Date();
-      if (
-        lastReset.getMonth() !== now.getMonth() ||
-        lastReset.getFullYear() !== now.getFullYear()
-      ) {
-        sub.campaignsUsedThisMonth = 0;
-        sub.lastResetDate = now.toISOString();
-        // Persist the reset
-        await upsertSubscription(userId, {
-          campaignsUsedThisMonth: 0,
-          lastResetDate: now.toISOString(),
-        });
-      }
-
       return sub;
     }
   } catch (err: any) {
@@ -144,10 +126,10 @@ export async function upsertSubscription(
 }
 
 // ============================================================================
-// INCREMENT CAMPAIGN COUNT (Atomic)
+// DEDUCT CREDITS (Atomic)
 // ============================================================================
 
-export async function incrementCampaignCount(userId: string): Promise<UserSubscription> {
+export async function deductCredits(userId: string, amount: number): Promise<UserSubscription> {
   const client = getDynamoClient();
 
   try {
@@ -156,14 +138,14 @@ export async function incrementCampaignCount(userId: string): Promise<UserSubscr
         TableName: TABLES.USERS,
         Key: { userId },
         UpdateExpression:
-          'SET #count = if_not_exists(#count, :zero) + :one, #updated = :now',
+          'SET #credits = if_not_exists(#credits, :zero) - :amount, #updated = :now',
         ExpressionAttributeNames: {
-          '#count': 'campaignsUsedThisMonth',
+          '#credits': 'credits',
           '#updated': 'updatedAt',
         },
         ExpressionAttributeValues: {
           ':zero': 0,
-          ':one': 1,
+          ':amount': amount,
           ':now': new Date().toISOString(),
         },
         ReturnValues: 'ALL_NEW',
@@ -172,7 +154,7 @@ export async function incrementCampaignCount(userId: string): Promise<UserSubscr
 
     return result.Attributes as UserSubscription;
   } catch (err: any) {
-    console.error(`[DB] DynamoDB increment failed for ${userId}: ${err.message}`);
+    console.error(`[DB] DynamoDB deduct failed for ${userId}: ${err.message}`);
     // Fallback: return current state
     return getSubscription(userId);
   }

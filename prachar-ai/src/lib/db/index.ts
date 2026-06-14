@@ -12,7 +12,7 @@ export { getDynamoClient, TABLES } from './dynamodb';
 export {
   getSubscription,
   upsertSubscription,
-  incrementCampaignCount,
+  deductCredits,
 } from './users';
 
 // Campaign Repository

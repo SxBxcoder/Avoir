@@ -2,7 +2,10 @@ import os
 import requests
 import time
 import random
+import json
 from typing import List, Dict, Any
+
+GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', '')
 
 class TrendSniper:
     def __init__(self):
@@ -31,7 +34,11 @@ class TrendSniper:
             except Exception as e:
                 print(f"Apify Snipe Failed: {e}")
 
-        # 3. Fallback to Mocks if we got nothing (Keys missing or failed)
+        # 3. Fallback to Gemini AI if we got nothing (Keys missing or failed)
+        if not trends:
+            trends = self._generate_ai_trends()
+            
+        # If Gemini also fails (no API key), use the Titanium Shield Mock
         if not trends:
             trends = self._get_smart_mock_trends()
             
@@ -74,20 +81,71 @@ class TrendSniper:
         # Using a mock return for now, but wired for real integration.
         return []
 
+    def _generate_ai_trends(self) -> List[Dict[str, Any]]:
+        """
+        Dynamically generates real-time looking trends using Gemini.
+        This represents the 'Proactive Autonomous' upgrade.
+        """
+        if not GEMINI_API_KEY:
+            return []
+
+        print("[TrendSniper] 🎯 Firing Gemini AI for dynamic trend detection...")
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
+        
+        system_prompt = """You are an elite Social Media Trend Analyst. Return 3 highly viral, currently trending social media content formats.
+Return valid JSON only. Format:
+[
+  {
+    "id": "unique_id",
+    "platform": "TikTok/Reels" | "YouTube Shorts",
+    "trend_name": "Name of the trend",
+    "description": "Why it works and what the visual format is",
+    "velocity": "Spiking/Breaking/Sustained",
+    "virality_score": 90-99,
+    "suggested_hook": "A viral hook for this trend",
+    "mutator_tags": ["tag1", "tag2", "tag3"]
+  }
+]"""
+        try:
+            payload = {
+                "contents": [{"parts": [{"text": "Analyze the current global social media landscape and return 3 viral trends."}]}],
+                "systemInstruction": {"parts": [{"text": system_prompt}]},
+                "generationConfig": {
+                    "temperature": 0.9,
+                    "responseMimeType": "application/json"
+                }
+            }
+            resp = requests.post(url, json=payload, timeout=15)
+            resp.raise_for_status()
+            data = resp.json()
+            raw_text = data['candidates'][0]['content']['parts'][0]['text']
+            
+            trends = json.loads(raw_text)
+            
+            # Ensure they have required fields
+            for t in trends:
+                if 'audio_url' not in t:
+                    t['audio_url'] = None
+            
+            print(f"[TrendSniper] ✅ Gemini generated {len(trends)} dynamic trends.")
+            return trends
+        except Exception as e:
+            print(f"[TrendSniper] ⚠️ AI Trend Generation failed: {e}")
+            return []
+
     def _get_smart_mock_trends(self) -> List[Dict[str, Any]]:
         """
-        God-Tier high-converting realistic mocks for local development
-        when API keys are not provided.
+        Titanium Shield: Ultimate fallback if even AI keys are missing.
         """
         return [
             {
                 "id": f"trend_{int(time.time())}_1",
                 "platform": "TikTok/Reels",
                 "trend_name": "POV: Main Character Energy Transition",
-                "description": "Fast-paced camera whip transition with heavily bass-boosted phonk music. Creators use this to show 'Before vs After' transformations.",
+                "description": "Fast-paced camera whip transition with heavily bass-boosted phonk music.",
                 "velocity": "Spiking (+400% in 12h)",
                 "virality_score": 98,
-                "audio_url": "https://www.tiktok.com/music/original-sound-12345",
+                "audio_url": None,
                 "suggested_hook": "POV: You finally stopped playing it safe...",
                 "mutator_tags": ["aesthetic", "fast-cut", "phonk"]
             },
@@ -95,23 +153,12 @@ class TrendSniper:
                 "id": f"trend_{int(time.time())}_2",
                 "platform": "YouTube Shorts",
                 "trend_name": "The 'Hormozi Pattern Interrupt' Explainer",
-                "description": "Talking head format starting with an aggressive contrarian statement, followed by rapid zooming and dynamic B-roll.",
+                "description": "Talking head format starting with an aggressive contrarian statement.",
                 "velocity": "Sustained (+120% in 48h)",
                 "virality_score": 92,
                 "audio_url": None,
-                "suggested_hook": "99% of people are doing [X] completely wrong. Here's why.",
-                "mutator_tags": ["talking-head", "educational", "retention-heavy"]
-            },
-            {
-                "id": f"trend_{int(time.time())}_3",
-                "platform": "Instagram Reels",
-                "trend_name": "Nostalgia Bait CapCut Template",
-                "description": "A specific CapCut template combining old childhood photos fading into a current success/flex moment. Highly emotional.",
-                "velocity": "Breaking (+800% in 6h)",
-                "virality_score": 99,
-                "audio_url": "https://www.instagram.com/reels/audio/98765",
-                "suggested_hook": "They laughed when I started. Look at us now.",
-                "mutator_tags": ["capcut", "emotional", "trending-audio"]
+                "suggested_hook": "99% of people are doing [X] completely wrong.",
+                "mutator_tags": ["talking-head", "educational", "retention"]
             }
         ]
 

@@ -511,7 +511,7 @@ export default function CampaignDashboard({ accessToken, userEmail, onLogout }: 
                       };
                       setCurrentCampaign(campaignData);
                       if (subscription) {
-                        setSubscription(prev => prev ? { ...prev, campaignsUsedThisMonth: prev.campaignsUsedThisMonth + 1 } : prev);
+                        setSubscription((prev) => prev ? { ...prev, credits: Math.max(0, prev.credits - 1) } : prev);
                       }
                       setSystemStatus(prev => ({ ...prev, tier: 'ACTIVE', dbSync: 'SYNCED' }));
                       break;
