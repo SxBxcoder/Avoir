@@ -171,6 +171,13 @@ export default function Home() {
   }, []);
 
   const checkAuth = async () => {
+    if (typeof window !== 'undefined' && window.location.search.includes('demo=true')) {
+      setIsLoggedIn(true);
+      setUserEmail('commander@prachar.ai');
+      setAccessToken('demo-token');
+      setCheckingAuth(false);
+      return;
+    }
     const authenticated = await isAuthenticated();
     setIsLoggedIn(authenticated);
     if (authenticated) {

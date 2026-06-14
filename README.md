@@ -17,8 +17,10 @@
   <br/><br/>
 
   <img src="https://img.shields.io/badge/Next.js-14-000?style=flat-square&logo=next.js" alt="Next.js" />
-  <img src="https://img.shields.io/badge/AWS-Lambda-FF9900?style=flat-square&logo=amazonaws" alt="AWS" />
+  <img src="https://img.shields.io/badge/AWS-Amplify-FF9900?style=flat-square&logo=amazonaws" alt="AWS Amplify" />
+  <img src="https://img.shields.io/badge/AWS-Lambda-FF9900?style=flat-square&logo=amazonaws" alt="AWS Lambda" />
   <img src="https://img.shields.io/badge/Framer_Motion-0055FF?style=flat-square&logo=framer" alt="Framer Motion" />
+  <img src="https://img.shields.io/badge/Three.js-000000?style=flat-square&logo=threedotjs" alt="Three.js" />
   <img src="https://img.shields.io/badge/DynamoDB-4053D6?style=flat-square&logo=amazondynamodb" alt="DynamoDB" />
   <img src="https://img.shields.io/badge/Stripe-635BFF?style=flat-square&logo=stripe&logoColor=white" alt="Stripe" />
   <img src="https://img.shields.io/badge/Cognito-DD344C?style=flat-square&logo=amazonaws" alt="Cognito" />
@@ -50,8 +52,10 @@ Marketing to Indian Gen-Z requires deep understanding of local pop culture, slan
 |---------|-------------|
 | **Diamond Cascade Engine** | Proprietary 6-tier AI architecture orchestrating multiple models in sequence — each one refining the output. No single AI can match this. |
 | **Hinglish Mastery** | Generates viral copy with authentic power words (Aukaat, Bawaal, Main Character Energy, Level Up) — not generic English translations. |
-| **God-Tier Dashboard UX** | Multi-million dollar SaaS aesthetic: Real-time SSE Streaming, Framer Motion spring physics, slide-out sidebars, and an ChatGPT-style floating chat interface. |
+| **Dynamic Motion UI** | **[NEW]** Immersive 3D interactive physics and `TechGeometryCanvas` backgrounds. Features Framer Motion spring physics, magnetic buttons, glassmorphism, floating micro-animations, and fluid interactive scaling that reacts to mouse tracking. |
+| **God-Tier Dashboard UX** | Real-time SSE Streaming, slide-out sidebars, and a ChatGPT-style floating chat interface for generating campaigns. |
 | **Mobile-First Domination** | 100% responsive fluid typography, native-feeling mobile drawers, and stacked UI cards for seamless execution on iPhones/Androids. |
+| **Automated CI/CD** | **[NEW]** Production-ready Continuous Integration and Continuous Deployment (CI/CD) pipeline fully powered by AWS Amplify out of the box. |
 | **Complete Campaigns** | Hook → Offer → CTA strategy + 3 platform-ready captions + visual direction. Everything in one click. |
 | **Trend Sniper** *(Coming)* | Auto-detect viral trends across Instagram, YouTube, and X. Get campaign suggestions in real-time. |
 | **Aukaat Engine** *(Coming)* | Competitive intelligence that shows exactly where you stand against competitors in your niche. |
@@ -146,7 +150,7 @@ graph LR
   </tr>
   <tr>
     <td width="50%"><img src="docs/screenshots/login.png" alt="Login Page" /><br/><sub><b>Login</b> — Split-panel design with brand identity</sub></td>
-    <td width="50%"><img src="docs/screenshots/register.png" alt="Register Page" /><br/><sub><b>Register</b> — Password strength indicators</sub></td>
+    <td width="50%"><img src="docs/screenshots/dashboard.png" alt="Dashboard" /><br/><sub><b>Dashboard</b> — God-tier Generation UI</sub></td>
   </tr>
   <tr>
     <td width="50%"><img src="docs/screenshots/how_it_works.png" alt="How It Works" /><br/><sub><b>How It Works</b> — Three-step flow with spring animations</sub></td>
