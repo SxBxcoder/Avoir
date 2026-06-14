@@ -10,19 +10,19 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   title: "Prachar.ai — Your AI Creative Director",
-  description: "Generate viral Hinglish campaigns, structured marketing strategies, and authentic local copy in seconds. The AI-powered creative director built for Indian creators.",
-  keywords: ["AI marketing", "Hinglish campaigns", "Indian Gen-Z", "social media", "creative director", "viral campaigns", "content creator tools"],
+  description: "Generate viral global campaigns, structured marketing strategies, and authentic high-converting copy in seconds. The AI-powered creative director built for modern brands.",
+  keywords: ["AI marketing", "global campaigns", "digital marketing", "social media", "creative director", "viral campaigns", "content creator tools"],
   openGraph: {
     title: "Prachar.ai — Your AI Creative Director",
-    description: "Generate viral campaigns in seconds with AI. Built for Indian creators.",
+    description: "Generate viral campaigns in seconds with AI. Built for modern brands.",
     type: "website",
-    locale: "en_IN",
+    locale: "en_US",
     siteName: "Prachar.ai",
   },
   twitter: {
     card: "summary_large_image",
     title: "Prachar.ai — Your AI Creative Director",
-    description: "Generate viral campaigns in seconds with AI. Built for Indian creators.",
+    description: "Generate viral campaigns in seconds with AI. Built for modern brands.",
   },
 };
 

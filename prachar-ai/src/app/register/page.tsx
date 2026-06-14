@@ -106,7 +106,7 @@ export default function RegisterPage() {
 
             {/* Feature pills */}
             <div className="flex flex-wrap gap-3 mt-12">
-              {['AI-Powered Copy', 'Hinglish Campaigns', 'Visual Assets', 'Free to Start'].map((feat) => (
+              {['AI-Powered Copy', 'Global Campaigns', 'Visual Assets', 'Free to Start'].map((feat) => (
                 <span key={feat} className="text-xs text-zinc-400 px-3 py-1.5 rounded-full bg-white/5 border border-white/10">
                   {feat}
                 </span>

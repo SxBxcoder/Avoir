@@ -86,18 +86,18 @@ logger.info(f"API Keys configured: Gemini1={'✓' if GEMINI_API_KEY else '✗'},
 # SYSTEM PERSONA - THE CREATIVE DIRECTOR
 # ============================================================================
 
-SYSTEM_PROMPT = """You are the Prachar.ai Lead Creative Director. You dominate Indian Gen-Z marketing.
+SYSTEM_PROMPT = """You are the Prachar.ai Lead Creative Director. You dominate global digital marketing.
 
 TONE: Aggressive, elite, high-energy. Never be "mid" (mediocre).
-LANGUAGE: Masterful Hinglish (40-60% Hindi, 60-40% English)
-POWER WORDS (MUST USE): Aukaat, Bawaal, Main Character Energy, Level Up.
+LANGUAGE: Global Viral English (modern, high-converting, punchy).
+POWER WORDS (MUST USE): Viral, Aesthetic, Main Character Energy, Level Up.
 EMOJIS: 🔥, 💯, ✨, 🎉, 🚀
 
 OUTPUT FORMAT: You MUST return valid JSON with this exact structure:
 {
-  "hook": "Attention-grabbing opening (Hinglish, 50-80 chars)",
-  "offer": "Value proposition (Hinglish, 80-120 chars)",
-  "cta": "Clear action with urgency (Hinglish, 30-50 chars)",
+  "hook": "Attention-grabbing opening (English, 50-80 chars)",
+  "offer": "Value proposition (English, 80-120 chars)",
+  "cta": "Clear action with urgency (English, 30-50 chars)",
   "captions": ["Caption 1 (150-200 chars)", "Caption 2 (150-200 chars)", "Caption 3 (150-200 chars)"],
   "image_prompt": "A highly detailed, visual description of a photorealistic image for this campaign (English, 100-150 chars)"
 }
@@ -146,48 +146,48 @@ CORS_HEADERS = {
 
 MOCK_CAMPAIGNS = {
     "tech": {
-        "hook": "Arre tech enthusiasts, ready for the biggest innovation fest? 🚀",
+        "hook": "Calling all tech enthusiasts! Ready for the biggest innovation fest? 🚀",
         "offer": "3 days of workshops, hackathons, and networking with industry leaders",
         "cta": "Register now - limited seats available!",
         "captions": [
-            "🔥 Tech fest aa raha hai! AI, ML, Web3 - sab kuch seekho. Register karo abhi! 💻✨",
-            "Arre coders, yeh opportunity miss mat karo! 3 din ka tech extravaganza. Join karo! 🚀💯",
-            "Innovation ka maha-utsav! Workshops, prizes, aur networking. Seats limited hai! 🎯🔥"
+            "🔥 The ultimate tech fest is here! Learn AI, ML, and Web3 from the pros. Register now! 💻✨",
+            "Attention coders, don't miss this! 3 days of pure tech extravaganza. Join the movement! 🚀💯",
+            "The festival of innovation! Workshops, massive prizes, and networking. Secure your spot! 🎯🔥"
         ],
-        "image_prompt": "Vibrant tech conference with young Indian students coding on laptops, holographic AI displays, neon lights, futuristic atmosphere"
+        "image_prompt": "Vibrant tech conference with young modern students coding on laptops, holographic AI displays, neon lights, futuristic atmosphere"
     },
     "fest": {
         "hook": "College fest season is here! Get ready for the ultimate celebration 🎉",
         "offer": "Music, dance, food, and unlimited fun with your squad",
         "cta": "Book your passes now before they're gone!",
         "captions": [
-            "🎉 College fest ka maza loot lo! Music, dance, food - sab kuch ek jagah. Passes book karo! 🔥",
-            "Arre yaar, fest aa raha hai! Squad ke saath unlimited masti. Miss mat karna! 💯✨",
-            "Celebration time! Best performances, amazing food, aur dhamaal. Register abhi! 🚀🎊"
+            "🎉 Experience the magic of our college fest! Music, dance, and food all in one place. Book passes! 🔥",
+            "Gather your squad, the fest is here! Unlimited fun and unforgettable memories await. Don't miss out! 💯✨",
+            "Celebration time! Epic performances, amazing food, and incredible vibes. Register today! 🚀🎊"
         ],
-        "image_prompt": "Energetic college festival with colorful stage lights, crowd of excited Indian students dancing, food stalls, vibrant celebration"
+        "image_prompt": "Energetic college festival with colorful stage lights, crowd of excited modern students dancing, food stalls, vibrant celebration"
     },
     "workshop": {
-        "hook": "Level up your skills with hands-on learning!  ",
+        "hook": "Level up your skills with hands-on learning! 🎓",
         "offer": "Expert-led workshop with certificates and real-world projects",
         "cta": "Enroll today - Early bird discount available!",
         "captions": [
-            "🎓 Skill upgrade ka time! Expert teachers, real projects, certificate bhi milega. Enroll karo! 💯",
-            "Arre bhai, workshop join karo aur pro ban jao! Hands-on learning guaranteed. Register now!  ",
-            "Career boost chahiye? Yeh workshop perfect hai! Limited seats, jaldi karo! 🔥✨"
+            "🎓 Time for a massive skill upgrade! Expert instructors, real projects, and a shiny new certificate. Enroll! 💯",
+            "Join our intensive workshop and become a pro! Hands-on learning guaranteed to elevate your career. Register now! 🚀",
+            "Need a career boost? This workshop is perfectly designed for you! Limited seats remaining, act fast! 🔥✨"
         ],
-        "image_prompt": "Professional workshop setting with Indian students learning at modern desks, instructor presenting on screen, collaborative atmosphere"
+        "image_prompt": "Professional workshop setting with diverse students learning at modern desks, instructor presenting on screen, collaborative atmosphere"
     },
     "default": {
         "hook": "Something amazing is coming your way! 🌟",
-        "offer": "Exclusive opportunity for students and creators",
+        "offer": "Exclusive opportunity for creators and modern brands",
         "cta": "Join us now and be part of something special!",
         "captions": [
-            "🔥 Kuch naya aur exciting aa raha hai! Students ke liye special opportunity. Join karo! 💯",
-            "Arre yaar, yeh chance miss mat karo! Ekdum mast experience hoga. Register abhi! ✨🚀",
-            "Special offer for you! Limited time hai, jaldi action lo. Let's go!  🔥"
+            "🔥 Something fresh and exciting is dropping soon! An exclusive opportunity for creators. Join the waitlist! 💯",
+            "Don't let this massive chance slip by! We promise an absolute game-changing experience. Register now! ✨🚀",
+            "We have a special offer just for you! This is available for a limited time only, so take action now. Let's go! 🔥"
         ],
-        "image_prompt": "Dynamic group of diverse Indian students celebrating success, modern campus background, energetic and inspiring atmosphere"
+        "image_prompt": "Dynamic group of diverse modern creatives celebrating success, aesthetic minimalist background, energetic and inspiring atmosphere"
     }
 }
 
@@ -266,7 +266,7 @@ def generate_campaign_with_cascade(goal: str, messages: List[Dict[str, str]] = N
         gemini_contents = [{
             "role": "user",
             "parts": [{
-                "text": SYSTEM_PROMPT + f"\n\nTask: Create a viral Hinglish social media campaign for the following goal: {goal}\n\nReturn ONLY valid JSON with keys: hook, offer, cta, captions (array of 3), image_prompt."
+                "text": SYSTEM_PROMPT + f"\n\nTask: Create a viral global social media campaign for the following goal: {goal}\n\nReturn ONLY valid JSON with keys: hook, offer, cta, captions (array of 3), image_prompt."
             }]
         }]
         
@@ -331,7 +331,7 @@ def generate_campaign_with_cascade(goal: str, messages: List[Dict[str, str]] = N
         gemini_contents_2 = [{
             "role": "user",
             "parts": [{
-                "text": SYSTEM_PROMPT + f"\n\nTask: Create a viral Hinglish social media campaign for the following goal: {goal}\n\nReturn ONLY valid JSON with keys: hook, offer, cta, captions (array of 3), image_prompt."
+                "text": SYSTEM_PROMPT + f"\n\nTask: Create a viral global social media campaign for the following goal: {goal}\n\nReturn ONLY valid JSON with keys: hook, offer, cta, captions (array of 3), image_prompt."
             }]
         }]
         
@@ -395,7 +395,7 @@ def generate_campaign_with_cascade(goal: str, messages: List[Dict[str, str]] = N
         # Pure stateless prompt for Groq (NO message history to prevent HTTP 400)
         stateless_messages = [
             {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": f"Task: Create a viral Hinglish social media campaign for the following goal: {goal}\n\nReturn ONLY valid JSON with keys: hook, offer, cta, captions (array of 3), image_prompt."}
+            {"role": "user", "content": f"Task: Create a viral global social media campaign for the following goal: {goal}\n\nReturn ONLY valid JSON with keys: hook, offer, cta, captions (array of 3), image_prompt."}
         ]
         
         groq_payload = {
@@ -458,7 +458,7 @@ def generate_campaign_with_cascade(goal: str, messages: List[Dict[str, str]] = N
         # Pure stateless prompt for OpenRouter (NO message history)
         stateless_messages = [
             {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": f"Task: Create a viral Hinglish social media campaign for the following goal: {goal}\n\nReturn ONLY valid JSON with keys: hook, offer, cta, captions (array of 3), image_prompt."}
+            {"role": "user", "content": f"Task: Create a viral global social media campaign for the following goal: {goal}\n\nReturn ONLY valid JSON with keys: hook, offer, cta, captions (array of 3), image_prompt."}
         ]
         
         openrouter_payload = {
@@ -523,7 +523,7 @@ def generate_campaign_with_cascade(goal: str, messages: List[Dict[str, str]] = N
         # Pure stateless prompt for Shield (NO message history)
         stateless_messages = [
             {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": f"Task: Create a viral Hinglish social media campaign for the following goal: {goal}\n\nReturn ONLY valid JSON with keys: hook, offer, cta, captions (array of 3), image_prompt."}
+            {"role": "user", "content": f"Task: Create a viral global social media campaign for the following goal: {goal}\n\nReturn ONLY valid JSON with keys: hook, offer, cta, captions (array of 3), image_prompt."}
         ]
         
         shield_payload = {

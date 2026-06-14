@@ -223,7 +223,7 @@ export default function Home() {
     {
       icon: <Sparkles className="w-6 h-6" />,
       title: 'AI-Powered Copy',
-      description: 'Generate viral Hinglish captions that connect with Indian youth. No more staring at blank screens.',
+      description: 'Generate high-converting viral captions that connect with global audiences. No more staring at blank screens.',
       gradient: 'from-indigo-500/20 to-purple-500/20',
       iconColor: 'text-indigo-400',
       borderColor: 'border-indigo-500/20',
@@ -246,7 +246,7 @@ export default function Home() {
     },
     {
       icon: <BarChart3 className="w-6 h-6" />,
-      title: 'Aukaat Engine',
+      title: 'Authority Engine',
       description: 'Real-time competitive intelligence. Know exactly where you stand against competitors in your niche.',
       gradient: 'from-cyan-500/20 to-blue-500/20',
       iconColor: 'text-cyan-400',
@@ -355,8 +355,8 @@ export default function Home() {
             transition={{ ...springSmooth, delay: 0.6 }}
             className="text-lg md:text-xl text-zinc-400 max-w-2xl mx-auto mb-10 leading-relaxed"
           >
-            Generate viral Hinglish campaigns, structured marketing strategies, and authentic local copy in seconds.
-            <span className="text-zinc-300 font-medium"> Built for Indian creators.</span>
+            Generate viral global campaigns, structured marketing strategies, and authentic high-converting copy in seconds.
+            <span className="text-zinc-300 font-medium"> Built for modern brands.</span>
           </motion.p>
 
           {/* CTA buttons */}
@@ -409,7 +409,7 @@ export default function Home() {
                   <Star key={i} className="w-4 h-4 text-yellow-400 fill-yellow-400" />
                 ))}
               </div>
-              <p className="text-xs text-zinc-500 mt-0.5">Loved by 1,000+ Indian creators</p>
+              <p className="text-xs text-zinc-500 mt-0.5">Loved by 1,000+ modern creators</p>
             </div>
           </motion.div>
         </motion.div>
@@ -586,7 +586,7 @@ export default function Home() {
               <span className="fluid-text-hero">start dominating?</span>
             </h2>
             <p className="text-lg text-zinc-400 max-w-xl mx-auto mb-10">
-              Join 1,000+ Indian creators who are already using AI to generate campaigns that actually convert.
+              Join 1,000+ creators and brands who are already using AI to generate campaigns that actually convert.
             </p>
 
             <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.97 }}>

@@ -14,12 +14,12 @@ import json
 import uvicorn
 
 # Import the Lambda handler from agent.py
-from agent import lambda_handler
+from aws_lambda_handler import lambda_handler
 
 # Initialize FastAPI app
 app = FastAPI(
     title="Prachar.ai API",
-    description="AI Creative Director for Indian Students",
+    description="AI Creative Director for Modern Brands",
     version="1.0.0"
 )
 
@@ -107,8 +107,12 @@ async def generate_campaign(request: CampaignRequest):
             })
         }
         
+        # Create a mock context
+        class MockContext:
+            aws_request_id = "local-dev-request-" + request.user_id
+            
         # Call the Lambda handler
-        response = lambda_handler(event, context=None)
+        response = lambda_handler(event, context=MockContext())
         
         # Parse response
         status_code = response.get('statusCode', 500)
@@ -147,6 +151,12 @@ async def generate_campaign(request: CampaignRequest):
                 body['captions'] = ['🔥 Caption 1', '✨ Caption 2', '💥 Caption 3']
             if 'image_url' not in body:
                 body['image_url'] = 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=1024&h=1024&fit=crop'
+                
+        # Map DynamoDB keys to expected snake_case response
+        if 'campaignId' in body and 'campaign_id' not in body:
+            body['campaign_id'] = body.pop('campaignId')
+        if 'userId' in body and 'user_id' not in body:
+            body['user_id'] = body.pop('userId')
         
         # Return successful response directly (no extra wrappers)
         print(f"✅ Returning campaign to frontend")

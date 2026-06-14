@@ -26,10 +26,10 @@ import { checkRateLimit } from '@/lib/db/cache';
 // Status messages that stream to the UI for the "AI is Cooking" experience
 const COOKING_MESSAGES = [
   { delay: 0, text: '🔥 Initializing Diamond Cascade Engine...' },
-  { delay: 800, text: '⚡ Scanning Indian Gen-Z trend database...' },
-  { delay: 1600, text: '🎯 Calibrating Aukaat Engine for maximum impact...' },
+  { delay: 800, text: '⚡ Scanning global Gen-Z trend database...' },
+  { delay: 1600, text: '🎯 Calibrating Authority Engine for maximum impact...' },
   { delay: 2400, text: '🧠 Tier 1: Gemini Flash — Generating raw strategy...' },
-  { delay: 3200, text: '✍️ Crafting aggressive Hinglish hooks...' },
+  { delay: 3200, text: '✍️ Crafting high-converting viral hooks...' },
   { delay: 4000, text: '🎨 Composing visual assets with AI Director...' },
   { delay: 5000, text: '⚔️ Running final quality cascade checks...' },
 ];
