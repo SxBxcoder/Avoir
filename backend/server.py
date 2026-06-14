@@ -8,6 +8,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import json
@@ -15,6 +16,8 @@ import uvicorn
 
 # Import the Lambda handler from agent.py
 from aws_lambda_handler import lambda_handler
+from trends_sniper import sniper
+from shadow_clone import clone_engine
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -193,6 +196,57 @@ async def get_campaigns(user_id: str):
         "campaigns": [],
         "message": "Campaign history endpoint - coming soon"
     }
+
+
+# Sprint 3: Trend Sniper Endpoint
+@app.get("/api/trends")
+async def get_trends():
+    """
+    Scrapes the internet for current viral trends using the TrendSniper module.
+    """
+    try:
+        trends = sniper.get_current_trends()
+        return {"status": "success", "trends": trends}
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to snipe trends: {str(e)}"
+        )
+
+
+# Sprint 8: Omni-Deck Command Center Publish Mock
+class PublishRequest(BaseModel):
+    campaign_id: str
+    platforms: list[str]
+
+@app.post("/api/publish")
+async def publish_campaign(request: PublishRequest):
+    """
+    Zero-Click viral loop. Auto-publishes to selected platforms.
+    """
+    # MOCK implementation for local dev
+    return {
+        "status": "success",
+        "message": f"Successfully published campaign {request.campaign_id} to {', '.join(request.platforms)}!",
+        "metrics_url": "/dashboard/analytics"
+    }
+
+
+# Sprint 4: Shadow Clone Engine
+class ShadowCloneRequest(BaseModel):
+    script: str
+    image_url: str
+
+@app.post("/api/shadow-clone/generate")
+async def generate_shadow_clone(request: ShadowCloneRequest):
+    """
+    Triggers the Zero-Camera Content Factory.
+    Streams SSE updates back to the client as the avatar renders.
+    """
+    return StreamingResponse(
+        clone_engine.generate_video_stream(request.script, request.image_url),
+        media_type="text/event-stream"
+    )
 
 
 # Run server

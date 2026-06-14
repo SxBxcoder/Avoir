@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence, useSpring, useTransform } from 'framer-motion';
-import { Send, Sparkles, Terminal, Activity, Database, Globe, Copy, Check, Zap, LogOut, Menu, X, Plus, Download, BookOpen, Crown, CreditCard, Flame, Radio, ChevronRight, MessageSquare, Target, Rocket, TrendingUp, Shield, Eye } from 'lucide-react';
+import { Send, Sparkles, Terminal, Activity, Database, Globe, Copy, Check, Zap, LogOut, Menu, X, Plus, Download, BookOpen, Crown, CreditCard, Flame, Radio, ChevronRight, MessageSquare, Target, Rocket, TrendingUp, Shield, Eye, PlayCircle, Video, Loader2 } from 'lucide-react';
 import UpgradeModal from './UpgradeModal';
 import NeuralNetworkCanvas from './NeuralNetworkCanvas';
 import { type UserSubscription, canGenerateCampaign, getRemainingCampaigns, PLANS, DEFAULT_SUBSCRIPTION } from '@/lib/stripe';
@@ -380,6 +380,11 @@ export default function CampaignDashboard({ accessToken, userEmail, onLogout }: 
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   
+  // Shadow Clone States
+  const [shadowCloneStatus, setShadowCloneStatus] = useState<{step: number, message: string} | null>(null);
+  const [shadowCloneVideo, setShadowCloneVideo] = useState<string | null>(null);
+  const [isShadowModalOpen, setIsShadowModalOpen] = useState(false);
+  
   const chatEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -405,6 +410,15 @@ export default function CampaignDashboard({ accessToken, userEmail, onLogout }: 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, cookingMessages]);
+
+  // Handle Trend Snipe Redirect
+  useEffect(() => {
+    const snipe = localStorage.getItem('trend_snipe');
+    if (snipe) {
+      setInputValue(snipe);
+      localStorage.removeItem('trend_snipe');
+    }
+  }, []);
 
   // Derived subscription info
   const currentTier = subscription?.tier || 'free';
@@ -557,6 +571,68 @@ export default function CampaignDashboard({ accessToken, userEmail, onLogout }: 
     } finally {
       setIsGenerating(false);
       setCookingMessages([]);
+    }
+  };
+
+  // ========================================================================
+  // SHADOW CLONE HANDLER
+  // ========================================================================
+  const handleSummonShadowClone = async () => {
+    if (!currentCampaign) return;
+    
+    setIsShadowModalOpen(true);
+    setShadowCloneVideo(null);
+    setShadowCloneStatus({ step: 1, message: "INITIALIZING NEURAL CLONE ENGINE..." });
+    
+    try {
+      const response = await fetch('/api/shadow-clone/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          script: currentCampaign.captions[0] || currentCampaign.plan.hook,
+          image_url: currentCampaign.image_url || ""
+        })
+      });
+      
+      if (!response.ok) throw new Error("Shadow Clone generation failed");
+      
+      const reader = response.body?.getReader();
+      if (!reader) throw new Error("No readable stream");
+      
+      const decoder = new TextDecoder();
+      let buffer = '';
+      
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+        
+        for (const line of lines) {
+          if (line.startsWith('event: ')) {
+            const eventType = line.slice(7).trim();
+            const nextLine = lines[lines.indexOf(line) + 1];
+            if (nextLine?.startsWith('data: ')) {
+              try {
+                const data = JSON.parse(nextLine.slice(6));
+                if (eventType === 'status') {
+                  setShadowCloneStatus(data);
+                } else if (eventType === 'video') {
+                  setShadowCloneVideo(data.video_url);
+                  setShadowCloneStatus(null);
+                }
+              } catch (e) {
+                console.error(e);
+              }
+            }
+          }
+        }
+      }
+    } catch (err) {
+      console.error(err);
+      setShadowCloneStatus({ step: 0, message: "ERROR: NEURAL CLONE SYNTHESIS FAILED" });
     }
   };
 
@@ -794,6 +870,19 @@ export default function CampaignDashboard({ accessToken, userEmail, onLogout }: 
                 >
                   <Download className="w-4 h-4 text-purple-400 group-hover:text-purple-300 transition-colors flex-shrink-0" />
                   {!sidebarCollapsed && <span className="text-sm font-medium text-zinc-300 group-hover:text-white transition-colors whitespace-nowrap">Export Campaign</span>}
+                </button>
+              </motion.div>
+              
+              <motion.div variants={staggerItem}>
+                <button 
+                  onClick={() => {
+                    window.location.href = '/omnideck';
+                  }}
+                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl glass-card hover:border-red-500/30 cursor-pointer transition-all group"
+                  title="Omni-Deck Command Center"
+                >
+                  <Target className="w-4 h-4 text-red-400 group-hover:text-red-300 transition-colors flex-shrink-0" />
+                  {!sidebarCollapsed && <span className="text-sm font-medium text-zinc-300 group-hover:text-white transition-colors whitespace-nowrap">Omni-Deck</span>}
                 </button>
               </motion.div>
               
@@ -1043,6 +1132,23 @@ export default function CampaignDashboard({ accessToken, userEmail, onLogout }: 
                         ))}
                       </motion.div>
                     )}
+
+                    {/* Shadow Clone Factory */}
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.5 }}
+                      className="mt-8 pt-8 border-t border-zinc-800/50"
+                    >
+                      <button
+                        onClick={handleSummonShadowClone}
+                        className="w-full flex items-center justify-center gap-3 py-4 rounded-2xl bg-gradient-to-r from-emerald-600/20 to-teal-600/20 hover:from-emerald-600/40 hover:to-teal-600/40 border border-emerald-500/30 hover:border-emerald-500/60 transition-all group overflow-hidden relative shadow-[0_0_30px_rgba(16,185,129,0.1)] hover:shadow-[0_0_40px_rgba(16,185,129,0.3)]"
+                      >
+                        <div className="absolute inset-0 bg-gradient-to-r from-emerald-400/0 via-emerald-400/10 to-emerald-400/0 -translate-x-full group-hover:animate-[shimmer_2s_infinite]" />
+                        <Video className="w-6 h-6 text-emerald-400 group-hover:scale-110 transition-transform" />
+                        <span className="text-lg font-bold text-white font-tactical tracking-widest">SUMMON SHADOW CLONE</span>
+                      </button>
+                    </motion.div>
                   </motion.div>
                 )}
               </div>
@@ -1089,6 +1195,79 @@ export default function CampaignDashboard({ accessToken, userEmail, onLogout }: 
           </div>
         </div>
       </div>
+
+      {/* Shadow Clone Rendering Modal */}
+      <AnimatePresence>
+        {isShadowModalOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="w-full max-w-2xl bg-zinc-950 border border-emerald-500/30 rounded-2xl overflow-hidden shadow-[0_0_50px_rgba(16,185,129,0.2)]"
+            >
+              <div className="p-6 border-b border-white/5 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Activity className="w-5 h-5 text-emerald-400 animate-pulse" />
+                  <h3 className="text-xl font-tactical font-bold text-white tracking-widest">NEURAL CLONE FACTORY</h3>
+                </div>
+                <button onClick={() => setIsShadowModalOpen(false)} className="text-zinc-500 hover:text-white transition-colors">
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+              
+              <div className="p-8">
+                {shadowCloneVideo ? (
+                  <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
+                    <div className="aspect-video w-full bg-black rounded-xl overflow-hidden relative border border-white/10 group">
+                      <video src={shadowCloneVideo} className="w-full h-full object-cover" autoPlay loop muted playsInline />
+                      <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                        <PlayCircle className="w-16 h-16 text-white/80 cursor-pointer hover:text-white hover:scale-110 transition-all" />
+                      </div>
+                    </div>
+                    <p className="text-emerald-400 font-tactical text-center animate-pulse">ASSET READY FOR DEPLOYMENT</p>
+                  </motion.div>
+                ) : (
+                  <div className="space-y-8 py-8">
+                    <div className="flex justify-center">
+                      <div className="relative">
+                        <div className="w-32 h-32 rounded-full border-4 border-zinc-800 flex items-center justify-center relative overflow-hidden">
+                          {currentCampaign?.image_url && <img src={currentCampaign.image_url} alt="Base" className="w-full h-full object-cover opacity-30" />}
+                          <div className="absolute inset-0 bg-emerald-500/20 animate-pulse" />
+                          <Loader2 className="w-10 h-10 text-emerald-400 absolute animate-spin" />
+                        </div>
+                        <motion.div 
+                          className="absolute -inset-4 border-2 border-emerald-500/30 rounded-full"
+                          animate={{ scale: [1, 1.2, 1], opacity: [0.5, 0, 0.5] }}
+                          transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                        />
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-2 text-center">
+                      <p className="text-2xl font-tactical text-emerald-400">STEP {shadowCloneStatus?.step || 1} / 5</p>
+                      <p className="text-zinc-400 font-mono text-sm tracking-wider">{shadowCloneStatus?.message || "INITIALIZING..."}</p>
+                    </div>
+                    
+                    <div className="w-full h-2 bg-zinc-800 rounded-full overflow-hidden">
+                      <motion.div 
+                        className="h-full bg-emerald-500"
+                        animate={{ width: `${((shadowCloneStatus?.step || 1) / 5) * 100}%` }}
+                        transition={{ duration: 0.5 }}
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Status Bar — Desktop Only */}
       <div className="hidden lg:flex h-[36px] z-[60] border-t border-zinc-800/50 bg-zinc-950/90 backdrop-blur-xl px-6 items-center justify-between text-xs font-tactical flex-shrink-0">

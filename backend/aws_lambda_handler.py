@@ -105,6 +105,23 @@ OUTPUT FORMAT: You MUST return valid JSON with this exact structure:
 CRITICAL: The image_prompt must be in English, highly detailed, and describe a photorealistic scene that captures the campaign's energy."""
 
 
+TREND_SNIPER_PROMPT = """You are the Prachar.ai God-Tier Trend Sniper. Your job is to hijack a viral internet trend and mutate it into a massive campaign for the user.
+
+TONE: Aggressive, hyper-relevant, algorithm-optimizing.
+LANGUAGE: Global Viral English.
+POWER WORDS (MUST USE): Viral, Algorithm, Attention, Hack.
+
+The user will provide a specific TREND. You must create a campaign that RIDES THIS TREND perfectly.
+OUTPUT FORMAT: You MUST return valid JSON with this exact structure:
+{
+  "hook": "Attention-grabbing opening optimized for this specific trend (50-80 chars)",
+  "offer": "Value proposition disguised as entertainment (80-120 chars)",
+  "cta": "Clear action (30-50 chars)",
+  "captions": ["Caption 1 matching the trend vibe", "Caption 2 for high engagement", "Caption 3 alternative angle"],
+  "image_prompt": "A highly detailed, visual description of a photorealistic image matching the trend's aesthetic"
+}"""
+
+
 # ============================================================================
 # MODEL CONFIGURATION (6-Tier Diamond Resilience Cascade)
 # ============================================================================
@@ -248,6 +265,11 @@ def generate_campaign_with_cascade(goal: str, messages: List[Dict[str, str]] = N
     
     logger.info("Using pure stateless generation with live AI image generation")
 
+    active_system_prompt = SYSTEM_PROMPT
+    if "[TREND SNIPE]" in goal:
+        logger.info("🎯 TREND SNIPE DETECTED. Engaging Trend Sniper Persona.")
+        active_system_prompt = TREND_SNIPER_PROMPT
+
     # ========================================================================
     # TIER 1: GOOGLE GEMINI 3 FLASH PREVIEW (Primary Key 1)
     # ========================================================================
@@ -266,7 +288,7 @@ def generate_campaign_with_cascade(goal: str, messages: List[Dict[str, str]] = N
         gemini_contents = [{
             "role": "user",
             "parts": [{
-                "text": SYSTEM_PROMPT + f"\n\nTask: Create a viral global social media campaign for the following goal: {goal}\n\nReturn ONLY valid JSON with keys: hook, offer, cta, captions (array of 3), image_prompt."
+                "text": active_system_prompt + f"\n\nTask: Create a viral global social media campaign for the following goal: {goal}\n\nReturn ONLY valid JSON with keys: hook, offer, cta, captions (array of 3), image_prompt."
             }]
         }]
         
@@ -394,7 +416,7 @@ def generate_campaign_with_cascade(goal: str, messages: List[Dict[str, str]] = N
         
         # Pure stateless prompt for Groq (NO message history to prevent HTTP 400)
         stateless_messages = [
-            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "system", "content": active_system_prompt},
             {"role": "user", "content": f"Task: Create a viral global social media campaign for the following goal: {goal}\n\nReturn ONLY valid JSON with keys: hook, offer, cta, captions (array of 3), image_prompt."}
         ]
         
@@ -457,7 +479,7 @@ def generate_campaign_with_cascade(goal: str, messages: List[Dict[str, str]] = N
         
         # Pure stateless prompt for OpenRouter (NO message history)
         stateless_messages = [
-            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "system", "content": active_system_prompt},
             {"role": "user", "content": f"Task: Create a viral global social media campaign for the following goal: {goal}\n\nReturn ONLY valid JSON with keys: hook, offer, cta, captions (array of 3), image_prompt."}
         ]
         
@@ -522,7 +544,7 @@ def generate_campaign_with_cascade(goal: str, messages: List[Dict[str, str]] = N
         
         # Pure stateless prompt for Shield (NO message history)
         stateless_messages = [
-            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "system", "content": active_system_prompt},
             {"role": "user", "content": f"Task: Create a viral global social media campaign for the following goal: {goal}\n\nReturn ONLY valid JSON with keys: hook, offer, cta, captions (array of 3), image_prompt."}
         ]
         
