@@ -132,13 +132,7 @@ User Request
 
 ## 📸 Platform Interface
 
-<div align="center">
-  <img src="docs/screenshots/dashboard2.png" alt="Advanced Dashboard" width="100%" style="border-radius: 8px; box-shadow: 0 4px 30px rgba(0,0,0,0.5);" />
-  <br/>
-  <sub><b>The War Room</b> — Live alpha generation, market visualization, and Genome Mode</sub>
-</div>
 
-<br/>
 
 <table>
   <tr>
