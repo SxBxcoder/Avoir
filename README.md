@@ -153,7 +153,7 @@ User Request
   </tr>
   <tr>
     <td width="50%">
-      <img src="docs/screenshots/omnideck_published.png" alt="Omni-Deck" />
+      <img src="docs/screenshots/Omnideck.png" alt="Omni-Deck" />
       <br/><sub><b>Omni-Deck Command Center</b> — Centralized cross-platform publishing</sub>
     </td>
     <td width="50%">
