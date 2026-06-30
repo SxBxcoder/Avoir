@@ -10,7 +10,7 @@
 
   <br/>
 
-  <a href="https://main.d2u0mm6cr1j81.amplifyapp.com/"><img src="https://img.shields.io/badge/🌐_Live_Demo-Try_It_Now-6366f1?style=for-the-badge" alt="Live Demo" /></a>
+  <a href="https://main.d2dh7nn5wsblob.amplifyapp.com/"><img src="https://img.shields.io/badge/🌐_Live_Demo-Try_It_Now-6366f1?style=for-the-badge" alt="Live Demo" /></a>
   &nbsp;
   <a href="#-quick-start"><img src="https://img.shields.io/badge/⚡_Quick_Start-Setup_Guide-22c55e?style=for-the-badge" alt="Quick Start" /></a>
 
@@ -288,7 +288,7 @@ Open **http://localhost:3000** → Register → Start generating campaigns.
 <div align="center">
   <img src="docs/logo.png" alt="Avoir" width="48" />
   <br/><br/>
-  <a href="https://main.d2u0mm6cr1j81.amplifyapp.com/">Live Demo</a> · <a href="#-quick-start">Quick Start</a> · <a href="#-documentation">Documentation</a>
+  <a href="https://main.d2dh7nn5wsblob.amplifyapp.com/">Live Demo</a> · <a href="#-quick-start">Quick Start</a> · <a href="#-documentation">Documentation</a>
   <br/><br/>
   <sub>© 2026 Avoir. <br/><br/><i>Note: This project originated as an AWS Hackathon submission and has since successfully pivoted into an independent SaaS startup, currently in its Public Beta stage.</i></sub>
 </div>
