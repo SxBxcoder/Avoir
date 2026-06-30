@@ -56,3 +56,11 @@ logs/
 secrets/
 *.pem
 *.key
+
+# Demo
+demo_session.json
+*.mp4
+*.mkv
+
+# Binaries
+bin/

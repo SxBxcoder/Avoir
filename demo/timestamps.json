@@ -1,0 +1,42 @@
+{
+  "dashboard_ready": {
+    "abs": 1782827386297,
+    "relSeconds": 2.879
+  },
+  "typing_start": {
+    "abs": 1782827389833,
+    "relSeconds": 6.415
+  },
+  "typing_end": {
+    "abs": 1782827400797,
+    "relSeconds": 17.379
+  },
+  "generate_click": {
+    "abs": 1782827401973,
+    "relSeconds": 18.555
+  },
+  "generation_start": {
+    "abs": 1782827402304,
+    "relSeconds": 18.886
+  },
+  "generation_end": {
+    "abs": 1782827413734,
+    "relSeconds": 30.316
+  },
+  "scroll_start": {
+    "abs": 1782827415755,
+    "relSeconds": 32.337
+  },
+  "scroll_end": {
+    "abs": 1782827415784,
+    "relSeconds": 32.366
+  },
+  "omnideck_click": {
+    "abs": 1782827418842,
+    "relSeconds": 35.424
+  },
+  "omnideck_ready": {
+    "abs": 1782827419426,
+    "relSeconds": 36.008
+  }
+}
