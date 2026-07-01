@@ -9,3 +9,6 @@ Always remember the core identity of this startup:
 NEVER refer to this project as a "hackathon project" or "hackathon submission". Treat it as a real, multimillion-dollar SaaS startup.
 
 Whenever discussing the project, suggesting copy, refining UI, or writing documentation, always ensure this dual identity (quantitative finance intersection with digital marketing execution) is preserved and emphasized. Do not lean too far into just marketing or just finance; it is explicitly a combo of both.
+
+## Git Operations Rule
+**CRITICAL:** ALWAYS ask the user for explicit permission BEFORE running any `git add`, `git commit`, or `git push` commands. Never push changes automatically without getting confirmation first.
