@@ -1,5 +1,5 @@
 """
-Prachar.ai - FastAPI Development Server
+Avoir - FastAPI Development Server
 Local web server for testing the Creative Director Agent
 """
 
@@ -23,7 +23,7 @@ from agency_bridge import agency_bridge
 
 # Initialize FastAPI app
 app = FastAPI(
-    title="Prachar.ai API",
+    title="Avoir API",
     description="AI Creative Director for Modern Brands",
     version="1.0.0"
 )
@@ -73,7 +73,7 @@ async def root():
     """Health check endpoint."""
     return {
         "status": "healthy",
-        "service": "Prachar.ai Creative Director",
+        "service": "Avoir Creative Director",
         "version": "1.0.0"
     }
 
@@ -334,7 +334,7 @@ async def get_public_campaign(link_id: str):
     return {"campaign": campaign}
 
 if __name__ == "__main__":
-    print("🚀 Starting Prachar.ai Development Server...")
+    print("🚀 Starting Avoir Development Server...")
     print("📍 API will be available at: http://localhost:8000")
     print("📚 API docs available at: http://localhost:8000/docs")
     print("🔗 Frontend should connect to: http://localhost:8000/api/generate")

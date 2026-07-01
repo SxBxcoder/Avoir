@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Prachar.ai - AWS Credentials Verification Script
+Avoir - AWS Credentials Verification Script
 Checks if AWS credentials are properly loaded from .env file
 """
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Prachar.ai - Environment Dependency Checker
+Avoir - Environment Dependency Checker
 Verifies all required modules are installed and provides fix commands
 """
 
@@ -9,7 +9,7 @@ import sys
 import importlib
 from typing import List, Tuple
 
-# Core modules required for Prachar.ai
+# Core modules required for Avoir
 REQUIRED_MODULES = [
     # Web Framework
     ('fastapi', 'pip install fastapi>=0.115.0'),
@@ -72,7 +72,7 @@ def check_python_version() -> Tuple[bool, str]:
 def main():
     """Run comprehensive environment check."""
     print("\n" + "="*70)
-    print("🔍 PRACHAR.AI ENVIRONMENT DEPENDENCY CHECKER")
+    print("🔍 AVOIR ENVIRONMENT DEPENDENCY CHECKER")
     print("="*70 + "\n")
     
     # Check Python version
@@ -124,7 +124,7 @@ def main():
     if all_required_ok:
         print("\n✅ ALL REQUIRED DEPENDENCIES INSTALLED!")
         print("="*70 + "\n")
-        print("🎉 Your environment is ready to run Prachar.ai!")
+        print("🎉 Your environment is ready to run Avoir!")
         print("\n📝 Next steps:")
         print("   1. Configure AWS credentials: python check_keys.py")
         print("   2. Test the agent: python test_agent.py")

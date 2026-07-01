@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Prachar.ai - Mock Data for Seamless Hybrid Failover
+Avoir - Mock Data for Seamless Hybrid Failover
 High-quality pre-generated responses for demo continuity when AWS is throttled
 """
 

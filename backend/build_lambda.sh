@@ -1,22 +1,22 @@
 #!/bin/bash
 
 # ============================================================================
-# Prachar.ai Lambda Deployment Package Builder
+# Avoir Lambda Deployment Package Builder
 # ============================================================================
 # This script automates the creation of a production-ready AWS Lambda
 # deployment package with all dependencies and the handler code.
 #
 # Author: Team NEONX
-# Project: Prachar.ai - AI for Bharat Hackathon
+# Project: Avoir - AI-Native Agency + AI Hedge Fund
 # ============================================================================
 
-echo "🚀 Building Prachar.ai Production Lambda Package..."
+echo "🚀 Building Avoir Production Lambda Package..."
 echo ""
 
 # Clean up any previous build artifacts
 echo "🧹 Cleaning up old build artifacts..."
 rm -rf package/
-rm -f prachar-production-backend.zip
+rm -f avoir-production-backend.zip
 
 # Create fresh package directory
 echo "📦 Creating package directory..."
@@ -32,7 +32,7 @@ cp backend/aws_lambda_handler.py package/
 
 # Create the deployment zip file
 echo "🗜️  Creating deployment zip file..."
-cd package && zip -r ../prachar-production-backend.zip . && cd ..
+cd package && zip -r ../avoir-production-backend.zip . && cd ..
 
 # Clean up temporary package directory
 echo "🧹 Cleaning up temporary files..."
@@ -40,13 +40,13 @@ rm -rf package/
 
 # Display success message and file info
 echo ""
-echo "✅ Build Complete! prachar-production-backend.zip is ready for AWS."
+echo "✅ Build Complete! avoir-production-backend.zip is ready for AWS."
 echo ""
 echo "📊 Package Information:"
-ls -lh prachar-production-backend.zip
+ls -lh avoir-production-backend.zip
 echo ""
 echo "🚀 Next Steps:"
 echo "   1. Upload to AWS Lambda Console, or"
 echo "   2. Deploy via AWS CLI:"
-echo "      aws lambda update-function-code --function-name prachar-ai-backend --zip-file fileb://prachar-production-backend.zip"
+echo "      aws lambda update-function-code --function-name avoir-backend --zip-file fileb://avoir-production-backend.zip"
 echo ""

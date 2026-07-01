@@ -1,5 +1,5 @@
 """
-AWS Lambda Handler for Prachar.ai - Enterprise-Grade Campaign Generation
+AWS Lambda Handler for Avoir - Enterprise-Grade Campaign Generation
 6-TIER DIAMOND RESILIENCE CASCADE - Production Version
 
 This module serves as the ONLY entry point for AWS Lambda, handling API Gateway requests
@@ -21,7 +21,7 @@ Tier 5: OpenRouter Llama 3.3 70B (The Shield - Ultra Reliable)
 Tier 6: Titanium Shield Mock Data (Terminal - 100% Reliability)
 
 Author: Team NEONX
-Project: Prachar.ai - AI for Bharat Hackathon
+Project: Avoir - AI-Native Agency + AI Hedge Fund
 """
 
 import json
@@ -69,8 +69,8 @@ except Exception as e:
 # ENVIRONMENT VARIABLES
 # ============================================================================
 
-DYNAMODB_TABLE = os.environ.get('DYNAMODB_TABLE_NAME', 'prachar-campaigns')
-S3_BUCKET = os.environ.get('S3_BUCKET_NAME', 'prachar-assets-kiit-2026')
+DYNAMODB_TABLE = os.environ.get('DYNAMODB_TABLE_NAME', 'avoir-campaigns')
+S3_BUCKET = os.environ.get('S3_BUCKET_NAME', 'avoir-assets')
 
 # 6-Tier Diamond Resilience Cascade API Keys
 GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', '')
@@ -86,7 +86,7 @@ logger.info(f"API Keys configured: Gemini1={'✓' if GEMINI_API_KEY else '✗'},
 # SYSTEM PERSONA - THE CREATIVE DIRECTOR
 # ============================================================================
 
-SYSTEM_PROMPT = """You are the Prachar.ai Lead Creative Director. You dominate global digital marketing.
+SYSTEM_PROMPT = """You are the Avoir Lead Creative Director. You dominate global digital marketing.
 
 TONE: Aggressive, elite, high-energy. Never be "mid" (mediocre).
 LANGUAGE: Global Viral English (modern, high-converting, punchy).
@@ -105,7 +105,7 @@ OUTPUT FORMAT: You MUST return valid JSON with this exact structure:
 CRITICAL: The image_prompt must be in English, highly detailed, and describe a photorealistic scene that captures the campaign's energy."""
 
 
-TREND_SNIPER_PROMPT = """You are the Prachar.ai God-Tier Trend Sniper. Your job is to hijack a viral internet trend and mutate it into a massive campaign for the user.
+TREND_SNIPER_PROMPT = """You are the Avoir God-Tier Trend Sniper. Your job is to hijack a viral internet trend and mutate it into a massive campaign for the user.
 
 TONE: Aggressive, hyper-relevant, algorithm-optimizing.
 LANGUAGE: Global Viral English.
@@ -497,8 +497,8 @@ def generate_campaign_with_cascade(goal: str, messages: List[Dict[str, str]] = N
             headers={
                 'Authorization': f'Bearer {openrouter_api_key}',
                 'Content-Type': 'application/json',
-                'HTTP-Referer': 'https://prachar.ai',
-                'X-Title': 'Prachar.ai',
+                'HTTP-Referer': 'https://avoir.ai',
+                'X-Title': 'Avoir',
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'
             },
             method='POST'
@@ -562,8 +562,8 @@ def generate_campaign_with_cascade(goal: str, messages: List[Dict[str, str]] = N
             headers={
                 'Authorization': f'Bearer {openrouter_api_key}',
                 'Content-Type': 'application/json',
-                'HTTP-Referer': 'https://prachar.ai',
-                'X-Title': 'Prachar.ai',
+                'HTTP-Referer': 'https://avoir.ai',
+                'X-Title': 'Avoir',
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'
             },
             method='POST'
@@ -632,7 +632,7 @@ def parse_captions(text: str) -> List[str]:
 
 def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     """
-    AWS Lambda entry point for Prachar.ai campaign generation.
+    AWS Lambda entry point for Avoir campaign generation.
     
     GLOBAL SAFETY NET: Wraps entire execution in try/except to ensure
     statusCode 200 is always returned with mock data if anything fails.
@@ -948,9 +948,9 @@ if __name__ == '__main__':
     # Mock context
     class MockContext:
         request_id = 'local-test-request-id'
-        function_name = 'prachar-ai-backend'
+        function_name = 'avoir-backend'
         memory_limit_in_mb = 512
-        invoked_function_arn = 'arn:aws:lambda:us-east-1:123456789012:function:prachar-ai-backend'
+        invoked_function_arn = 'arn:aws:lambda:us-east-1:123456789012:function:avoir-backend'
     
     # Test handler
     response = lambda_handler(test_event, MockContext())

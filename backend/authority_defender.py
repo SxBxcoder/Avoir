@@ -17,7 +17,7 @@ class AuthorityDefender:
     Analyzes sentiment and autonomously drafts God-Tier brand replies.
     """
     def __init__(self):
-        self.verify_token = os.getenv("META_WEBHOOK_VERIFY_TOKEN", "prachar_authority_secret_2026")
+        self.verify_token = os.getenv("META_WEBHOOK_VERIFY_TOKEN", "avoir_authority_secret_2026")
         
         # In-memory queue to stream caught engagements to the frontend
         # In production, this goes to Redis or DynamoDB
