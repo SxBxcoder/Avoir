@@ -333,6 +333,81 @@ async def get_public_campaign(link_id: str):
         raise HTTPException(status_code=404, detail="Campaign not found or expired")
     return {"campaign": campaign}
 
+
+class ReviseRequest(BaseModel):
+    link_id: str
+    client_comment: str
+
+
+@app.post("/api/campaigns/revise")
+async def revise_campaign(request: ReviseRequest):
+    """
+    Autonomous Client Collaboration: Intercepts client feedback, 
+    uses AI to rewrite the campaign instantly, and updates the thread.
+    """
+    # 1. Add comment to thread
+    campaign = agency_bridge.add_feedback(request.link_id, request.client_comment, "client")
+    if not campaign:
+        raise HTTPException(status_code=404, detail="Campaign not found")
+
+    # 2. Call AI to rewrite (using a simple mock/simulation for the demo pipeline if real API key isn't set, 
+    # but we will implement the actual logic)
+    import os, json
+    from urllib.request import Request, urlopen
+    
+    api_key = os.getenv("GEMINI_API_KEY")
+    if not api_key:
+        # Fallback to simulated AI revision if no key
+        new_hook = f"[REVISED] {campaign['hook']}"
+        new_offer = f"Revised offer based on: {request.client_comment}"
+    else:
+        # Call Gemini via REST
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}"
+        prompt = f"""
+        You are Avoir, an elite AI media buyer and copywriter.
+        The current campaign is:
+        Hook: {campaign['hook']}
+        Offer: {campaign['offer']}
+        CTA: {campaign['cta']}
+        
+        The client just requested this change: "{request.client_comment}"
+        
+        Rewrite the campaign to perfectly address their feedback.
+        Return ONLY a JSON object with keys: "hook", "offer", "cta", "captions" (list of 3 strings).
+        """
+        payload = json.dumps({"contents": [{"parts": [{"text": prompt}]}]}).encode('utf-8')
+        req = Request(url, data=payload, headers={'Content-Type': 'application/json'})
+        try:
+            with urlopen(req) as response:
+                result = json.loads(response.read())
+                text_response = result['candidates'][0]['content']['parts'][0]['text']
+                # Clean markdown json block if present
+                clean_json = text_response.replace('```json', '').replace('```', '').strip()
+                ai_data = json.loads(clean_json)
+                new_hook = ai_data.get('hook', campaign['hook'])
+                new_offer = ai_data.get('offer', campaign['offer'])
+                new_cta = ai_data.get('cta', campaign['cta'])
+                new_captions = ai_data.get('captions', campaign['captions'])
+        except Exception as e:
+            print(f"AI Revision failed: {e}")
+            new_hook = f"Error during revision: {e}"
+            new_offer = campaign['offer']
+            new_cta = campaign['cta']
+            new_captions = campaign['captions']
+
+    # 3. Update the campaign in the bridge
+    updated_campaign = agency_bridge.update_campaign_variant(request.link_id, {
+        "hook": new_hook if api_key else new_hook,
+        "offer": new_offer if api_key else new_offer,
+        "cta": new_cta if api_key else campaign['cta'],
+        "captions": new_captions if api_key else campaign['captions']
+    })
+    
+    # 4. Add AI's reply to the thread
+    agency_bridge.add_feedback(request.link_id, "Done! I've updated the campaign based on your feedback. How does this new version look?", "avoir")
+
+    return {"status": "success", "campaign": updated_campaign}
+
 if __name__ == "__main__":
     print("🚀 Starting Avoir Development Server...")
     print("📍 API will be available at: http://localhost:8000")

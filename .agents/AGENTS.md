@@ -25,3 +25,5 @@ read it at the start of any new session if you haven't already. Key rules:
 write session summaries on completion, link every new note to related 
 existing ones, never write an orphan note, patch source-of-truth files 
 in 03-Architecture/ and 02-Product/ directly when decisions change them.
+## Plan Execution Rule
+**CRITICAL:** ALWAYS ask the user for explicit permission BEFORE moving forward with any implementation plan or executing code changes, regardless of auto-approval policies.

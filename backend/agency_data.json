@@ -1,0 +1,103 @@
+{
+  "test-link-123": {
+    "hook": "[REVISED] Are you tired of basic workout clothes that fall apart after one wash?",
+    "offer": "Revised offer based on: Make this more Gen-Z and edgy please!",
+    "cta": "Shop Now",
+    "captions": [
+      "Stop settling for less. \ud83d\udcaa",
+      "Premium quality that lasts.",
+      "Link in bio to shop the drop."
+    ],
+    "image_url": "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=1024&h=1024&fit=crop",
+    "agency_id": "default_agency",
+    "created_at": 1700000000,
+    "status": "PENDING_APPROVAL",
+    "thread": [
+      {
+        "sender": "client",
+        "text": "Make this more Gen-Z and edgy please!",
+        "timestamp": 1783013390
+      },
+      {
+        "sender": "avoir",
+        "text": "Done! I've updated the campaign based on your feedback. How does this new version look?",
+        "timestamp": 1783013390
+      }
+    ]
+  },
+  "55da0399-41c": {
+    "hook": "Your closet is a landfill. We made the exit.",
+    "offer": "First 500 members get lifetime access to our Capsule Exchange \u2014 trade, swap, never waste.",
+    "cta": "Join the Capsule \u2192",
+    "captions": [
+      "\ud83c\udf0d Your style shouldn't cost the planet. Capsule Exchange is here \u2014 swap, trade, repeat. Link in bio.",
+      "POV: You just traded 3 pieces you never wore for a vintage Acne Studios jacket. That's Capsule. #SustainableFashion",
+      "Gen-Z is done with fast fashion. We built the alternative. 500 spots left \u2192"
+    ],
+    "image_url": "https://images.unsplash.com/photo-1558618666-fcd25c85f82e?w=800",
+    "agency_id": "default_agency",
+    "created_at": 1783013825,
+    "status": "PENDING_APPROVAL",
+    "thread": []
+  },
+  "81ae4b98-eaa": {
+    "hook": "Your closet is a landfill. We made the exit.",
+    "offer": "First 500 members get lifetime access to our Capsule Exchange \u2014 trade, swap, never waste.",
+    "cta": "Join the Capsule \u2192",
+    "captions": [
+      "\ud83c\udf0d Your style shouldn't cost the planet. Capsule Exchange is here \u2014 swap, trade, repeat. Link in bio.",
+      "POV: You just traded 3 pieces you never wore for a vintage Acne Studios jacket. That's Capsule. #SustainableFashion",
+      "Gen-Z is done with fast fashion. We built the alternative. 500 spots left \u2192"
+    ],
+    "image_url": "https://images.unsplash.com/photo-1558618666-fcd25c85f82e?w=800",
+    "agency_id": "default_agency",
+    "created_at": 1783013842,
+    "status": "PENDING_APPROVAL",
+    "thread": []
+  },
+  "d0557fca-b2c": {
+    "hook": "Your closet is a landfill. We made the exit.",
+    "offer": "First 500 members get lifetime access to our Capsule Exchange \u2014 trade, swap, never waste.",
+    "cta": "Join the Capsule \u2192",
+    "captions": [
+      "\ud83c\udf0d Your style shouldn't cost the planet. Capsule Exchange is here \u2014 swap, trade, repeat. Link in bio.",
+      "POV: You just traded 3 pieces you never wore for a vintage Acne Studios jacket. That's Capsule. #SustainableFashion",
+      "Gen-Z is done with fast fashion. We built the alternative. 500 spots left \u2192"
+    ],
+    "image_url": "https://images.unsplash.com/photo-1558618666-fcd25c85f82e?w=800",
+    "agency_id": "default_agency",
+    "created_at": 1783013845,
+    "status": "PENDING_APPROVAL",
+    "thread": []
+  },
+  "5e81e3fd-53c": {
+    "hook": "Therapy is $200/hour. Your notes app is free but chaotic. We're the middle ground.",
+    "offer": "AI-guided journaling that actually tracks your patterns. 5 minutes a day. Real insights, not vibes.",
+    "cta": "Start Your First Entry \u2192",
+    "captions": [
+      "\ud83e\udde0 Your therapist sees you once a week. Your journal sees you every day. Make it count.",
+      "I journaled for 30 days with AI guidance. Here's what I learned about my own patterns \ud83e\uddf5 #MentalHealth",
+      "Not a replacement for therapy. A supplement that works at 3am when your therapist is asleep \u2192"
+    ],
+    "image_url": "https://images.unsplash.com/photo-1517842645767-c639042777db?w=800",
+    "agency_id": "default_agency",
+    "created_at": 1783014049,
+    "status": "PENDING_APPROVAL",
+    "thread": []
+  },
+  "28967943-900": {
+    "hook": "Therapy is $200/hour. Your notes app is free but chaotic. We're the middle ground.",
+    "offer": "AI-guided journaling that actually tracks your patterns. 5 minutes a day. Real insights, not vibes.",
+    "cta": "Start Your First Entry \u2192",
+    "captions": [
+      "\ud83e\udde0 Your therapist sees you once a week. Your journal sees you every day. Make it count.",
+      "I journaled for 30 days with AI guidance. Here's what I learned about my own patterns \ud83e\uddf5 #MentalHealth",
+      "Not a replacement for therapy. A supplement that works at 3am when your therapist is asleep \u2192"
+    ],
+    "image_url": "https://images.unsplash.com/photo-1517842645767-c639042777db?w=800",
+    "agency_id": "default_agency",
+    "created_at": 1783014053,
+    "status": "PENDING_APPROVAL",
+    "thread": []
+  }
+}

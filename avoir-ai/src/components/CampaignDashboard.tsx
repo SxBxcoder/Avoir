@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence, useSpring, useTransform, LayoutGroup } from 'framer-motion';
-import { Send, Sparkles, Terminal, Activity, Database, Globe, Copy, Check, Zap, LogOut, Menu, X, Plus, Download, BookOpen, Crown, CreditCard, Flame, Radio, ChevronRight, MessageSquare, Target, Rocket, TrendingUp, Shield, Eye, PlayCircle, Video, Loader2, Trash2, Clock, Cpu } from 'lucide-react';
+import { Send, Sparkles, Terminal, Activity, Database, Globe, Copy, Check, Zap, LogOut, Menu, X, Plus, Download, BookOpen, Crown, CreditCard, Flame, Radio, ChevronRight, MessageSquare, Target, Rocket, TrendingUp, Shield, Eye, PlayCircle, Video, Loader2, Trash2, Clock, Cpu, Share2 } from 'lucide-react';
 import UpgradeModal from './UpgradeModal';
 import NeuralNetworkCanvas from './NeuralNetworkCanvas';
 import InteractivePlasmaCanvas from './InteractivePlasmaCanvas';
@@ -445,6 +445,9 @@ export default function CampaignDashboard({ accessToken, userEmail, onLogout }: 
   const [shadowCloneVideo, setShadowCloneVideo] = useState<string | null>(null);
   const [isShadowModalOpen, setIsShadowModalOpen] = useState(false);
 
+  // Client Approval Sharing State
+  const [isSharing, setIsSharing] = useState(false);
+
   // P0-A: Reasoning Engine States
   const [reasoningExpanded, setReasoningExpanded] = useState<Record<string, boolean>>({});
 
@@ -630,6 +633,37 @@ export default function CampaignDashboard({ accessToken, userEmail, onLogout }: 
       });
     } catch (err) {
       console.warn("Could not save winner status to DB (local dev).");
+    }
+  };
+
+  const handleShareWithClient = async () => {
+    if (!currentCampaign) return;
+    setIsSharing(true);
+    try {
+      const res = await fetch('http://localhost:8000/api/agency/share-link', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          campaign_data: {
+            hook: currentCampaign.plan.hook,
+            offer: currentCampaign.plan.offer,
+            cta: currentCampaign.plan.cta,
+            captions: currentCampaign.captions,
+            image_url: currentCampaign.image_url,
+          }
+        })
+      });
+      const data = await res.json();
+      const fullUrl = `${window.location.origin}${data.share_url}`;
+      
+      await navigator.clipboard.writeText(fullUrl);
+      window.open(fullUrl, '_blank');
+      setCopied('share-link');
+      setTimeout(() => setCopied(null), 2000);
+    } catch (err) {
+      console.error("Failed to share:", err);
+    } finally {
+      setIsSharing(false);
     }
   };
 
@@ -1825,7 +1859,24 @@ export default function CampaignDashboard({ accessToken, userEmail, onLogout }: 
                       transition={{ delay: 0.5 }}
                       className="mt-8 pt-8 border-t border-zinc-800/50"
                     >
-                      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-4">
+                        <button
+                          onClick={handleShareWithClient}
+                          disabled={isSharing}
+                          className="w-full flex items-center justify-center gap-3 py-4 rounded-2xl bg-gradient-to-r from-pink-600/20 to-rose-600/20 hover:from-pink-600/40 hover:to-rose-600/40 border border-pink-500/30 hover:border-pink-500/60 transition-all group overflow-hidden relative shadow-[0_0_30px_rgba(236,72,153,0.1)] hover:shadow-[0_0_40px_rgba(236,72,153,0.3)] disabled:opacity-50"
+                        >
+                          {isSharing ? (
+                            <Loader2 className="w-5 h-5 text-pink-400 animate-spin" />
+                          ) : copied === 'share-link' ? (
+                            <Check className="w-5 h-5 text-green-400" />
+                          ) : (
+                            <Share2 className="w-5 h-5 text-pink-400 group-hover:scale-110 transition-transform" />
+                          )}
+                          <span className="text-sm font-bold text-white font-tactical tracking-widest whitespace-nowrap">
+                            {copied === 'share-link' ? 'PORTAL OPENED' : 'SHARE CLIENT'}
+                          </span>
+                        </button>
+
                         <button
                           onClick={handleMarkWinner}
                           className="w-full flex items-center justify-center gap-3 py-4 rounded-2xl bg-gradient-to-r from-yellow-600/20 to-amber-600/20 hover:from-yellow-600/40 hover:to-amber-600/40 border border-yellow-500/30 hover:border-yellow-500/60 transition-all group overflow-hidden relative shadow-[0_0_30px_rgba(234,179,8,0.1)] hover:shadow-[0_0_40px_rgba(234,179,8,0.3)]"
