@@ -23,14 +23,15 @@ The report should include:
 - 3-5 specific actionable trends for B2B SaaS or Algorithmic Trading.
 - Potential impact on Avoir's core strategies.
 
-### 3. Generate Backlinks
-Ensure the generated report includes Obsidian-style backlinks to core concepts that likely exist in the vault. 
-Examples: `[[Algorithmic Trading]]`, `[[B2B SaaS]]`, `[[Market Anomalies]]`.
+### 3. Generate Backlinks (Requires Verification)
+Before generating backlinks, use the `avoir-brain` MCP server's `search_notes` or `list_directory` tools to confirm the existence of related concepts. 
+**CRITICAL:** Only emit backlinks (e.g., `[[Algorithmic Trading]]`) that resolve to confirmed, existing vault entries. Do not guess or create orphaned links.
 
-### 4. Ingest into the Vault
+### 4. Ingest into the Vault (Draft Gating)
 Use the `avoir-brain` MCP server's `write_note` tool to save the synthesized report.
-- Target path: `01-Research/Synthesized/Trend-Report-[YYYY-MM-DD].md`
-- Do NOT save this locally in the standard repo directory; it must be written into the vault via the MCP tool.
+- **CRITICAL:** If running in an automated background task (cron), you must save the report as a draft. 
+- Target draft path: `01-Research/Inbox/Draft-Trend-Report-[YYYY-MM-DD].md`
+- If running manually with the user present, you may ask for explicit permission to save directly to `01-Research/Synthesized/Trend-Report-[YYYY-MM-DD].md`.
 
 ### 5. Report Completion
-Once the file is successfully written to the vault, notify the user (or simply log the completion if running in the background) that the ingest pipeline ran successfully. Do not output the entire report into the chat, just provide a summary and the vault path.
+Once the file is successfully written to the vault's Inbox, notify the user (or log the completion) that a draft is ready for human review. Do not output the entire report into the chat.
