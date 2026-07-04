@@ -1,0 +1,30 @@
+language: "en-US"
+reviews:
+  profile: "chill"
+  request_changes_workflow: false
+  high_level_summary: true
+  poem: true
+  review_status: true
+  collapse_walkthrough: false
+  path_instructions:
+    - path: "avoir-ai/**/*.ts"
+      instructions: |
+        - Ensure strict TypeScript typing. Avoid using 'any'.
+        - Check for Next.js 14 App Router best practices. Ensure server components are not unnecessarily labeled with 'use client'.
+        - Validate that AWS Amplify and Stripe SDKs are used securely on the server-side where applicable.
+    - path: "avoir-ai/**/*.tsx"
+      instructions: |
+        - Check for responsive design using Tailwind CSS.
+        - Ensure accessible HTML semantics.
+        - Verify Framer Motion animations are optimized and don't cause layout thrashing.
+    - path: "backend/**/*.py"
+      instructions: |
+        - Enforce Python 3.11+ and FastAPI best practices.
+        - Ensure all I/O bound operations (DynamoDB, LLM calls) use proper async/await or thread pools.
+        - Check for secure handling of API keys (Gemini, Groq) and avoid prompt injection vulnerabilities.
+  instructions: |
+    - Focus heavily on security vulnerabilities: flag exposed secrets, insecure AWS configurations, and unsafe API endpoint designs.
+    - Be concise and provide actionable code snippets.
+    - Acknowledge our unique architecture: Next.js 14 frontend calling a FastAPI/Lambda Python backend.
+chat:
+  auto_reply: true
