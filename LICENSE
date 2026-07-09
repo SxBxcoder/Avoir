@@ -1,12 +1,26 @@
-Copyright (c) 2026 Avoir. All Rights Reserved.
+END USER LICENSE AGREEMENT (EULA) AND PROPRIETARY SOFTWARE LICENSE
 
-This repository and its contents are the proprietary intellectual property of the author. 
-The source code is provided publicly for portfolio, educational, and review purposes only.
+Copyright (c) 2026 Avoir (SxBxcoder). All Rights Reserved.
 
-You are NOT permitted to:
-- Copy, clone, or distribute this software or its source code.
-- Modify, adapt, or create derivative works from this software.
-- Use this software for any commercial purposes.
-- Deploy, host, or operate this software as a service.
+1. PROPRIETARY RIGHTS
+This software, including all source code, documentation, architecture, and associated assets (collectively, the "Software"), is the exclusive, proprietary intellectual property of Avoir and its author. The Software is protected by global copyright, trade secret, and intellectual property laws. 
 
-Any unauthorized use, reproduction, or distribution is strictly prohibited and may result in legal action.
+2. SCOPE OF LICENSE
+This repository is made publicly available strictly for the purposes of portfolio demonstration, academic review, and security auditing. Accessing this public repository does NOT grant any express or implied licenses to use, execute, or distribute the Software.
+
+3. RESTRICTIONS
+You are expressly and strictly PROHIBITED from:
+  a. Copying, duplicating, or reproducing the Software in whole or in part.
+  b. Modifying, translating, or creating derivative works based on the Software.
+  c. Distributing, sublicensing, leasing, selling, or transferring the Software to any third party.
+  d. Deploying, hosting, or operating the Software in any commercial, production, or testing environment.
+  e. Using the Software to develop a competing product or service.
+  f. Removing or altering any copyright, trademark, or proprietary notices contained within the Software.
+
+4. NO WARRANTY
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+5. ENFORCEMENT
+Any unauthorized use, reproduction, or distribution of this Software constitutes a severe infringement of intellectual property rights. The author reserves the right to pursue all available legal and equitable remedies, including injunctive relief and monetary damages, against any individual or entity found in violation of these terms.
+
+By viewing, cloning, or downloading this repository, you acknowledge that you have read, understood, and agreed to be bound by the terms of this License.
