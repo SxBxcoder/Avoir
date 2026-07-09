@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Cpu, CheckCircle2, Globe, Server, Activity, ArrowRight, DollarSign } from 'lucide-react';
 
@@ -23,26 +23,38 @@ export function CapitalDeploymentSimulator({ onClose, campaignPlan }: CapitalDep
   ];
 
   const [simulationResult, setSimulationResult] = useState<any>(null);
+  const mounted = useRef(true);
+
+  useEffect(() => {
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
 
   const handleExecute = async () => {
     setStage(1);
     
     // Start backend simulation simultaneously
-    const simPromise = fetch('http://localhost:8000/api/simulate', {
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+    const simPromise = fetch(`${apiUrl}/api/simulate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ budget, target_roas: targetRoas })
     }).then(res => res.json()).catch(() => null);
 
     await new Promise(r => setTimeout(r, 1200));
+    if (!mounted.current) return;
     setStage(2);
     
     const result = await simPromise;
+    if (!mounted.current) return;
     if (result) setSimulationResult(result);
 
     await new Promise(r => setTimeout(r, 1500));
+    if (!mounted.current) return;
     setStage(3);
     await new Promise(r => setTimeout(r, 1000));
+    if (!mounted.current) return;
     setStage(4);
   };
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Target, Activity, TrendingUp, DollarSign, Users, Briefcase, Zap, Shield, ArrowRight, Server, ChevronRight, Share2, Copy, BarChart2, CheckCircle2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -22,6 +22,11 @@ const staggerItem = {
 export default function OmniDeckPage() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<'positions' | 'intelligence' | 'b2b'>('positions');
+  const activeTabRef = useRef(activeTab);
+
+  useEffect(() => {
+    activeTabRef.current = activeTab;
+  }, [activeTab]);
   const [engagements, setEngagements] = useState<any[]>([]);
   const [copiedLink, setCopiedLink] = useState(false);
   const [selectedCampaignForSim, setSelectedCampaignForSim] = useState<any | null>(null);
@@ -40,8 +45,9 @@ export default function OmniDeckPage() {
   ];
 
   useEffect(() => {
-    // Real-time Decay Monitor and Intelligence Stream (bypassing Next.js proxy to prevent ECONNRESET)
-    const eventSource = new EventSource('http://localhost:8000/api/engagement/stream');
+    // Real-time Decay Monitor and Intelligence Stream
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+    const eventSource = new EventSource(`${apiUrl}/api/engagement/stream`);
     
     eventSource.onmessage = (event) => {
       try {
@@ -51,11 +57,12 @@ export default function OmniDeckPage() {
         if (data.id && data.momentum !== undefined) {
           setActivePositions(prev => prev.map(pos => {
             if (pos.id === data.id) {
+              const newStatus = data.momentum > 10 ? 'SCALING' : data.momentum > 0 ? 'OPTIMIZING' : 'LIQUIDATING';
               return {
                 ...pos,
                 momentum: data.momentum > 0 ? `+${data.momentum}` : `${data.momentum}`,
                 isDecaying: data.is_decay_alert,
-                status: data.is_decay_alert ? 'DECAY WARNING' : pos.status
+                status: data.is_decay_alert ? 'DECAY WARNING' : newStatus
               };
             }
             return pos;
@@ -63,7 +70,7 @@ export default function OmniDeckPage() {
         } 
         // Handle Intelligence Feed (if it has type/action)
         else if (data.action) {
-          if (activeTab === 'intelligence') {
+          if (activeTabRef.current === 'intelligence') {
             setEngagements(prev => [data, ...prev].slice(0, 15));
           }
         }
@@ -71,7 +78,7 @@ export default function OmniDeckPage() {
     };
     
     return () => eventSource.close();
-  }, [activeTab]);
+  }, []); // Only establish connection once
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
@@ -179,6 +186,14 @@ export default function OmniDeckPage() {
                           key={pos.id}
                           variants={staggerItem}
                           onClick={() => setSelectedCampaignForSim(pos)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault();
+                              setSelectedCampaignForSim(pos);
+                            }
+                          }}
+                          tabIndex={0}
+                          role="button"
                           className={`border-b border-white/5 transition-colors cursor-pointer ${pos.isDecaying ? 'bg-red-500/20 animate-pulse' : 'hover:bg-white/5'}`}
                         >
                           <td className="p-4 text-sm font-medium text-white">{pos.asset}</td>

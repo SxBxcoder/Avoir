@@ -11,7 +11,7 @@ def run_tests():
         res = requests.post("http://localhost:8000/api/simulate", json={
             "budget": 5000,
             "target_roas": 4.5
-        })
+        }, timeout=10)
         print(f"Status: {res.status_code}")
         print(f"Response: {json.dumps(res.json(), indent=2)}")
     except Exception as e:
@@ -23,7 +23,7 @@ def run_tests():
         res = requests.post("http://localhost:8000/api/generate", json={
             "goal": "Launch a new Gen-Z sneaker line",
             "user_id": "test_user_777"
-        })
+        }, timeout=10)
         print(f"Status: {res.status_code}")
         print(f"Response: {json.dumps(res.json(), indent=2)}")
     except Exception as e:
@@ -32,7 +32,7 @@ def run_tests():
     # 3. Test /api/engagement/stream (SSE)
     print("\n3. Testing /api/engagement/stream (SSE)...")
     try:
-        response = requests.get("http://localhost:8000/api/engagement/stream", stream=True)
+        response = requests.get("http://localhost:8000/api/engagement/stream", stream=True, timeout=10)
         
         event_count = 0
         for line in response.iter_lines():

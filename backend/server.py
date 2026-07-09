@@ -45,6 +45,7 @@ app.add_middleware(
 
 # Request/Response Models
 class CampaignRequest(BaseModel):
+    """Request model for generating a new campaign."""
     goal: str
     user_id: str
 
@@ -58,6 +59,7 @@ class CampaignRequest(BaseModel):
 
 
 class CampaignResponse(BaseModel):
+    """Response model representing a generated campaign."""
     campaign_id: str
     user_id: str
     goal: str
@@ -219,6 +221,7 @@ async def get_trends():
 
 # Sprint 8: Omni-Deck Command Center Publish Mock
 class PublishRequest(BaseModel):
+    """Request model for publishing a campaign to selected platforms."""
     campaign_id: str
     platforms: list[str]
 
@@ -237,6 +240,7 @@ async def publish_campaign(request: PublishRequest):
 
 # Sprint 4: Shadow Clone Engine
 class ShadowCloneRequest(BaseModel):
+    """Request model for generating a shadow clone video stream."""
     script: str
     image_url: str
 
@@ -308,28 +312,9 @@ async def stream_engagements():
             await asyncio.sleep(2)
             tick += 1
             
-            # Every tick: send decay data for all campaigns
-            for camp in decay_monitor.campaigns:
-                if camp["id"] == "pos-1":
-                    # TikTok: trend up
-                    camp["momentum"] += random.uniform(-0.2, 0.8)
-                    camp["momentum"] = min(camp["momentum"], 45.0)
-                elif camp["id"] == "pos-2":
-                    # Instagram: stable
-                    camp["momentum"] += random.uniform(-0.5, 0.5)
-                elif camp["id"] == "pos-3":
-                    # YouTube Shorts: decay
-                    camp["momentum"] += random.uniform(-1.5, -0.2)
-                    camp["momentum"] = max(camp["momentum"], -25.0)
-                
-                is_decay_alert = camp["momentum"] <= -10.0
-                
-                event_data = {
-                    "id": camp["id"],
-                    "platform": camp["platform"],
-                    "momentum": round(camp["momentum"], 2),
-                    "is_decay_alert": is_decay_alert,
-                }
+            # Every tick: send decay data for all campaigns using unified tick method
+            events = decay_monitor.tick()
+            for event_data in events:
                 yield f"data: {json.dumps(event_data)}\n\n"
             
             # Every 3rd tick: also send an engagement event for the intelligence tab
@@ -355,6 +340,7 @@ async def get_agency_clients(agency_id: str = "default_agency"):
 
 
 class ShareLinkRequest(BaseModel):
+    """Request model for generating a white-labeled client share link."""
     agency_id: str = "default_agency"
     campaign_data: dict
 
@@ -376,6 +362,7 @@ async def get_public_campaign(link_id: str):
 
 
 class ReviseRequest(BaseModel):
+    """Request model for autonomous client collaboration revision."""
     link_id: str
     client_comment: str
 
@@ -455,23 +442,34 @@ async def revise_campaign(request: ReviseRequest):
 
 
 class SimulateRequest(BaseModel):
+    """Request model for capital deployment simulation."""
     budget: float
     target_roas: float
 
 @app.post("/api/simulate")
 async def simulate_deployment(req: SimulateRequest):
     """Predictive ROI simulator for capital deployment."""
+    if req.budget <= 0:
+        raise HTTPException(status_code=400, detail="Budget must be strictly positive")
+        
     import random
     projected_roas = min(req.target_roas, 5.0) - 0.2
     # Calculate realistic metrics based on budget
     projected_reach = int(req.budget * random.uniform(18, 32))
     expected_ctr = round(random.uniform(2.8, 6.5), 2)
     estimated_cpc = round(req.budget / max(projected_reach * (expected_ctr / 100), 1), 2)
+    
+    # Calculate CPA independent of the budget term canceling out
+    # estimated_cpa = CPC / Conversion Rate (simulating 5-15% conversion rate)
+    conversion_rate = random.uniform(0.05, 0.15)
+    estimated_cpa = round(estimated_cpc / conversion_rate, 2)
+    
     confidence = round(random.uniform(78, 96), 1)
+    
     return {
         "status": "success",
         "simulated_roas": round(projected_roas, 2),
-        "estimated_cpa": round(req.budget / max(req.budget * projected_roas / 100, 1), 2),
+        "estimated_cpa": estimated_cpa,
         "projected_reach": projected_reach,
         "expected_ctr": expected_ctr,
         "estimated_cpc": estimated_cpc,
