@@ -27,3 +27,28 @@ existing ones, never write an orphan note, patch source-of-truth files
 in 03-Architecture/ and 02-Product/ directly when decisions change them.
 ## Plan Execution Rule
 **CRITICAL:** ALWAYS ask the user for explicit permission BEFORE moving forward with any implementation plan or executing code changes, regardless of auto-approval policies.
+
+## Context Navigation Rule (Token Optimization)
+**CRITICAL:** When you need to understand the codebase, architecture, features,
+or project state, ALWAYS query the `avoir-brain` vault FIRST using `search_notes`,
+`read_note`, or `list_directory`. Start with these key vault entries:
+- `00-Meta/index` — Master map of the entire knowledge graph.
+- `02-Product/feature-inventory` — Complete inventory of every built feature.
+- `03-Architecture/system-overview` — Architecture and system connections.
+- `03-Architecture/resilience-cascade` — Diamond Cascade failover details.
+
+**ONLY** use `view_file` to read raw source files (`.tsx`, `.py`, `.ts`) when:
+1. You are actively writing or editing code in that specific file.
+2. The vault does not contain the information you need.
+3. The user explicitly asks you to read a specific file.
+
+This rule exists to prevent redundant re-reading of large source files across
+sessions, preserving token budget for actual productive work.
+
+## Task Completion & Vault Sync Rule
+**CRITICAL:** Every time you complete a significant feature, fix a major bug, or finish an implementation plan, you MUST proactively update the Avoir Vault WITHOUT asking for permission. This includes:
+1. Creating or appending to a daily session log in `04-Sessions/{YYYY-MM-DD}.md`.
+2. ALWAYS including `Related: [[index]]` at the top of the session log to avoid orphan nodes.
+3. Updating `02-Product/feature-inventory.md` if new features were added or changed.
+4. Updating `06-Ideas/tech-debt-priority.md` if any tech debt was resolved or discovered.
+Never end a session with a desynced vault!

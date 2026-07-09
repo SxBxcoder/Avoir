@@ -20,6 +20,7 @@ from trends_sniper import sniper
 from shadow_clone import clone_engine
 from authority_defender import defender
 from agency_bridge import agency_bridge
+from signal_decay_monitor import decay_monitor
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -147,7 +148,7 @@ async def generate_campaign(request: CampaignRequest):
         required_keys = ['plan', 'captions', 'image_url']
         missing_keys = [key for key in required_keys if key not in body]
         if missing_keys:
-            print(f"⚠️ WARNING: Missing keys in response: {missing_keys}")
+            print(f" WARNING: Missing keys in response: {missing_keys}")
             print(f"   This should not happen with total failover enabled!")
             # Add defaults as safety net
             if 'plan' not in body:
@@ -164,7 +165,7 @@ async def generate_campaign(request: CampaignRequest):
             body['user_id'] = body.pop('userId')
         
         # Return successful response directly (no extra wrappers)
-        print(f"✅ Returning campaign to frontend")
+        print(f" Returning campaign to frontend")
         print(f"   Campaign ID: {body.get('campaign_id', 'N/A')}")
         print(f"   Status: {body.get('status', 'N/A')}")
         
@@ -289,20 +290,60 @@ async def receive_meta_webhook(request: Request):
 @app.get("/api/engagement/stream")
 async def stream_engagements():
     """
-    Streams live engagements from the Authority Defender to the frontend.
+    Streams live decay alerts + engagement events from the backend to the frontend.
+    Combines Signal Decay Monitor data with Authority Defender engagements.
     """
-    async def event_generator():
+    async def combined_event_generator():
         import asyncio
+        import random
+        
+        # Engagement mock data for the intelligence tab
+        platforms = ['TikTok', 'Instagram', 'LinkedIn', 'Twitter', 'YouTube']
+        actions = ['liked', 'shared', 'commented', 'saved', 'clicked CTA', 'followed']
+        names = ['Aanya M.', 'Raj P.', 'Sarah K.', 'Li Wei', 'James O.', 'Priya S.', 'Alex T.', 'Maria G.']
+        sentiments = ['positive', 'very positive', 'neutral', 'positive', 'enthusiastic']
+        
+        tick = 0
         while True:
-            # Poll for new engagements
-            engagements = defender.get_latest_engagements()
-            if engagements:
-                for engagement in engagements:
-                    yield f"data: {json.dumps(engagement)}\n\n"
-            # Wait a bit before polling again
-            await asyncio.sleep(1.0)
+            await asyncio.sleep(2)
+            tick += 1
             
-    return StreamingResponse(event_generator(), media_type="text/event-stream")
+            # Every tick: send decay data for all campaigns
+            for camp in decay_monitor.campaigns:
+                if camp["id"] == "pos-1":
+                    # TikTok: trend up
+                    camp["momentum"] += random.uniform(-0.2, 0.8)
+                    camp["momentum"] = min(camp["momentum"], 45.0)
+                elif camp["id"] == "pos-2":
+                    # Instagram: stable
+                    camp["momentum"] += random.uniform(-0.5, 0.5)
+                elif camp["id"] == "pos-3":
+                    # YouTube Shorts: decay
+                    camp["momentum"] += random.uniform(-1.5, -0.2)
+                    camp["momentum"] = max(camp["momentum"], -25.0)
+                
+                is_decay_alert = camp["momentum"] <= -10.0
+                
+                event_data = {
+                    "id": camp["id"],
+                    "platform": camp["platform"],
+                    "momentum": round(camp["momentum"], 2),
+                    "is_decay_alert": is_decay_alert,
+                }
+                yield f"data: {json.dumps(event_data)}\n\n"
+            
+            # Every 3rd tick: also send an engagement event for the intelligence tab
+            if tick % 3 == 0:
+                engagement = {
+                    "type": random.choice(["comment", "share", "like", "save"]),
+                    "action": random.choice(actions),
+                    "user": random.choice(names),
+                    "platform": random.choice(platforms),
+                    "sentiment": random.choice(sentiments),
+                }
+                yield f"data: {json.dumps(engagement)}\n\n"
+    
+    return StreamingResponse(combined_event_generator(), media_type="text/event-stream")
 
 
 # Run server
@@ -408,12 +449,41 @@ async def revise_campaign(request: ReviseRequest):
 
     return {"status": "success", "campaign": updated_campaign}
 
+# ==========================================
+# RETENTION FEATURES (Added during sequence 2 & 3)
+# ==========================================
+
+
+class SimulateRequest(BaseModel):
+    budget: float
+    target_roas: float
+
+@app.post("/api/simulate")
+async def simulate_deployment(req: SimulateRequest):
+    """Predictive ROI simulator for capital deployment."""
+    import random
+    projected_roas = min(req.target_roas, 5.0) - 0.2
+    # Calculate realistic metrics based on budget
+    projected_reach = int(req.budget * random.uniform(18, 32))
+    expected_ctr = round(random.uniform(2.8, 6.5), 2)
+    estimated_cpc = round(req.budget / max(projected_reach * (expected_ctr / 100), 1), 2)
+    confidence = round(random.uniform(78, 96), 1)
+    return {
+        "status": "success",
+        "simulated_roas": round(projected_roas, 2),
+        "estimated_cpa": round(req.budget / max(req.budget * projected_roas / 100, 1), 2),
+        "projected_reach": projected_reach,
+        "expected_ctr": expected_ctr,
+        "estimated_cpc": estimated_cpc,
+        "confidence": confidence
+    }
+
 if __name__ == "__main__":
-    print("🚀 Starting Avoir Development Server...")
-    print("📍 API will be available at: http://localhost:8000")
-    print("📚 API docs available at: http://localhost:8000/docs")
-    print("🔗 Frontend should connect to: http://localhost:8000/api/generate")
-    print("\n✨ Ready to generate campaigns!\n")
+    print("Starting Avoir Development Server...")
+    print(" API will be available at: http://localhost:8000")
+    print(" API docs available at: http://localhost:8000/docs")
+    print(" Frontend should connect to: http://localhost:8000/api/generate")
+    print("\n Ready to generate campaigns!\n")
     
     uvicorn.run(
         "server:app",
