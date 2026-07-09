@@ -52,3 +52,9 @@ sessions, preserving token budget for actual productive work.
 3. Updating `02-Product/feature-inventory.md` if new features were added or changed.
 4. Updating `06-Ideas/tech-debt-priority.md` if any tech debt was resolved or discovered.
 Never end a session with a desynced vault!
+
+## CodeRabbit PR Enforcement Rule
+**CRITICAL:** ALL code changes must be pushed to a feature branch and reviewed via a Pull Request. NEVER push code directly to the `main` branch. 
+1. Always create a branch (e.g., `git checkout -b feature/name`).
+2. Commit your changes and push the branch to `origin`.
+3. Inform the user to open a Pull Request so that CodeRabbit can execute its automated review pipeline.
