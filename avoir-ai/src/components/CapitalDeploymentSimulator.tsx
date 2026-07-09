@@ -1,4 +1,6 @@
-import React, { useState, useEffect } from 'react';
+'use client';
+
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Cpu, CheckCircle2, Globe, Server, Activity, ArrowRight, DollarSign } from 'lucide-react';
 
@@ -20,13 +22,39 @@ export function CapitalDeploymentSimulator({ onClose, campaignPlan }: CapitalDep
     { id: 'live', title: 'TRADE EXECUTED' },
   ];
 
+  const [simulationResult, setSimulationResult] = useState<any>(null);
+  const mounted = useRef(true);
+
+  useEffect(() => {
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
+
   const handleExecute = async () => {
     setStage(1);
+    
+    // Start backend simulation simultaneously
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+    const simPromise = fetch(`${apiUrl}/api/simulate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ budget, target_roas: targetRoas })
+    }).then(res => res.json()).catch(() => null);
+
     await new Promise(r => setTimeout(r, 1200));
+    if (!mounted.current) return;
     setStage(2);
+    
+    const result = await simPromise;
+    if (!mounted.current) return;
+    if (result) setSimulationResult(result);
+
     await new Promise(r => setTimeout(r, 1500));
+    if (!mounted.current) return;
     setStage(3);
-    await new Promise(r => setTimeout(r, 2000));
+    await new Promise(r => setTimeout(r, 1000));
+    if (!mounted.current) return;
     setStage(4);
   };
 
@@ -65,7 +93,8 @@ export function CapitalDeploymentSimulator({ onClose, campaignPlan }: CapitalDep
               >
                 <div className="bg-white/5 border border-white/10 rounded-xl p-4">
                   <h3 className="text-[10px] font-tactical text-zinc-500 mb-2">TARGET ASSET</h3>
-                  <p className="text-sm text-indigo-300 font-medium leading-relaxed">"{campaignPlan?.hook}"</p>
+                  <p className="text-sm text-indigo-300 font-medium leading-relaxed">"{campaignPlan?.asset || campaignPlan?.hook || 'Campaign'}"</p>
+                  <p className="text-xs text-zinc-500 mt-1 font-mono">{campaignPlan?.platform} &middot; Current ROAS: {campaignPlan?.roas}x &middot; Spend: ${campaignPlan?.spend}</p>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
@@ -151,12 +180,34 @@ export function CapitalDeploymentSimulator({ onClose, campaignPlan }: CapitalDep
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.5 }}
-                    className="mt-8 pt-8 border-t border-white/10 text-center"
+                    className="mt-8 pt-8 border-t border-white/10"
                   >
-                    <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 mb-4">
+                    <div className="flex items-center justify-center gap-2 mb-6">
                       <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                      <span className="text-xs font-bold font-mono">CAPITAL DEPLOYED TO META / TIKTOK EXCHANGES</span>
+                      <span className="text-xs font-bold font-mono text-emerald-400">CAPITAL DEPLOYED & SIMULATION COMPLETE</span>
                     </div>
+
+                    {simulationResult && (
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                        <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-3 text-center">
+                          <p className="text-[10px] text-zinc-500 font-mono mb-1">PROJECTED REACH</p>
+                          <p className="text-lg font-bold text-white">{simulationResult.projected_reach.toLocaleString()}</p>
+                        </div>
+                        <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-3 text-center">
+                          <p className="text-[10px] text-zinc-500 font-mono mb-1">EXPECTED CTR</p>
+                          <p className="text-lg font-bold text-indigo-400">{simulationResult.expected_ctr.toFixed(2)}%</p>
+                        </div>
+                        <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-3 text-center">
+                          <p className="text-[10px] text-zinc-500 font-mono mb-1">ESTIMATED CPC</p>
+                          <p className="text-lg font-bold text-emerald-400">${simulationResult.estimated_cpc.toFixed(2)}</p>
+                        </div>
+                        <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-3 text-center">
+                          <p className="text-[10px] text-zinc-500 font-mono mb-1">CONFIDENCE</p>
+                          <p className="text-lg font-bold text-cyan-400">{simulationResult.confidence.toFixed(1)}%</p>
+                        </div>
+                      </div>
+                    )}
+
                     <button 
                       onClick={onClose}
                       className="w-full py-3 bg-zinc-800 hover:bg-zinc-700 text-white rounded-xl text-sm font-tactical transition-colors"
