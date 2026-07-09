@@ -119,13 +119,45 @@ User Request
 <table>
   <tr>
     <td width="50%">
-      <img src="docs/screenshots/Omnideck.png" alt="Omni-Deck" />
-      <br/><sub><b>Omni-Deck Command Center</b> — Centralized portfolio manager & active positions table.</sub>
+      <img src="docs/screenshots/campaign.png" alt="Campaign Generation" />
+      <br/><sub><b>Algorithmic Delivery</b> — High-frequency marketing campaign deployment</sub>
     </td>
     <td width="50%">
       <img src="docs/screenshots/campaign2.png" alt="Campaign Analytics" />
-      <br/><sub><b>Genome Mode</b> — Multi-variant generation with divergent strategies.</sub>
+      <br/><sub><b>Genome Mode</b> — Multi-variant generation with divergent strategies</sub>
     </td>
+  </tr>
+  <tr>
+    <td width="50%">
+      <img src="docs/screenshots/Omnideck.png" alt="Omni-Deck" />
+      <br/><sub><b>Omni-Deck Command Center</b> — Centralized portfolio manager & active positions table</sub>
+    </td>
+    <td width="50%">
+      <img src="docs/screenshots/dashboard.png" alt="Standard Dashboard" />
+      <br/><sub><b>Signal Hub</b> — Core predictive sentiment feeds</sub>
+    </td>
+  </tr>
+</table>
+
+### Authentication & Billing
+
+<table>
+  <tr>
+    <td width="33%"><img src="docs/screenshots/login.png" alt="Secure Login" /><br/><sub><b>Secure Access</b></sub></td>
+    <td width="33%"><img src="docs/screenshots/register.png" alt="Registration" /><br/><sub><b>Institutional Onboarding</b></sub></td>
+    <td width="33%"><img src="docs/screenshots/pricing.png" alt="Pricing" /><br/><sub><b>Atomic Billing</b></sub></td>
+  </tr>
+</table>
+
+### Core Architecture
+
+<table>
+  <tr>
+    <td width="50%"><img src="docs/screenshots/hero.png" alt="Landing Page" /><br/><sub><b>Hero Section</b> — Magnetic UI with 3D orbs</sub></td>
+    <td width="50%"><img src="docs/screenshots/how_it_works.png" alt="How It Works" /><br/><sub><b>Execution Flow</b> — Animated algorithmic pipelines</sub></td>
+  </tr>
+  <tr>
+    <td colspan="2" align="center"><img src="docs/screenshots/features.png" alt="Features" width="60%" /><br/><sub><b>Features</b> — Glassmorphism feature cards</sub></td>
   </tr>
 </table>
 
