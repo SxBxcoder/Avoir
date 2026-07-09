@@ -104,11 +104,11 @@ The system is split into two independently deployable halves: a **Next.js 14 fro
 |---|---|---|---|
 | `avoir-users` | `userId` | — | Subscription state, credits, Stripe IDs |
 | `avoir-campaigns` | `userId` | `campaignId` | Campaign history with full plan/captions/image |
-| `avoir-audit` | — | — | Cascade tier logs and billing events |
+| `avoir-audit` | `logId` | — | Cascade tier logs and billing events |
 | `avoir-brand-dna` | `userId` | — | Brand identity profiles |
 | `avoir-performance` | `userId` | `campaignId` | Performance metrics per campaign |
 | `avoir-intelligence` | `userId` | — | Compounding learning profile (Flywheel) |
-| `avoir-competitors` | — | — | Competitor intel |
+| `avoir-competitors` | `industry` | `competitorId` | Competitor intel |
 
 ## 6. Data Flow: Campaign Generation
 

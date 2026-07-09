@@ -51,7 +51,7 @@ Modern growth teams rely on slow, manual analysis and gut feelings. Trends move 
 | Feature | Description |
 |---------|-------------|
 | **Omni-Deck Command Center** | A hedge-fund-style portfolio manager. Track live campaign momentum, predict ROI with the Capital Deployment Simulator, and monitor real-time social engagement streams. |
-| **Diamond Cascade Engine** | Proprietary 6-tier AI architecture orchestrating multiple models in sequence (Gemini → Groq → OpenRouter → Fallbacks). Guarantees 100% campaign generation uptime. |
+| **Diamond Cascade Engine** | Proprietary 6-tier AI architecture orchestrating multiple models in sequence (Gemini → Groq → OpenRouter → Fallbacks). Provides high availability and fallback coverage for campaign generation. |
 | **Daily Alpha Brief** | Top-of-page intelligence card showing today's top trend anomaly with a pre-generated, ready-to-deploy campaign hook. |
 | **Signal Decay Monitor** | Real-time SSE streams tracking per-campaign momentum. Get instant "DECAY WARNING" alerts when a campaign's engagement drops. |
 | **Genome Mode** | Generates 3 strategically divergent campaign variants (Virality, Conversion, Authority) with predicted radar scores. |
@@ -63,7 +63,7 @@ Modern growth teams rely on slow, manual analysis and gut feelings. Trends move 
 
 ## 🔷 Diamond Cascade Architecture
 
-Our proprietary 6-tier AI cascade guarantees **100% uptime** with intelligent failover:
+Our proprietary 6-tier AI cascade provides **high availability** with intelligent failover:
 
 ```text
 User Request
@@ -89,10 +89,10 @@ User Request
  └──────────────────────┬─────────────────────────┘
                         ↓ failover
  ┌────────────────────────────────────────────────┐
- │  TIER 6  Titanium Shield (Mock)   100% Uptime   │
+ │  TIER 6  Titanium Shield (Mock)   Local Fallback │
  └────────────────────────────────────────────────┘
      ↓
- Strategy Delivered (100% Guaranteed)
+ Strategy Delivered (High Availability)
 ```
 
 ---
@@ -181,8 +181,8 @@ Open **http://localhost:3000** to access the dashboard.
 
 | Document | Purpose |
 |----------|---------|
-| [requirements.md](specs/requirements.md) | Core SaaS functional requirements and features. |
-| [design.md](specs/design.md) | Complete system architecture, data models, and API boundaries. |
+| [requirements.md](requirements.md) | Core SaaS functional requirements and features. |
+| [design.md](design.md) | Complete system architecture, data models, and API boundaries. |
 | [COGNITO_AUTHENTICATION.md](specs/COGNITO_AUTHENTICATION.md) | JWT-based auth implementation details. |
 
 ---

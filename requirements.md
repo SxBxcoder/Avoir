@@ -9,7 +9,7 @@
 ### 1.1 Autonomous Campaign Generation
 - The system SHALL generate full marketing campaigns (Hook, Offer, CTA, Captions, Images) based on user goals.
 - The generation process SHALL stream responses via Server-Sent Events (SSE) for real-time user feedback.
-- The system SHALL enforce a 6-Tier Diamond Cascade failover mechanism (Gemini → Groq → OpenRouter → Mock) to guarantee 100% uptime.
+- The system SHALL enforce a 6-Tier Diamond Cascade failover mechanism (Gemini → Gemini Fallback → Groq → OpenRouter → Llama → Mock) to maintain a 99.9% uptime SLO.
 - The system SHALL support "Genome Mode," generating exactly 3 divergent strategic variants (Virality, Conversion, Authority) for A/B testing.
 - AI Image generation SHALL be supported via Pollinations.ai (Flux/Turbo engines) and injected directly into campaign plans.
 
@@ -34,7 +34,7 @@
 ### 1.5 Billing, Quotas & Authentication
 - The system SHALL enforce JWT-based authentication via Amazon Cognito.
 - The system SHALL support 3-tier Stripe billing (Free, Pro, Enterprise) via Checkout Sessions and Customer Portal.
-- The system SHALL track user credits in DynamoDB and deduct them atomically per campaign generation.
+- The system SHALL track user credits in DynamoDB and deduct them per campaign generation.
 - The system SHALL enforce sliding-window rate limiting per `userId` using Upstash Redis.
 
 ### 1.6 Market Intelligence
@@ -49,7 +49,7 @@
 - The Capital Deployment Simulator API (`/api/simulate`) SHALL respond in < 500ms.
 
 ### 2.2 Reliability
-- The system SHALL guarantee 100% success rate on campaign generation via the Diamond Cascade (Tier 6 Mock fallback).
+- The system SHALL maintain a 99.9% success rate on campaign generation via the Diamond Cascade (Tier 6 Mock fallback).
 - DynamoDB reads/writes SHALL complete within 500ms.
 
 ### 2.3 Scalability & Deployment
