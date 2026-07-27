@@ -370,7 +370,7 @@ Every milestone below can be independently verified by running `git log --onelin
                                                                      Proprietary EULA license
 ```
 
-**Why "Prachar.ai" became "Avoir":** The project started as an AWS "AI for Bharat" hackathon submission focused on Indian SMB marketing. During development, the architecture evolved beyond the hackathon scope into a full SaaS product with global positioning, Stripe billing, and enterprise features. The pivot was formalized on June 30, 2026 (commit `ef688c1`). The name "Avoir" (French for "to have / assets") was chosen to reflect the hedge fund identity.
+**Why "Prachar.ai" became "Avoir":** The project originally started as an AWS "AI for Bharat" hackathon submission focused on Indian SMB marketing. The project successfully qualified for the prototype phase (2nd round) among the top 1800 teams nationally, though it did not proceed to the final stage. During development, the architecture evolved far beyond the hackathon scope into a full SaaS product with global positioning, Stripe billing, and enterprise features. The pivot was formalized on June 30, 2026 (commit `ef688c1`). The name "Avoir" (French for "to have / assets") was chosen to reflect the hedge fund identity.
 
 ---
 
