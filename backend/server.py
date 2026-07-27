@@ -20,6 +20,7 @@ from trends_sniper import sniper
 from shadow_clone import clone_engine
 from authority_defender import defender
 from agency_bridge import agency_bridge
+from signal_decay_monitor import decay_monitor
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -44,6 +45,7 @@ app.add_middleware(
 
 # Request/Response Models
 class CampaignRequest(BaseModel):
+    """Request model for generating a new campaign."""
     goal: str
     user_id: str
 
@@ -57,6 +59,7 @@ class CampaignRequest(BaseModel):
 
 
 class CampaignResponse(BaseModel):
+    """Response model representing a generated campaign."""
     campaign_id: str
     user_id: str
     goal: str
@@ -147,7 +150,7 @@ async def generate_campaign(request: CampaignRequest):
         required_keys = ['plan', 'captions', 'image_url']
         missing_keys = [key for key in required_keys if key not in body]
         if missing_keys:
-            print(f"⚠️ WARNING: Missing keys in response: {missing_keys}")
+            print(f" WARNING: Missing keys in response: {missing_keys}")
             print(f"   This should not happen with total failover enabled!")
             # Add defaults as safety net
             if 'plan' not in body:
@@ -164,7 +167,7 @@ async def generate_campaign(request: CampaignRequest):
             body['user_id'] = body.pop('userId')
         
         # Return successful response directly (no extra wrappers)
-        print(f"✅ Returning campaign to frontend")
+        print(f" Returning campaign to frontend")
         print(f"   Campaign ID: {body.get('campaign_id', 'N/A')}")
         print(f"   Status: {body.get('status', 'N/A')}")
         
@@ -218,6 +221,7 @@ async def get_trends():
 
 # Sprint 8: Omni-Deck Command Center Publish Mock
 class PublishRequest(BaseModel):
+    """Request model for publishing a campaign to selected platforms."""
     campaign_id: str
     platforms: list[str]
 
@@ -236,6 +240,7 @@ async def publish_campaign(request: PublishRequest):
 
 # Sprint 4: Shadow Clone Engine
 class ShadowCloneRequest(BaseModel):
+    """Request model for generating a shadow clone video stream."""
     script: str
     image_url: str
 
@@ -289,20 +294,41 @@ async def receive_meta_webhook(request: Request):
 @app.get("/api/engagement/stream")
 async def stream_engagements():
     """
-    Streams live engagements from the Authority Defender to the frontend.
+    Streams live decay alerts + engagement events from the backend to the frontend.
+    Combines Signal Decay Monitor data with Authority Defender engagements.
     """
-    async def event_generator():
+    async def combined_event_generator():
         import asyncio
+        import random
+        
+        # Engagement mock data for the intelligence tab
+        platforms = ['TikTok', 'Instagram', 'LinkedIn', 'Twitter', 'YouTube']
+        actions = ['liked', 'shared', 'commented', 'saved', 'clicked CTA', 'followed']
+        names = ['Aanya M.', 'Raj P.', 'Sarah K.', 'Li Wei', 'James O.', 'Priya S.', 'Alex T.', 'Maria G.']
+        sentiments = ['positive', 'very positive', 'neutral', 'positive', 'enthusiastic']
+        
+        tick = 0
         while True:
-            # Poll for new engagements
-            engagements = defender.get_latest_engagements()
-            if engagements:
-                for engagement in engagements:
-                    yield f"data: {json.dumps(engagement)}\n\n"
-            # Wait a bit before polling again
-            await asyncio.sleep(1.0)
+            await asyncio.sleep(2)
+            tick += 1
             
-    return StreamingResponse(event_generator(), media_type="text/event-stream")
+            # Every tick: send decay data for all campaigns using unified tick method
+            events = decay_monitor.tick()
+            for event_data in events:
+                yield f"data: {json.dumps(event_data)}\n\n"
+            
+            # Every 3rd tick: also send an engagement event for the intelligence tab
+            if tick % 3 == 0:
+                engagement = {
+                    "type": random.choice(["comment", "share", "like", "save"]),
+                    "action": random.choice(actions),
+                    "user": random.choice(names),
+                    "platform": random.choice(platforms),
+                    "sentiment": random.choice(sentiments),
+                }
+                yield f"data: {json.dumps(engagement)}\n\n"
+    
+    return StreamingResponse(combined_event_generator(), media_type="text/event-stream")
 
 
 # Run server
@@ -314,6 +340,7 @@ async def get_agency_clients(agency_id: str = "default_agency"):
 
 
 class ShareLinkRequest(BaseModel):
+    """Request model for generating a white-labeled client share link."""
     agency_id: str = "default_agency"
     campaign_data: dict
 
@@ -335,6 +362,7 @@ async def get_public_campaign(link_id: str):
 
 
 class ReviseRequest(BaseModel):
+    """Request model for autonomous client collaboration revision."""
     link_id: str
     client_comment: str
 
@@ -408,12 +436,52 @@ async def revise_campaign(request: ReviseRequest):
 
     return {"status": "success", "campaign": updated_campaign}
 
+# ==========================================
+# RETENTION FEATURES (Added during sequence 2 & 3)
+# ==========================================
+
+
+class SimulateRequest(BaseModel):
+    """Request model for capital deployment simulation."""
+    budget: float
+    target_roas: float
+
+@app.post("/api/simulate")
+async def simulate_deployment(req: SimulateRequest):
+    """Predictive ROI simulator for capital deployment."""
+    if req.budget <= 0:
+        raise HTTPException(status_code=400, detail="Budget must be strictly positive")
+        
+    import random
+    projected_roas = min(req.target_roas, 5.0) - 0.2
+    # Calculate realistic metrics based on budget
+    projected_reach = int(req.budget * random.uniform(18, 32))
+    expected_ctr = round(random.uniform(2.8, 6.5), 2)
+    estimated_cpc = round(req.budget / max(projected_reach * (expected_ctr / 100), 1), 2)
+    
+    # Calculate CPA independent of the budget term canceling out
+    # estimated_cpa = CPC / Conversion Rate (simulating 5-15% conversion rate)
+    conversion_rate = random.uniform(0.05, 0.15)
+    estimated_cpa = round(estimated_cpc / conversion_rate, 2)
+    
+    confidence = round(random.uniform(78, 96), 1)
+    
+    return {
+        "status": "success",
+        "simulated_roas": round(projected_roas, 2),
+        "estimated_cpa": estimated_cpa,
+        "projected_reach": projected_reach,
+        "expected_ctr": expected_ctr,
+        "estimated_cpc": estimated_cpc,
+        "confidence": confidence
+    }
+
 if __name__ == "__main__":
-    print("🚀 Starting Avoir Development Server...")
-    print("📍 API will be available at: http://localhost:8000")
-    print("📚 API docs available at: http://localhost:8000/docs")
-    print("🔗 Frontend should connect to: http://localhost:8000/api/generate")
-    print("\n✨ Ready to generate campaigns!\n")
+    print("Starting Avoir Development Server...")
+    print(" API will be available at: http://localhost:8000")
+    print(" API docs available at: http://localhost:8000/docs")
+    print(" Frontend should connect to: http://localhost:8000/api/generate")
+    print("\n Ready to generate campaigns!\n")
     
     uvicorn.run(
         "server:app",

@@ -1,10 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Target, Activity, TrendingUp, DollarSign, Users, Briefcase, Zap, Shield, ArrowRight, Server, ChevronRight, Share2, Copy, BarChart2, CheckCircle2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import InteractivePlasmaCanvas from '@/components/InteractivePlasmaCanvas';
+import DailyAlphaBrief from '@/components/DailyAlphaBrief';
+import { CapitalDeploymentSimulator } from '@/components/CapitalDeploymentSimulator';
 
 // Spring physics
 const springConfig = { type: 'spring' as const, stiffness: 300, damping: 30 };
@@ -20,15 +22,21 @@ const staggerItem = {
 export default function OmniDeckPage() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<'positions' | 'intelligence' | 'b2b'>('positions');
+  const activeTabRef = useRef(activeTab);
+
+  useEffect(() => {
+    activeTabRef.current = activeTab;
+  }, [activeTab]);
   const [engagements, setEngagements] = useState<any[]>([]);
   const [copiedLink, setCopiedLink] = useState(false);
+  const [selectedCampaignForSim, setSelectedCampaignForSim] = useState<any | null>(null);
 
-  // Mock Active Positions (Live Campaigns)
-  const activePositions = [
-    { id: 'pos-1', asset: 'Corporate Villain Era Hook', platform: 'TikTok', roas: 4.2, spend: 1250, momentum: '+15%', status: 'SCALING' },
-    { id: 'pos-2', asset: 'Anti-Hustle Culture Ad', platform: 'Instagram', roas: 3.8, spend: 850, momentum: '+8%', status: 'OPTIMIZING' },
-    { id: 'pos-3', asset: 'Lo-Fi Skincare Demo', platform: 'YouTube Shorts', roas: 1.2, spend: 400, momentum: '-5%', status: 'LIQUIDATING' },
-  ];
+  // Active Positions (Live Campaigns) - Now stateful for real-time decay alerts
+  const [activePositions, setActivePositions] = useState([
+    { id: 'pos-1', asset: 'Corporate Villain Era Hook', platform: 'TikTok', roas: 4.2, spend: 1250, momentum: '+15', status: 'SCALING', isDecaying: false },
+    { id: 'pos-2', asset: 'Anti-Hustle Culture Ad', platform: 'Instagram', roas: 3.8, spend: 850, momentum: '+8', status: 'OPTIMIZING', isDecaying: false },
+    { id: 'pos-3', asset: 'Lo-Fi Skincare Demo', platform: 'YouTube Shorts', roas: 1.2, spend: 400, momentum: '-5', status: 'LIQUIDATING', isDecaying: false },
+  ]);
 
   // Mock B2B Clients
   const clients = [
@@ -37,17 +45,40 @@ export default function OmniDeckPage() {
   ];
 
   useEffect(() => {
-    if (activeTab === 'intelligence') {
-      const eventSource = new EventSource('/api/engagement/stream');
-      eventSource.onmessage = (event) => {
-        try {
-          const newEngagement = JSON.parse(event.data);
-          setEngagements(prev => [newEngagement, ...prev].slice(0, 15));
-        } catch (err) {}
-      };
-      return () => eventSource.close();
-    }
-  }, [activeTab]);
+    // Real-time Decay Monitor and Intelligence Stream
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+    const eventSource = new EventSource(`${apiUrl}/api/engagement/stream`);
+    
+    eventSource.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        
+        // Handle Decay Alerts
+        if (data.id && data.momentum !== undefined) {
+          setActivePositions(prev => prev.map(pos => {
+            if (pos.id === data.id) {
+              const newStatus = data.momentum > 10 ? 'SCALING' : data.momentum > 0 ? 'OPTIMIZING' : 'LIQUIDATING';
+              return {
+                ...pos,
+                momentum: data.momentum > 0 ? `+${data.momentum}` : `${data.momentum}`,
+                isDecaying: data.is_decay_alert,
+                status: data.is_decay_alert ? 'DECAY WARNING' : newStatus
+              };
+            }
+            return pos;
+          }));
+        } 
+        // Handle Intelligence Feed (if it has type/action)
+        else if (data.action) {
+          if (activeTabRef.current === 'intelligence') {
+            setEngagements(prev => [data, ...prev].slice(0, 15));
+          }
+        }
+      } catch (err) {}
+    };
+    
+    return () => eventSource.close();
+  }, []); // Only establish connection once
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
@@ -87,7 +118,10 @@ export default function OmniDeckPage() {
       </header>
 
       {/* Main Content */}
-      <main className="relative z-10 max-w-7xl mx-auto px-6 py-8 flex gap-8">
+      <div className="relative z-10 max-w-7xl mx-auto px-6 pt-8 pb-4">
+        <DailyAlphaBrief />
+      </div>
+      <main className="relative z-10 max-w-7xl mx-auto px-6 pb-8 flex gap-8">
         
         {/* Sidebar Nav */}
         <aside className="w-64 flex-shrink-0 space-y-2">
@@ -119,6 +153,7 @@ export default function OmniDeckPage() {
             {activeTab === 'positions' && (
               <motion.div
                 key="positions"
+                id="active-positions-table"
                 variants={staggerContainer}
                 initial="hidden"
                 animate="show"
@@ -150,17 +185,27 @@ export default function OmniDeckPage() {
                         <motion.tr 
                           key={pos.id}
                           variants={staggerItem}
-                          className="border-b border-white/5 hover:bg-white/5 transition-colors"
+                          onClick={() => setSelectedCampaignForSim(pos)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault();
+                              setSelectedCampaignForSim(pos);
+                            }
+                          }}
+                          tabIndex={0}
+                          role="button"
+                          className={`border-b border-white/5 transition-colors cursor-pointer ${pos.isDecaying ? 'bg-red-500/20 animate-pulse' : 'hover:bg-white/5'}`}
                         >
                           <td className="p-4 text-sm font-medium text-white">{pos.asset}</td>
                           <td className="p-4 text-sm text-zinc-400">{pos.platform}</td>
                           <td className="p-4 text-sm font-mono text-zinc-300">${pos.spend}</td>
                           <td className="p-4 text-sm font-mono text-indigo-400">{pos.roas}x</td>
-                          <td className={`p-4 text-sm font-mono ${pos.momentum.startsWith('+') ? 'text-emerald-400' : 'text-red-400'}`}>
-                            {pos.momentum}
+                          <td className={`p-4 text-sm font-mono ${String(pos.momentum).startsWith('+') ? 'text-emerald-400' : 'text-red-400'}`}>
+                            {pos.momentum}%
                           </td>
                           <td className="p-4 text-right">
                             <span className={`inline-flex items-center px-2 py-1 rounded text-[10px] font-tactical tracking-widest ${
+                              pos.isDecaying ? 'bg-red-600 text-white shadow-[0_0_15px_rgba(220,38,38,0.8)] border border-red-500' :
                               pos.status === 'SCALING' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' :
                               pos.status === 'OPTIMIZING' ? 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20' :
                               'bg-red-500/10 text-red-400 border border-red-500/20'
@@ -280,6 +325,16 @@ export default function OmniDeckPage() {
           </AnimatePresence>
         </div>
       </main>
+
+      {/* Simulator Modal overlay */}
+      <AnimatePresence>
+        {selectedCampaignForSim && (
+          <CapitalDeploymentSimulator 
+            onClose={() => setSelectedCampaignForSim(null)} 
+            campaignPlan={selectedCampaignForSim} 
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }
