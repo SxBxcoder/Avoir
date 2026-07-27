@@ -30,6 +30,17 @@
   <br/><br/>
 
   <code>82 commits · 21 active development days · 4 contributors · Feb 2026 – present</code>
+  
+  <br/><br/><br/>
+
+  <h3>🏆 AWS AI For Bharat — National Top 1800 Prototype Phase Shortlist</h3>
+  <table>
+    <tr>
+      <td width="33%" align="center"><img src="docs/credentials/shortlist_badge.jpg" alt="Top Innovator Badge" /><br/><sub><b>Top Innovator Badge</b></sub></td>
+      <td width="33%" align="center"><img src="docs/credentials/shortlist_email.png" alt="Shortlist Email" /><br/><sub><b>Prototype Phase Selection</b></sub></td>
+      <td width="33%" align="center"><img src="docs/credentials/aws_credits.png" alt="AWS Credits Grant" /><br/><sub><b>AWS Credits Grant</b></sub></td>
+    </tr>
+  </table>
 </div>
 
 <br/>
