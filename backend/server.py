@@ -390,7 +390,7 @@ async def revise_campaign(request: ReviseRequest):
         new_offer = f"Revised offer based on: {request.client_comment}"
     else:
         # Call Gemini via REST
-        url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent"
+        url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent"
         prompt = f"""
         You are Avoir, an elite AI media buyer and copywriter.
         The current campaign is:

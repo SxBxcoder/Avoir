@@ -90,7 +90,7 @@ class TrendSniper:
             return []
 
         print("[TrendSniper] 🎯 Firing Gemini AI for dynamic trend detection...")
-        url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent"
+        url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent"
         
         system_prompt = """You are an elite Social Media Trend Analyst. Return 3 highly viral, currently trending social media content formats.
 Return valid JSON only. Format:

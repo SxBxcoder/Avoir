@@ -99,7 +99,7 @@ class AuthorityDefender:
             else:
                 # REAL GEMINI AI INTEGRATION
                 print(f"[AuthorityDefender] 🎯 Firing Gemini AI for comment: {text}")
-                url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent"
+                url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent"
                 
                 payload = {
                     "contents": [{"parts": [{"text": user_prompt}]}],
