@@ -4,7 +4,8 @@ import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Target, MessageSquare, Briefcase, Zap, Shield, Link as LinkIcon, ArrowRight, Loader2, Check } from 'lucide-react';
-import { getCurrentUser } from 'aws-amplify/auth';
+import { useAuth } from '@/lib/auth/provider';
+import { RequireAuth } from '@/components/auth/guards';
 
 const QUESTIONS = [
   { id: 'brandName', title: "What's the name of your brand?", icon: Zap, placeholder: "e.g., Nexus Athletics" },
@@ -18,6 +19,7 @@ const QUESTIONS = [
 
 export default function OnboardingPage() {
   const router = useRouter();
+  const { email } = useAuth();
   const [currentStep, setCurrentStep] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [inputValue, setInputValue] = useState('');
@@ -26,22 +28,12 @@ export default function OnboardingPage() {
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    async function checkAuth() {
-      try {
-        const user = await getCurrentUser();
-        setUserEmail(user.signInDetails?.loginId || user.username);
-      } catch (err) {
-        // Not logged in? Either redirect to login or check if there's a bypass
-        const isDemo = new URLSearchParams(window.location.search).get('demo');
-        if (isDemo) {
-          setUserEmail('demo@avoir.ai');
-        } else {
-          router.push('/login');
-        }
-      }
+    // Auth state comes from the provider. In demo mode (?demo=true) the
+    // provider bootstraps a real mock session, so the email is always real.
+    if (email) {
+      setUserEmail(email);
     }
-    checkAuth();
-  }, [router]);
+  }, [email]);
 
   useEffect(() => {
     if (inputRef.current) {
@@ -81,8 +73,7 @@ export default function OnboardingPage() {
       if (!res.ok) throw new Error('Failed to save DNA');
       
       // Redirect to dashboard
-      const isDemo = new URLSearchParams(window.location.search).get('demo');
-      router.push(isDemo ? '/?demo=true' : '/');
+      router.push('/');
     } catch (err) {
       console.error(err);
       setIsSubmitting(false);
@@ -91,15 +82,18 @@ export default function OnboardingPage() {
 
   if (!userEmail) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
-        <Loader2 className="w-8 h-8 text-indigo-500 animate-spin" />
-      </div>
+      <RequireAuth>
+        <div className="min-h-screen bg-black flex items-center justify-center">
+          <Loader2 className="w-8 h-8 text-indigo-500 animate-spin" />
+        </div>
+      </RequireAuth>
     );
   }
 
   const CurrentIcon = QUESTIONS[currentStep].icon;
 
   return (
+    <RequireAuth>
     <div className="min-h-screen bg-black text-white flex flex-col font-sans selection:bg-indigo-500/30 overflow-hidden relative">
       {/* Background Elements */}
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-indigo-900/20 via-black to-black" />
@@ -184,5 +178,6 @@ export default function OnboardingPage() {
         </div>
       </div>
     </div>
+    </RequireAuth>
   );
 }

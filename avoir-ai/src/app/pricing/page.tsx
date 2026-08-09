@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Check, Zap, Star, Shield, ArrowLeft, Sparkles, Crown, Users, ArrowRight, X } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { getStripe, PLANS, type PlanTier } from '@/lib/stripe';
-import { isAuthenticated, getUser } from '@/lib/authHelpers';
+import { useAuth } from '@/lib/auth/provider';
 import Link from 'next/link';
 import Image from 'next/image';
 
@@ -33,6 +33,7 @@ function PricingContent() {
   const [loading, setLoading] = useState<string | null>(null);
   const [isAnnual, setIsAnnual] = useState(false);
   const router = useRouter();
+  const { isAuthenticated, user } = useAuth();
   const searchParams = useSearchParams();
   const canceled = searchParams.get('canceled');
 
@@ -74,14 +75,12 @@ function PricingContent() {
 
     setLoading(priceId);
     try {
-      const isAuth = await isAuthenticated();
-      if (!isAuth) {
+      if (!isAuthenticated) {
         router.push('/login');
         return;
       }
 
-      const user = await getUser();
-      const userEmail = user?.signInDetails?.loginId || '';
+      const userEmail = user?.email || '';
       const userId = user?.userId || '';
 
       const response = await fetch('/api/stripe/checkout', {
