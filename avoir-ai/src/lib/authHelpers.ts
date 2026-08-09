@@ -1,7 +1,7 @@
 // Helper functions for authentication
 // These are like your JWT middleware functions in MERN
 
-import { getCurrentUser, fetchAuthSession, signOut } from 'aws-amplify/auth';
+import { getCurrentUser, fetchAuthSession, signOut } from '@/lib/authBridge';
 
 // Check if user is logged in (like verifyToken middleware in MERN)
 export async function isAuthenticated(): Promise<boolean> {

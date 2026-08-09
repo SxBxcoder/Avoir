@@ -1,22 +1,21 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { signIn, signInWithRedirect } from 'aws-amplify/auth';
-import { configureAuth } from '@/lib/auth';
+import { signInWithRedirect, useMockAuth } from '@/lib/authBridge';
+import { useAuth } from '@/lib/auth/provider';
+import { GuestOnly } from '@/components/auth/guards';
 import { motion } from 'framer-motion';
 import { ArrowLeft, ArrowRight, Eye, EyeOff, Mail, Lock } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
-
-// Call synchronously outside component
-configureAuth();
 
 const springSmooth = { type: 'spring' as const, stiffness: 100, damping: 30 };
 const springBouncy = { type: 'spring' as const, stiffness: 400, damping: 25 };
 
 export default function LoginPage() {
   const router = useRouter();
+  const { login } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -29,20 +28,23 @@ export default function LoginPage() {
     setError('');
 
     try {
-      if (!process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID) {
-        throw new Error('Deployment Error: Cognito User Pool ID is missing. The AWS Amplify build did not inject the environment variables.');
-      }
-
-      const { isSignedIn } = await signIn({ username: email, password });
-      if (isSignedIn) router.push('/');
+      await login(email, password);
+      const next = new URLSearchParams(window.location.search).get('next') || '/';
+      router.push(next);
     } catch (err: any) {
-      setError(err.message || 'Login failed');
+      if (err.name === 'UserAlreadyAuthenticatedException' || err.message?.includes('already a signed in user')) {
+        const next = new URLSearchParams(window.location.search).get('next') || '/';
+        router.push(next);
+      } else {
+        setError(err.message || 'Login failed');
+      }
     } finally {
       setLoading(false);
     }
   };
 
   return (
+    <GuestOnly>
     <div className="min-h-screen bg-black text-white flex" style={{ fontFamily: "'Inter', sans-serif" }}>
       {/* Left Panel — Branding */}
       <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden">
@@ -113,6 +115,13 @@ export default function LoginPage() {
             <h2 className="text-3xl font-bold tracking-tight mb-2">Sign in</h2>
             <p className="text-zinc-500">Enter your credentials to continue</p>
           </div>
+
+          {useMockAuth && (
+            <div className="mb-6 p-3 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-xs leading-relaxed">
+              <span className="font-bold uppercase tracking-wider text-indigo-400">Local Demo Mode</span> — auth runs
+              in your browser (no AWS). Register an account first, or click <span className="font-semibold">Continue with Google</span> to sign in instantly.
+            </div>
+          )}
 
           <motion.button
             type="button"
@@ -230,5 +239,6 @@ export default function LoginPage() {
         </motion.div>
       </div>
     </div>
+    </GuestOnly>
   );
 }

@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Target, Activity, TrendingUp, DollarSign, Users, Briefcase, Zap, Shield, ArrowRight, Server, ChevronRight, Share2, Copy, BarChart2, CheckCircle2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { RequireAuth } from '@/components/auth/guards';
 import InteractivePlasmaCanvas from '@/components/InteractivePlasmaCanvas';
 import DailyAlphaBrief from '@/components/DailyAlphaBrief';
 import { CapitalDeploymentSimulator } from '@/components/CapitalDeploymentSimulator';
@@ -87,6 +88,7 @@ export default function OmniDeckPage() {
   };
 
   return (
+    <RequireAuth>
     <div className="min-h-screen bg-black text-white font-sans overflow-x-hidden selection:bg-indigo-500/30">
       {/* Background */}
       <div className="fixed inset-0 z-0 pointer-events-none">
@@ -336,6 +338,7 @@ export default function OmniDeckPage() {
         )}
       </AnimatePresence>
     </div>
+    </RequireAuth>
   );
 }
 
