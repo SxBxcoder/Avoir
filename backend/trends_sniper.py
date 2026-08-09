@@ -90,7 +90,7 @@ class TrendSniper:
             return []
 
         print("[TrendSniper] 🎯 Firing Gemini AI for dynamic trend detection...")
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
+        url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent"
         
         system_prompt = """You are an elite Social Media Trend Analyst. Return 3 highly viral, currently trending social media content formats.
 Return valid JSON only. Format:
@@ -115,7 +115,7 @@ Return valid JSON only. Format:
                     "responseMimeType": "application/json"
                 }
             }
-            resp = requests.post(url, json=payload, timeout=15)
+            resp = requests.post(url, json=payload, headers={"x-goog-api-key": GEMINI_API_KEY}, timeout=15)
             resp.raise_for_status()
             data = resp.json()
             raw_text = data['candidates'][0]['content']['parts'][0]['text']
