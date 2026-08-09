@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { signInWithRedirect, useMockAuth } from '@/lib/authBridge';
 import { useAuth } from '@/lib/auth/provider';
-import { GuestOnly } from '@/components/auth/guards';
+import { GuestOnly, getSafeRedirectPath } from '@/components/auth/guards';
 import { motion } from 'framer-motion';
 import { ArrowLeft, ArrowRight, Eye, EyeOff, Mail, Lock } from 'lucide-react';
 import Link from 'next/link';
@@ -29,11 +29,11 @@ export default function LoginPage() {
 
     try {
       await login(email, password);
-      const next = new URLSearchParams(window.location.search).get('next') || '/';
+      const next = getSafeRedirectPath(new URLSearchParams(window.location.search).get('next'));
       router.push(next);
     } catch (err: any) {
       if (err.name === 'UserAlreadyAuthenticatedException' || err.message?.includes('already a signed in user')) {
-        const next = new URLSearchParams(window.location.search).get('next') || '/';
+        const next = getSafeRedirectPath(new URLSearchParams(window.location.search).get('next'));
         router.push(next);
       } else {
         setError(err.message || 'Login failed');

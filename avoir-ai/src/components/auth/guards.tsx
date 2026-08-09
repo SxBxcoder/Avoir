@@ -20,6 +20,18 @@ import { useEffect, type ReactNode } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '@/lib/auth/provider';
 
+/**
+ * Resolves a `next` query param to a safe internal route.
+ *
+ * Guards against open redirects: only same-origin paths (single leading `/`,
+ * no `//`, no `/\`, no scheme) are allowed. Anything else falls back to `/`.
+ */
+export function getSafeRedirectPath(raw: string | null): string {
+  if (!raw) return '/';
+  if (!raw.startsWith('/') || raw.startsWith('//') || raw.startsWith('/\\')) return '/';
+  return raw;
+}
+
 export function AuthLoadingScreen() {
   return (
     <div className="min-h-screen bg-black flex items-center justify-center">
@@ -56,7 +68,7 @@ export function GuestOnly({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!isLoading && isAuthenticated) {
       const params = new URLSearchParams(window.location.search);
-      router.replace(params.get('next') || '/');
+      router.replace(getSafeRedirectPath(params.get('next')));
     }
   }, [isLoading, isAuthenticated, router]);
 

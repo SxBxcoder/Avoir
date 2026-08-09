@@ -28,14 +28,11 @@ export default function OnboardingPage() {
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    // Auth state comes from the provider. Keep the legacy ?demo=true bypass
-    // working so the recorded demo flow still reaches this page.
+    // Auth state comes from the provider. In demo mode (?demo=true) the
+    // provider bootstraps a real mock session, so the email is always real.
     if (email) {
       setUserEmail(email);
-      return;
     }
-    const isDemo = new URLSearchParams(window.location.search).get('demo');
-    setUserEmail(isDemo ? 'demo@avoir.ai' : null);
   }, [email]);
 
   useEffect(() => {
@@ -76,8 +73,7 @@ export default function OnboardingPage() {
       if (!res.ok) throw new Error('Failed to save DNA');
       
       // Redirect to dashboard
-      const isDemo = new URLSearchParams(window.location.search).get('demo');
-      router.push(isDemo ? '/?demo=true' : '/');
+      router.push('/');
     } catch (err) {
       console.error(err);
       setIsSubmitting(false);

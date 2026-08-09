@@ -27,6 +27,8 @@ import {
   fetchAuthSession,
   signIn as bridgeSignIn,
   signOut as bridgeSignOut,
+  demoSignIn,
+  useMockAuth,
 } from '@/lib/authBridge';
 import type { AuthUser } from './types';
 
@@ -95,7 +97,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    refresh();
+    const isDemoRequest =
+      useMockAuth &&
+      typeof window !== 'undefined' &&
+      new URLSearchParams(window.location.search).get('demo') === 'true';
+
+    // The recorded demo flow (?demo=true) needs an authenticated session to
+    // pass the route guards. In demo mode, create a real mock session so the
+    // provider — not a page-level bypass — is the source of truth.
+    const boot = async () => {
+      if (isDemoRequest) {
+        try {
+          await getCurrentUser();
+        } catch {
+          await demoSignIn();
+        }
+      }
+      await refresh();
+    };
+    boot();
   }, [refresh]);
 
   const login = useCallback(

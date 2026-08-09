@@ -149,7 +149,77 @@ function loadSession(): StoredSession {
 // Public API (matches aws-amplify/auth signatures)
 // ============================================================================
 
-export async function signUp({ username, password, options }: any): Promise<any> {
+export type MockSignUpInput = {
+  username: string;
+  password: string;
+  options?: { userAttributes?: Record<string, string> };
+};
+
+export type MockSignUpOutput = {
+  isSignUpComplete: boolean;
+  nextStep: {
+    signUpStep: 'CONFIRM_SIGN_UP';
+    codeDeliveryDetails?: { destination: string };
+  };
+};
+
+export type MockConfirmSignUpInput = {
+  username: string;
+  confirmationCode: string;
+};
+
+export type MockConfirmSignUpOutput = {
+  isSignUpComplete: boolean;
+  nextStep: { signUpStep: 'DONE' };
+};
+
+export type MockSignInInput = { username: string; password: string };
+
+export type MockSignInOutput = {
+  isSignedIn: boolean;
+  nextStep: { signInStep: 'DONE' };
+};
+
+export type MockResetPasswordInput = { username: string };
+
+export type MockResetPasswordOutput = {
+  nextStep: {
+    resetPasswordStep: 'CONFIRM_RESET_PASSWORD_WITH_CODE';
+    codeDeliveryDetails?: { destination: string };
+  };
+};
+
+export type MockConfirmResetPasswordInput = {
+  username: string;
+  confirmationCode: string;
+  newPassword: string;
+};
+
+export type MockConfirmResetPasswordOutput = {
+  isPasswordReset: boolean;
+  nextStep: { resetPasswordStep: 'DONE' };
+};
+
+/** Demo identity used by the recorded ?demo=true flow. */
+export const DEMO_COMMANDER_EMAIL = 'commander@avoir.ai';
+
+/** Creates a real mock session for the demo commander (demo mode only). */
+export async function demoSignIn(): Promise<void> {
+  const email = DEMO_COMMANDER_EMAIL;
+  const users = getUsers();
+  if (!users[email]) {
+    users[email] = {
+      password: 'DemoPass!123',
+      email,
+      verified: true,
+      brandName: 'Avoir Demo Brand',
+    };
+    setUsers(users);
+  }
+  createSession(email);
+}
+
+export async function signUp({ username, password, options }: MockSignUpInput): Promise<MockSignUpOutput> {
   const email = (username || '').toLowerCase().trim();
   assertEmail(email);
   assertPasswordPolicy(password);
@@ -176,7 +246,7 @@ export async function signUp({ username, password, options }: any): Promise<any>
   };
 }
 
-export async function confirmSignUp({ username, confirmationCode }: { username: string; confirmationCode: string }): Promise<any> {
+export async function confirmSignUp({ username, confirmationCode }: MockConfirmSignUpInput): Promise<MockConfirmSignUpOutput> {
   const email = (username || '').toLowerCase().trim();
   const users = getUsers();
 
@@ -193,7 +263,7 @@ export async function confirmSignUp({ username, confirmationCode }: { username: 
   return { isSignUpComplete: true, nextStep: { signUpStep: 'DONE' } };
 }
 
-export async function signIn({ username, password }: { username: string; password: string }): Promise<any> {
+export async function signIn({ username, password }: MockSignInInput): Promise<MockSignInOutput> {
   const email = (username || '').toLowerCase().trim();
   const users = getUsers();
 
@@ -216,7 +286,7 @@ export async function signIn({ username, password }: { username: string; passwor
 }
 
 export async function signInWithRedirect(): Promise<void> {
-  createSession('demo-commander@avoir.ai');
+  await demoSignIn();
   if (isBrowser()) {
     window.location.href = '/';
   }
@@ -235,7 +305,12 @@ export async function getCurrentUser(): Promise<{ userId: string; username: stri
   };
 }
 
-export async function fetchAuthSession(): Promise<any> {
+export async function fetchAuthSession(): Promise<{
+  tokens: {
+    accessToken: { toString(): string };
+    idToken: { payload: { sub: string; email: string } };
+  };
+}> {
   const session = loadSession();
   return {
     tokens: {
@@ -252,7 +327,7 @@ export async function fetchUserAttributes(): Promise<{ email: string }> {
   return { email: session.signInDetails.loginId };
 }
 
-export async function resetPassword({ username }: { username: string }): Promise<any> {
+export async function resetPassword({ username }: MockResetPasswordInput): Promise<MockResetPasswordOutput> {
   const email = (username || '').toLowerCase().trim();
   const users = getUsers();
 
@@ -272,11 +347,7 @@ export async function confirmResetPassword({
   username,
   confirmationCode,
   newPassword,
-}: {
-  username: string;
-  confirmationCode: string;
-  newPassword: string;
-}): Promise<any> {
+}: MockConfirmResetPasswordInput): Promise<MockConfirmResetPasswordOutput> {
   const email = (username || '').toLowerCase().trim();
   const users = getUsers();
 

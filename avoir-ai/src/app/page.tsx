@@ -152,23 +152,16 @@ function Navbar() {
 export default function Home() {
   const router = useRouter();
 
-  // Auth state is centralized in the AuthProvider.
+  // Auth state is centralized in the AuthProvider. In demo mode the provider
+  // bootstraps a real mock session for ?demo=true, so no page-level bypass is
+  // needed here.
   const { isAuthenticated, email, accessToken: authToken, logout, isLoading, refresh } = useAuth();
-  const [demoMode, setDemoMode] = useState(false);
 
   // Scroll-based parallax (global scroll, no ref — avoids hydration errors with conditional rendering)
   const { scrollY } = useScroll();
   const heroY = useTransform(scrollY, [0, 600], [0, 200]);
   const heroOpacity = useTransform(scrollY, [0, 400], [1, 0]);
   const heroScale = useTransform(scrollY, [0, 400], [1, 0.95]);
-
-  useEffect(() => {
-    // Legacy demo bypass: ?demo=true lets the recorded demo video play the
-    // dashboard without a real session.
-    if (typeof window !== 'undefined' && window.location.search.includes('demo=true')) {
-      setDemoMode(true);
-    }
-  }, []);
 
   // Returning from OAuth: the token exchange happens asynchronously inside
   // aws-amplify, so poll the provider session a few times, then clean the URL.
@@ -187,19 +180,17 @@ export default function Home() {
     }
   }, [refresh]);
 
-  // Derived auth state (provider session, overridden by the demo bypass).
-  const isLoggedIn = isAuthenticated || demoMode;
-  const userEmail = email || (demoMode ? 'commander@avoir.ai' : '');
-  const resolvedAccessToken = authToken || (demoMode ? 'mock-token' : '');
+  const isLoggedIn = isAuthenticated;
+  const userEmail = email;
+  const resolvedAccessToken = authToken;
 
   const handleLogout = async () => {
     await logout();
-    setDemoMode(false);
   };
 
   // While the initial session restore is in flight, show a loader instead of
   // flashing the landing page at authenticated users.
-  if (isLoading && !demoMode) {
+  if (isLoading) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
         <div className="w-10 h-10 border-2 border-white/20 border-t-indigo-500 rounded-full animate-spin" />
@@ -209,7 +200,13 @@ export default function Home() {
 
   // Authenticated: Show Dashboard
   if (isLoggedIn) {
-    return <CampaignDashboard accessToken={resolvedAccessToken} userEmail={userEmail} onLogout={handleLogout} />;
+    return (
+      <CampaignDashboard
+        accessToken={resolvedAccessToken || ''}
+        userEmail={userEmail || ''}
+        onLogout={handleLogout}
+      />
+    );
   }
 
   // ========================================================================
