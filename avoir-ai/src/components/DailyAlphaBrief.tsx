@@ -20,33 +20,42 @@ interface AlphaBriefData {
   };
 }
 
+const FALLBACK_BRIEF: AlphaBriefData = {
+  trend: {
+    title: 'AI Micro-Agents',
+    description: 'Explosive growth in single-purpose AI agents replacing complex SaaS.',
+    momentum: 'peaking',
+  },
+  brief: {
+    plan: {
+      hook: '🔥 The era of bloated SaaS is dead. Say hello to Micro-Agents.',
+      offer: 'Deploy 5 highly-specialized AI agents for the cost of 1 generic tool.',
+      cta: 'Start building your automated army today 🚀',
+    },
+  },
+};
+
 export default function DailyAlphaBrief() {
   const [data, setData] = useState<AlphaBriefData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isDismissed, setIsDismissed] = useState(false);
 
   useEffect(() => {
-    // In production, this would fetch from our Next.js API which queries Redis
-    // For now, we mock the delayed load of the cached brief to simulate the experience
+    // Fetches today's Redis-cached brief from /api/alpha-brief.
+    // Falls back to the local mock if the API is unreachable so the UI never breaks.
     const fetchBrief = async () => {
       setIsLoading(true);
-      setTimeout(() => {
-        setData({
-          trend: {
-            title: 'AI Micro-Agents',
-            description: 'Explosive growth in single-purpose AI agents replacing complex SaaS.',
-            momentum: 'peaking',
-          },
-          brief: {
-            plan: {
-              hook: '🔥 The era of bloated SaaS is dead. Say hello to Micro-Agents.',
-              offer: 'Deploy 5 highly-specialized AI agents for the cost of 1 generic tool.',
-              cta: 'Start building your automated army today 🚀'
-            }
-          }
-        });
+      try {
+        const res = await fetch('/api/alpha-brief');
+        if (!res.ok) throw new Error(`Request failed: ${res.status}`);
+        const brief = await res.json();
+        setData(brief);
+      } catch (err) {
+        console.warn('[DailyAlphaBrief] API unavailable, using local fallback:', err);
+        setData(FALLBACK_BRIEF);
+      } finally {
         setIsLoading(false);
-      }, 1500);
+      }
     };
 
     fetchBrief();
