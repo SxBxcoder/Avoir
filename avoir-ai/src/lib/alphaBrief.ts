@@ -21,10 +21,10 @@ export interface AlphaBrief {
     momentum: Momentum;
   };
   brief: {
-    plan?: {
-      hook?: string;
-      offer?: string;
-      cta?: string;
+    plan: {
+      hook: string;
+      offer: string;
+      cta: string;
     };
     captions?: string[];
   };
