@@ -3,24 +3,9 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Sparkles, Zap, TrendingUp, Target, Loader2, ArrowRight } from 'lucide-react';
+import type { AlphaBrief } from '@/lib/alphaBrief';
 
-interface AlphaBriefData {
-  trend: {
-    title: string;
-    description: string;
-    momentum: string;
-  };
-  brief: {
-    plan?: {
-      hook?: string;
-      offer?: string;
-      cta?: string;
-    };
-    captions?: string[];
-  };
-}
-
-const FALLBACK_BRIEF: AlphaBriefData = {
+const FALLBACK_BRIEF: AlphaBrief = {
   trend: {
     title: 'AI Micro-Agents',
     description: 'Explosive growth in single-purpose AI agents replacing complex SaaS.',
@@ -36,7 +21,7 @@ const FALLBACK_BRIEF: AlphaBriefData = {
 };
 
 export default function DailyAlphaBrief() {
-  const [data, setData] = useState<AlphaBriefData | null>(null);
+  const [data, setData] = useState<AlphaBrief | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isDismissed, setIsDismissed] = useState(false);
 

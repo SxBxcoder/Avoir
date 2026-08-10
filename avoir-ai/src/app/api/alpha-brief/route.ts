@@ -15,6 +15,7 @@
 import { NextResponse } from 'next/server';
 import { getCachedAlphaBrief, setCachedAlphaBrief } from '@/lib/db/cache';
 import { isDemoMode, MOCK_ALPHA_BRIEF } from '@/lib/mockShield';
+import { errorMessage, isAlphaBrief, type AlphaBrief } from '@/lib/alphaBrief';
 
 const BACKEND_API_URL = process.env.BACKEND_API_URL || 'http://localhost:8000';
 
@@ -41,16 +42,19 @@ export async function GET(req: Request) {
       throw new Error(`Backend alpha brief responded with ${res.status}`);
     }
 
-    const data = await res.json();
+    const data: AlphaBrief = await res.json();
+    if (!isAlphaBrief(data)) {
+      throw new Error('Backend returned an invalid alpha brief shape');
+    }
 
     // 3. Best-effort re-cache so subsequent requests skip the backend
     await setCachedAlphaBrief(data);
 
     return NextResponse.json(data);
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[AlphaBrief API] GET error:', error);
     return NextResponse.json(
-      { error: error.message || 'Failed to fetch alpha brief' },
+      { error: errorMessage(error) || 'Failed to fetch alpha brief' },
       { status: 500 }
     );
   }
