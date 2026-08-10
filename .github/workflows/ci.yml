@@ -9,10 +9,14 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 jobs:
   frontend:
     name: Frontend (lint + typecheck + build)
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     defaults:
       run:
         working-directory: avoir-ai
@@ -40,6 +44,7 @@ jobs:
   backend:
     name: Backend (tests + import smoke)
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     defaults:
       run:
         working-directory: backend
@@ -73,24 +78,22 @@ jobs:
   security:
     name: Secret scan
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
 
       - name: Scan for leaked secrets
-        shell: bash
+        uses: gitleaks/gitleaks@v8.18.4
+        with:
+          args: detect --source "$GITHUB_WORKSPACE" --no-banner
+
+  workflows:
+    name: Workflow lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Lint GitHub Actions workflows
         run: |
-          set -e
-          matches=$(rg -n --hidden -g '!.git/**' \
-            -e 'AKIA[0-9A-Z]{16}' \
-            -e 'sk_live_[a-zA-Z0-9]{16,}' \
-            -e 'AIza[0-9A-Za-z_-]{35}' \
-            -e 'ghp_[a-zA-Z0-9]{36}' \
-            -e 'xox[baprs]-[a-zA-Z0-9-]{10,}' \
-            -e '-----BEGIN (RSA|EC|OPENSSH|PGP) PRIVATE KEY-----' \
-            . || true)
-          if [ -n "$matches" ]; then
-            echo "Potential secret leak detected:"
-            echo "$matches"
-            exit 1
-          fi
-          echo "No secrets found"
+          docker run --rm -v "${GITHUB_WORKSPACE}:/repo" -w /repo rhysd/actionlint:latest -color
