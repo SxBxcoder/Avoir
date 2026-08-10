@@ -12,6 +12,7 @@ from fastapi.responses import StreamingResponse, PlainTextResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import json
+import os
 import uvicorn
 
 # Import the Lambda handler from agent.py
@@ -225,7 +226,7 @@ async def get_trends():
 
 # Daily Alpha Brief Endpoint (Redis-cached daily trend anomaly + campaign hook)
 @app.get("/api/alpha-brief")
-async def get_alpha_brief(force: bool = False):
+async def get_alpha_brief(force: bool = False, request: Request = None):
     """
     Returns today's Daily Alpha Brief.
 
@@ -233,11 +234,22 @@ async def get_alpha_brief(force: bool = False):
     subsequent calls serve the cached copy until midnight.
 
     Args:
-        force: bypass the cache and regenerate (useful for manual refresh).
+        force: bypass the cache and regenerate (used only by the daily cron,
+            which must present a valid X-Admin-Token header).
+        request: the incoming request, used to verify the admin token.
 
     Returns:
         Alpha brief dict matching the DailyAlphaBrief.tsx contract.
     """
+    if force:
+        expected_token = os.getenv('ALPHA_BRIEF_ADMIN_TOKEN', '')
+        supplied_token = (request.headers.get('X-Admin-Token', '') if request else '')
+        if not expected_token or supplied_token != expected_token:
+            raise HTTPException(
+                status_code=403,
+                detail="Forbidden: force refresh requires a valid X-Admin-Token header",
+            )
+
     try:
         brief = alpha_brief_generator.get_daily_brief(force_refresh=force)
         return brief
