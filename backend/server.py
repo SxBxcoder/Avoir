@@ -13,6 +13,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import json
 import os
+import secrets
 import uvicorn
 
 # Import the Lambda handler from agent.py
@@ -246,7 +247,7 @@ def get_alpha_brief(force: bool = False, request: Request = None):
     if force:
         expected_token = os.getenv('ALPHA_BRIEF_ADMIN_TOKEN', '')
         supplied_token = (request.headers.get('X-Admin-Token', '') if request else '')
-        if not expected_token or supplied_token != expected_token:
+        if not expected_token or not secrets.compare_digest(supplied_token, expected_token):
             raise HTTPException(
                 status_code=403,
                 detail="Forbidden: force refresh requires a valid X-Admin-Token header",
