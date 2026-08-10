@@ -15,11 +15,11 @@
 import { NextResponse } from 'next/server';
 import { getCachedAlphaBrief, setCachedAlphaBrief } from '@/lib/db/cache';
 import { isDemoMode, MOCK_ALPHA_BRIEF } from '@/lib/mockShield';
-import { errorMessage, isAlphaBrief, type AlphaBrief } from '@/lib/alphaBrief';
+import { isAlphaBrief, type AlphaBrief } from '@/lib/alphaBrief';
 
 const BACKEND_API_URL = process.env.BACKEND_API_URL || 'http://localhost:8000';
 
-export async function GET(req: Request) {
+export async function GET() {
   // Demo Mock Shield
   if (isDemoMode()) {
     return NextResponse.json(MOCK_ALPHA_BRIEF);
@@ -52,9 +52,10 @@ export async function GET(req: Request) {
 
     return NextResponse.json(data);
   } catch (error: unknown) {
+    // Log the full detail server-side, but never echo internals to the client.
     console.error('[AlphaBrief API] GET error:', error);
     return NextResponse.json(
-      { error: errorMessage(error) || 'Failed to fetch alpha brief' },
+      { error: 'Failed to fetch alpha brief' },
       { status: 500 }
     );
   }
