@@ -21,6 +21,7 @@ from shadow_clone import clone_engine
 from authority_defender import defender
 from agency_bridge import agency_bridge
 from signal_decay_monitor import decay_monitor
+from alpha_brief_generator import AlphaBriefGenerator
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -28,6 +29,9 @@ app = FastAPI(
     description="AI Creative Director for Modern Brands",
     version="1.0.0"
 )
+
+# Daily Alpha Brief generator (Redis-cached, see alpha_brief_generator.py)
+alpha_brief_generator = AlphaBriefGenerator()
 
 # Configure CORS for Next.js frontend
 app.add_middleware(
@@ -216,6 +220,31 @@ async def get_trends():
         raise HTTPException(
             status_code=500,
             detail=f"Failed to snipe trends: {str(e)}"
+        )
+
+
+# Daily Alpha Brief Endpoint (Redis-cached daily trend anomaly + campaign hook)
+@app.get("/api/alpha-brief")
+async def get_alpha_brief(force: bool = False):
+    """
+    Returns today's Daily Alpha Brief.
+
+    First call of the day generates it via Gemini and caches it in Redis;
+    subsequent calls serve the cached copy until midnight.
+
+    Args:
+        force: bypass the cache and regenerate (useful for manual refresh).
+
+    Returns:
+        Alpha brief dict matching the DailyAlphaBrief.tsx contract.
+    """
+    try:
+        brief = alpha_brief_generator.get_daily_brief(force_refresh=force)
+        return brief
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to generate alpha brief: {str(e)}"
         )
 
 
