@@ -86,8 +86,21 @@ class GeneratorTests(unittest.TestCase):
             result = self.gen.get_daily_brief(force_refresh=True)
             self.gen.cache.get.assert_not_called()
             mock_gen.assert_called_once()
-            self.assertEqual(result['date'], __import__('datetime').date.today().isoformat())
+            today_utc = abg.datetime.now(abg.timezone.utc).date().isoformat()
+            self.assertEqual(result['date'], today_utc)
             self.assertTrue(result['generated_at'].endswith('Z'))
+
+    def test_utc_cache_contract(self):
+        """Cache key and TTL must follow the shared UTC contract used by the frontend."""
+        today_utc = abg.datetime.now(abg.timezone.utc).date().isoformat()
+        key = f"{abg.CACHE_PREFIX}{today_utc}"
+        self.assertTrue(key.startswith('alpha_brief:daily:'))
+        self.assertEqual(key, f"alpha_brief:daily:{today_utc}")
+        ttl = abg.seconds_until_end_of_day()
+        self.assertGreater(ttl, 0)
+        self.assertLessEqual(ttl, 86400)
+        generated_at = abg.datetime.now(abg.timezone.utc).isoformat().replace('+00:00', 'Z')
+        self.assertTrue(generated_at.endswith('Z'))
 
     def test_miss_generates_and_caches(self):
         self.gen.cache.get.return_value = None

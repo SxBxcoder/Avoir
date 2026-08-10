@@ -34,7 +34,7 @@ Project: Avoir - AI-Native Agency + AI Hedge Fund
 import json
 import os
 import logging
-from datetime import date, datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
 from urllib.request import Request, urlopen
 from urllib.parse import quote
@@ -159,8 +159,8 @@ MOCK_BRIEFS: List[Dict[str, Any]] = [
 
 
 def get_mock_brief() -> Dict[str, Any]:
-    """Rotate through curated mock briefs deterministically by day-of-year."""
-    day_of_year = date.today().timetuple().tm_yday
+    """Rotate through curated mock briefs deterministically by day-of-year (UTC)."""
+    day_of_year = datetime.now(timezone.utc).timetuple().tm_yday
     return json.loads(json.dumps(MOCK_BRIEFS[day_of_year % len(MOCK_BRIEFS)]))
 
 
@@ -222,10 +222,10 @@ class RedisCache:
 
 
 def seconds_until_end_of_day() -> int:
-    """Seconds remaining until local midnight (self-healing daily cache)."""
-    now = datetime.now()
-    end = datetime.combine(now.date() + timedelta(days=1), datetime.min.time())
-    seconds = int((end - now).total_seconds())
+    """Seconds remaining until UTC midnight (self-healing daily cache)."""
+    now = datetime.now(timezone.utc)
+    tomorrow = (now + timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
+    seconds = int((tomorrow - now).total_seconds())
     return seconds if seconds > 0 else 3600
 
 
@@ -253,7 +253,7 @@ class AlphaBriefGenerator:
         Returns:
             Full brief dict matching the DailyAlphaBrief.tsx contract.
         """
-        today = date.today().isoformat()
+        today = datetime.now(timezone.utc).date().isoformat()
         cache_key = f"{CACHE_PREFIX}{today}"
 
         if not force_refresh:
