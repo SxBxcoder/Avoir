@@ -225,8 +225,10 @@ async def get_trends():
 
 
 # Daily Alpha Brief Endpoint (Redis-cached daily trend anomaly + campaign hook)
+# Synchronous route: generation performs blocking urllib calls to Gemini/Redis,
+# so it runs in Starlette's threadpool instead of blocking the event loop.
 @app.get("/api/alpha-brief")
-async def get_alpha_brief(force: bool = False, request: Request = None):
+def get_alpha_brief(force: bool = False, request: Request = None):
     """
     Returns today's Daily Alpha Brief.
 
