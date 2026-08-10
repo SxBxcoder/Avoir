@@ -34,7 +34,7 @@ Project: Avoir - AI-Native Agency + AI Hedge Fund
 import json
 import os
 import logging
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
 from urllib.request import Request, urlopen
 from urllib.parse import quote
@@ -265,8 +265,7 @@ class AlphaBriefGenerator:
         logger.info(f"[AlphaBrief] CACHE MISS: generating fresh brief for {today}")
         brief = self._generate()
         brief['date'] = today
-        brief['generated_at'] = datetime.utcnow().isoformat() + 'Z'
-        brief.setdefault('captions', [])
+        brief['generated_at'] = datetime.now(timezone.utc).isoformat().replace('+00:00', 'Z')
 
         self.cache.set(cache_key, brief, ttl_seconds=seconds_until_end_of_day())
         return brief
