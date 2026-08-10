@@ -28,7 +28,7 @@ jobs:
           mkdir -p package
           pip install -r requirements-lambda.txt -t package/
           cp ./*.py package/
-          rm -rf package/test_*.py package/__pycache__ package/*/__pycache__
+          rm -rf package/test_*.py package/check_env.py package/check_keys.py package/clean_file.py package/find_unmatched_quotes.py package/__pycache__ package/*/__pycache__
           cd package
           zip -rq ../backend-deploy.zip .
 

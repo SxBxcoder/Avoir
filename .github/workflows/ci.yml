@@ -88,7 +88,7 @@ jobs:
         run: |
           curl -sSfL https://github.com/gitleaks/gitleaks/releases/download/v8.18.4/gitleaks_8.18.4_linux_x64.tar.gz -o gitleaks.tar.gz
           tar -xzf gitleaks.tar.gz gitleaks
-          ./gitleaks detect --source "$GITHUB_WORKSPACE" --no-banner
+          ./gitleaks detect --source "$GITHUB_WORKSPACE" --no-banner --redact
 
   workflows:
     name: Workflow lint
