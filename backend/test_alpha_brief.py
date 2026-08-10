@@ -155,7 +155,7 @@ class GeneratorTests(unittest.TestCase):
             result = self.gen.get_daily_brief()
         mock_gen.assert_called_once()
         self.gen.cache.set.assert_called_once()
-        self.gen.cache.delete.assert_called_once()
+        self.gen.cache.delete_if_equals.assert_called_once()
 
     def test_stampede_loser_waits_for_winner(self):
         self.gen.cache.get.side_effect = [None, VALID_BRIEF_JSON]
@@ -164,8 +164,18 @@ class GeneratorTests(unittest.TestCase):
             result = self.gen.get_daily_brief()
         mock_gen.assert_not_called()
         self.gen.cache.set.assert_not_called()
-        self.gen.cache.delete.assert_not_called()
+        self.gen.cache.delete_if_equals.assert_not_called()
         self.assertEqual(result['trend']['title'], 'AI Micro-Agents')
+
+    def test_stampede_loser_reacquires_after_waiting(self):
+        self.gen.cache.get.return_value = None
+        self.gen.cache.set_if_absent.side_effect = [False, True]
+        with patch.object(self.gen, '_generate', return_value=dict(VALID_BRIEF_JSON)) as mock_gen:
+            result = self.gen.get_daily_brief()
+        mock_gen.assert_called_once()
+        self.gen.cache.set.assert_called_once()
+        self.assertEqual(self.gen.cache.set_if_absent.call_count, 2)
+        self.gen.cache.delete_if_equals.assert_called_once()
 
     def test_invalid_cached_payload_is_regenerated(self):
         self.gen.cache.get.return_value = {'trend': {'title': 'x', 'momentum': 'bogus'}}

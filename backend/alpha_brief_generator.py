@@ -33,9 +33,10 @@ Project: Avoir - AI-Native Agency + AI Hedge Fund
 
 import copy
 import json
-import os
 import logging
+import os
 import time
+import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
 from urllib.error import HTTPError, URLError
@@ -60,6 +61,24 @@ GEMINI_ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models/gemin
 CACHE_PREFIX = "alpha_brief:daily:"
 
 VALID_MOMENTUM = ("spiking", "rising", "peaking", "sustained")
+
+# Generation lock TTL: must comfortably exceed the worst-case generation time
+# (Gemini call timeout + retry backoff + the 30s waiter window) so a slow
+# generator's lock never expires mid-flight and lets a duplicate start.
+LOCK_TTL_SECONDS = 300
+
+# Waiter loop: 60 * 0.5s = 30s, well within Gemini's request timeout.
+LOCK_WAIT_ROUNDS = 60
+LOCK_WAIT_SLEEP_SECONDS = 0.5
+
+# Atomically delete the lock key only if it still holds our token, so a
+# reacquired lock (owner changed after expiry) is never released by the
+# previous owner.
+COMPARE_AND_DELETE_SCRIPT = (
+    "if redis.call('GET', KEYS[1]) == ARGV[1] then "
+    "return redis.call('DEL', KEYS[1]) "
+    "else return 0 end"
+)
 
 # ============================================================================
 # SYSTEM PERSONA - THE ALPHA BRIEF ANALYST
@@ -259,12 +278,23 @@ class RedisCache:
             logger.warning(f"[Redis] SETNX failed for {key}: {e}")
             return None
 
-    def delete(self, key: str) -> None:
-        """Remove a key (used to release the generation lock). Best-effort."""
+    def delete_if_equals(self, key: str, expected_value: str) -> None:
+        """Delete a key only if it still holds the expected value.
+
+        Compare-and-delete lock release via a Lua script: a stale owner can
+        never remove a lock that a newer owner reacquired after expiry.
+        Best-effort; never raises.
+        """
         if not self.enabled:
             return
         try:
-            command = [["DEL", key]]
+            command = [[
+                "EVAL",
+                COMPARE_AND_DELETE_SCRIPT,
+                "1",
+                key,
+                expected_value,
+            ]]
             url = f"{self.base_url}/pipeline"
             req = Request(
                 url,
@@ -278,7 +308,7 @@ class RedisCache:
             with urlopen(req, timeout=10) as resp:
                 resp.read()
         except Exception as e:
-            logger.warning(f"[Redis] DEL failed for {key}: {e}")
+            logger.warning(f"[Redis] EVAL compare-and-delete failed for {key}: {e}")
 
 
 def seconds_until_end_of_day() -> int:
@@ -343,16 +373,23 @@ class AlphaBriefGenerator:
 
             # Cache stampede guard: claim the generation lock atomically so only
             # one caller pays for a fresh Gemini call; the rest wait for its result.
+            # A per-call random token makes the lock owned, so release is a
+            # compare-and-delete and a stale owner can't kill a reacquired lock.
             lock_key = f"{cache_key}:lock"
-            lock_acquired = self.cache.set_if_absent(lock_key, '1', ttl_seconds=180)
+            lock_token = uuid.uuid4().hex
+            lock_acquired = self.cache.set_if_absent(lock_key, lock_token, ttl_seconds=LOCK_TTL_SECONDS)
             if lock_acquired is False:
                 logger.info(f"[AlphaBrief] Generation already in flight for {today}; waiting for result...")
-                for _ in range(60):  # up to ~30s, well within Gemini's timeout
-                    time.sleep(0.5)
+                for _ in range(LOCK_WAIT_ROUNDS):
+                    time.sleep(LOCK_WAIT_SLEEP_SECONDS)
                     cached = self.cache.get(cache_key)
                     if cached and is_valid_brief(cached):
                         return cached
                 logger.warning(f"[AlphaBrief] Waited too long for {today}; generating ourselves")
+                # The original holder's lock may have expired or been released
+                # without producing a cache entry; re-acquire before generating
+                # so we don't stampede alongside a still-running holder.
+                lock_acquired = self.cache.set_if_absent(lock_key, lock_token, ttl_seconds=LOCK_TTL_SECONDS)
 
         logger.info(f"[AlphaBrief] CACHE MISS: generating fresh brief for {today}")
         try:
@@ -363,8 +400,8 @@ class AlphaBriefGenerator:
             self.cache.set(cache_key, brief, ttl_seconds=seconds_until_end_of_day())
             return brief
         finally:
-            if not force_refresh:
-                self.cache.delete(lock_key)
+            if not force_refresh and lock_acquired:
+                self.cache.delete_if_equals(lock_key, lock_token)
 
     # ------------------------------------------------------------------
     # RESILIENCE CASCADE
