@@ -151,3 +151,35 @@ export async function setCachedCampaign(goalHash: string, data: any): Promise<vo
     console.warn(`[Cache] Campaign cache write failed: ${err.message}`);
   }
 }
+
+// ============================================================================
+// DAILY ALPHA BRIEF CACHE — One generated brief per day (pre-warmed by cron)
+// ============================================================================
+
+const ALPHA_BRIEF_PREFIX = 'alpha_brief:';
+const ALPHA_BRIEF_TTL = 60 * 60 * 24; // 24 hours — same key namespace as the Python generator
+
+export async function getCachedAlphaBrief(): Promise<any | null> {
+  const redis = getRedis();
+  if (!redis) return null;
+
+  try {
+    const today = new Date().toISOString().slice(0, 10);
+    return await redis.get(`${ALPHA_BRIEF_PREFIX}${today}`);
+  } catch (err: any) {
+    console.warn(`[Cache] Alpha brief read failed: ${err.message}`);
+    return null;
+  }
+}
+
+export async function setCachedAlphaBrief(data: any): Promise<void> {
+  const redis = getRedis();
+  if (!redis) return;
+
+  try {
+    const today = new Date().toISOString().slice(0, 10);
+    await redis.set(`${ALPHA_BRIEF_PREFIX}${today}`, data, { ex: ALPHA_BRIEF_TTL });
+  } catch (err: any) {
+    console.warn(`[Cache] Alpha brief write failed: ${err.message}`);
+  }
+}

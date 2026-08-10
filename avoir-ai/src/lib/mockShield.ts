@@ -145,6 +145,33 @@ export const MOCK_CAMPAIGNS = [
 ];
 
 // ============================================================================
+// MOCK DAILY ALPHA BRIEF (for Demo Mode)
+// ============================================================================
+
+export const MOCK_ALPHA_BRIEF = {
+  date: new Date().toISOString().slice(0, 10),
+  trend: {
+    title: 'AI Micro-Agents',
+    description: 'Explosive growth in single-purpose AI agents replacing complex SaaS.',
+    momentum: 'peaking',
+  },
+  brief: {
+    plan: {
+      hook: '🔥 The era of bloated SaaS is dead. Say hello to Micro-Agents.',
+      offer: 'Deploy 5 highly-specialized AI agents for the cost of 1 generic tool.',
+      cta: 'Start building your automated army today 🚀',
+    },
+    captions: [
+      'One tool, one job, zero bloat. Micro-agents are eating SaaS alive.',
+      'Your SaaS stack is overpaying for 80% of features you never open.',
+      '5 specialists beat 1 bloated suite, every single time.',
+    ],
+  },
+  generated_by: 'mock',
+  generated_at: new Date().toISOString(),
+};
+
+// ============================================================================
 // MOCK INTELLIGENCE BRIEF
 // ============================================================================
 
