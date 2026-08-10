@@ -16,6 +16,8 @@ from unittest.mock import patch, Mock
 
 sys.path.insert(0, os.path.dirname(__file__))
 
+from fastapi.testclient import TestClient
+
 import alpha_brief_generator as abg
 from alpha_brief_generator import AlphaBriefGenerator, RedisCache
 
@@ -69,6 +71,39 @@ class RedisCacheTests(unittest.TestCase):
             mock_urlopen.assert_called_once()
         self.assertTrue(mock_urlopen.return_value.__enter__.called)
 
+    def test_set_if_absent_sends_setnx_command(self):
+        cache = RedisCache(url='https://db.upstash.io', token='tok')
+        with patch.object(abg, 'urlopen') as mock_urlopen:
+            cm = mock_urlopen.return_value.__enter__.return_value
+            cm.read.return_value = json.dumps({"result": [["SET", "OK", None]]}).encode()
+            acquired = cache.set_if_absent('alpha_brief:daily:2026-08-10:lock', '1', 180)
+        self.assertTrue(acquired)
+        command = json.loads(mock_urlopen.call_args[0][0].data)
+        self.assertEqual(
+            command,
+            [["SET", "alpha_brief:daily:2026-08-10:lock", "1", "NX", "EX", 180]],
+        )
+
+    def test_set_if_absent_reports_lock_held(self):
+        cache = RedisCache(url='https://db.upstash.io', token='tok')
+        with patch.object(abg, 'urlopen') as mock_urlopen:
+            cm = mock_urlopen.return_value.__enter__.return_value
+            cm.read.return_value = json.dumps({"result": [["SET", None, None]]}).encode()
+            acquired = cache.set_if_absent('k:lock', '1', 180)
+        self.assertFalse(acquired)
+
+    def test_set_if_absent_disabled_returns_none(self):
+        cache = RedisCache(url='', token='')
+        self.assertIsNone(cache.set_if_absent('k:lock', '1', 180))
+
+    def test_is_valid_brief(self):
+        self.assertFalse(abg.is_valid_brief(None))
+        self.assertFalse(abg.is_valid_brief({'trend': {'title': 'x'}}))
+        bad_momentum = dict(VALID_BRIEF_JSON)
+        bad_momentum['trend'] = {'title': 'x', 'description': 'y', 'momentum': 'mooning'}
+        self.assertFalse(abg.is_valid_brief(bad_momentum))
+        self.assertTrue(abg.is_valid_brief(VALID_BRIEF_JSON))
+
 
 class GeneratorTests(unittest.TestCase):
     def setUp(self):
@@ -112,6 +147,33 @@ class GeneratorTests(unittest.TestCase):
             key, value, ttl = args[0], args[1], kwargs.get('ttl_seconds') or args[2]
             self.assertTrue(key.startswith('alpha_brief:daily:'))
             self.assertGreater(ttl, 0)
+
+    def test_stampede_lock_holder_generates(self):
+        self.gen.cache.get.return_value = None
+        self.gen.cache.set_if_absent.return_value = True
+        with patch.object(self.gen, '_generate', return_value=dict(VALID_BRIEF_JSON)) as mock_gen:
+            result = self.gen.get_daily_brief()
+        mock_gen.assert_called_once()
+        self.gen.cache.set.assert_called_once()
+        self.gen.cache.delete.assert_called_once()
+
+    def test_stampede_loser_waits_for_winner(self):
+        self.gen.cache.get.side_effect = [None, VALID_BRIEF_JSON]
+        self.gen.cache.set_if_absent.return_value = False
+        with patch.object(self.gen, '_generate') as mock_gen:
+            result = self.gen.get_daily_brief()
+        mock_gen.assert_not_called()
+        self.gen.cache.set.assert_not_called()
+        self.gen.cache.delete.assert_not_called()
+        self.assertEqual(result['trend']['title'], 'AI Micro-Agents')
+
+    def test_invalid_cached_payload_is_regenerated(self):
+        self.gen.cache.get.return_value = {'trend': {'title': 'x', 'momentum': 'bogus'}}
+        self.gen.cache.set_if_absent.return_value = True
+        with patch.object(self.gen, '_generate', return_value=dict(VALID_BRIEF_JSON)) as mock_gen:
+            result = self.gen.get_daily_brief()
+        mock_gen.assert_called_once()
+        self.assertEqual(result['trend']['title'], 'AI Micro-Agents')
 
     def test_momentum_normalization(self):
         self.assertEqual(abg.AlphaBriefGenerator._normalize_momentum('Spiking (+400% in 12h)'), 'spiking')
@@ -172,6 +234,91 @@ class FallbackTests(unittest.TestCase):
         self.assertIn(brief['trend']['momentum'], ('spiking', 'rising', 'peaking', 'sustained'))
         self.assertTrue(brief['brief']['plan']['hook'])
         self.assertTrue(brief['brief']['plan']['offer'])
+
+
+class ServerEndpointTests(unittest.TestCase):
+    """
+    HTTP-level tests for GET /api/alpha-brief via FastAPI TestClient.
+
+    Verifies the admin-token gate on ?force=true (403 without a valid
+    X-Admin-Token header, 200 with one) and a normal cached read.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        # Stub the AWS/agent modules so server.py can be imported without
+        # boto3 or other heavy deps installed (same trick as the sniper stub).
+        cls._stub_modules = {}
+        for name, attr in (
+            ('aws_lambda_handler', 'lambda_handler'),
+            ('trends_sniper', 'sniper'),
+            ('shadow_clone', 'clone_engine'),
+            ('authority_defender', 'defender'),
+            ('agency_bridge', 'agency_bridge'),
+            ('signal_decay_monitor', 'decay_monitor'),
+        ):
+            cls._stub_modules[name] = sys.modules.get(name)
+            module = Mock()
+            setattr(module, attr, Mock())
+            sys.modules[name] = module
+
+        import server as server_module
+        cls.server = server_module
+        cls.client = TestClient(server_module.app)
+
+    @classmethod
+    def tearDownClass(cls):
+        for name, module in cls._stub_modules.items():
+            if module is None:
+                sys.modules.pop(name, None)
+            else:
+                sys.modules[name] = module
+
+    def test_force_without_token_is_forbidden(self):
+        with patch.dict(os.environ, {}, clear=False):
+            os.environ.pop('ALPHA_BRIEF_ADMIN_TOKEN', None)
+            with patch.object(self.server.alpha_brief_generator, 'get_daily_brief') as mock_gen:
+                res = self.client.get('/api/alpha-brief', params={'force': 'true'})
+        self.assertEqual(res.status_code, 403)
+        mock_gen.assert_not_called()
+
+    def test_force_with_wrong_token_is_forbidden(self):
+        with patch.dict(os.environ, {'ALPHA_BRIEF_ADMIN_TOKEN': 'correct-token'}):
+            with patch.object(self.server.alpha_brief_generator, 'get_daily_brief') as mock_gen:
+                res = self.client.get(
+                    '/api/alpha-brief',
+                    params={'force': 'true'},
+                    headers={'X-Admin-Token': 'wrong-token'},
+                )
+        self.assertEqual(res.status_code, 403)
+        mock_gen.assert_not_called()
+
+    def test_force_with_valid_token_succeeds(self):
+        with patch.dict(os.environ, {'ALPHA_BRIEF_ADMIN_TOKEN': 'correct-token'}):
+            with patch.object(
+                self.server.alpha_brief_generator,
+                'get_daily_brief',
+                return_value=dict(VALID_BRIEF_JSON),
+            ) as mock_gen:
+                res = self.client.get(
+                    '/api/alpha-brief',
+                    params={'force': 'true'},
+                    headers={'X-Admin-Token': 'correct-token'},
+                )
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(res.json()['trend']['title'], 'AI Micro-Agents')
+        mock_gen.assert_called_once()
+
+    def test_normal_call_returns_200(self):
+        with patch.object(
+            self.server.alpha_brief_generator,
+            'get_daily_brief',
+            return_value=dict(VALID_BRIEF_JSON),
+        ) as mock_gen:
+            res = self.client.get('/api/alpha-brief')
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(res.json()['trend']['title'], 'AI Micro-Agents')
+        mock_gen.assert_called_once()
 
 
 if __name__ == "__main__":
