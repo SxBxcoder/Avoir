@@ -6,10 +6,15 @@ on:
     paths:
       - 'backend/**'
 
+permissions:
+  contents: read
+
 jobs:
   deploy:
     name: Deploy to AWS Lambda
     runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: production
     steps:
       - uses: actions/checkout@v4
 
@@ -21,7 +26,7 @@ jobs:
         working-directory: backend
         run: |
           mkdir -p package
-          pip install -r requirements.txt -t package/
+          pip install -r requirements-lambda.txt -t package/
           cp *.py package/
           rm -rf package/test_*.py package/__pycache__ package/*/__pycache__
           cd package
@@ -40,3 +45,9 @@ jobs:
           aws lambda update-function-code \
             --function-name ${{ secrets.LAMBDA_FN_NAME }} \
             --zip-file fileb://backend-deploy.zip
+
+      - name: Publish version
+        working-directory: backend
+        run: |
+          aws lambda publish-version \
+            --function-name ${{ secrets.LAMBDA_FN_NAME }}
