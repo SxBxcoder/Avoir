@@ -7,6 +7,8 @@
  * This lets you record a flawless demo video without any external APIs configured.
  */
 
+import type { AlphaBrief } from '@/lib/alphaBrief';
+
 // ============================================================================
 // DEMO MODE CHECK
 // ============================================================================
@@ -148,7 +150,7 @@ export const MOCK_CAMPAIGNS = [
 // MOCK DAILY ALPHA BRIEF (for Demo Mode)
 // ============================================================================
 
-export const MOCK_ALPHA_BRIEF = {
+export const MOCK_ALPHA_BRIEF: AlphaBrief = {
   date: new Date().toISOString().slice(0, 10),
   trend: {
     title: 'AI Micro-Agents',

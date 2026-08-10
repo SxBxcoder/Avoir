@@ -2,23 +2,12 @@
 
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Sparkles, Zap, TrendingUp, Target, Loader2, ArrowRight } from 'lucide-react';
+import { Sparkles, Zap, Loader2, ArrowRight } from 'lucide-react';
+import { MOCK_ALPHA_BRIEF } from '@/lib/mockShield';
 import type { AlphaBrief } from '@/lib/alphaBrief';
 
-const FALLBACK_BRIEF: AlphaBrief = {
-  trend: {
-    title: 'AI Micro-Agents',
-    description: 'Explosive growth in single-purpose AI agents replacing complex SaaS.',
-    momentum: 'peaking',
-  },
-  brief: {
-    plan: {
-      hook: '🔥 The era of bloated SaaS is dead. Say hello to Micro-Agents.',
-      offer: 'Deploy 5 highly-specialized AI agents for the cost of 1 generic tool.',
-      cta: 'Start building your automated army today 🚀',
-    },
-  },
-};
+// Single source of truth for the fallback brief (also used by demo mode).
+const FALLBACK_BRIEF: AlphaBrief = MOCK_ALPHA_BRIEF;
 
 export default function DailyAlphaBrief() {
   const [data, setData] = useState<AlphaBrief | null>(null);
