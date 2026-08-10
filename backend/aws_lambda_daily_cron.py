@@ -18,7 +18,7 @@ import logging
 
 from alpha_brief_generator import AlphaBriefGenerator
 
-logger = logging.getLogger()
+logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO, format='%(message)s')
 logger.setLevel(logging.INFO)
 

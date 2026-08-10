@@ -31,11 +31,14 @@ Author: Team NEONX
 Project: Avoir - AI-Native Agency + AI Hedge Fund
 """
 
+import copy
 import json
 import os
 import logging
+import time
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
+from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 from urllib.parse import quote
 
@@ -43,16 +46,13 @@ from urllib.parse import quote
 # LOGGING
 # ============================================================================
 
-logger = logging.getLogger()
+logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO, format='%(message)s')
 logger.setLevel(logging.INFO)
 
 # ============================================================================
 # ENVIRONMENT / MODEL CONFIG
 # ============================================================================
-
-GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', '')
-GEMINI_API_KEY_2 = os.environ.get('GEMINI_API_KEY_2', '')
 
 # Upgraded Gemini model - same production model used by the Diamond Cascade
 GEMINI_ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent"
@@ -161,7 +161,7 @@ MOCK_BRIEFS: List[Dict[str, Any]] = [
 def get_mock_brief() -> Dict[str, Any]:
     """Rotate through curated mock briefs deterministically by day-of-year (UTC)."""
     day_of_year = datetime.now(timezone.utc).timetuple().tm_yday
-    return json.loads(json.dumps(MOCK_BRIEFS[day_of_year % len(MOCK_BRIEFS)]))
+    return copy.deepcopy(MOCK_BRIEFS[day_of_year % len(MOCK_BRIEFS)])
 
 
 # ============================================================================
@@ -220,6 +220,66 @@ class RedisCache:
         except Exception as e:
             logger.warning(f"[Redis] SET failed for {key}: {e}")
 
+    def set_if_absent(self, key: str, value: str, ttl_seconds: int) -> Optional[bool]:
+        """
+        Atomically set key only if it does not already exist (SET NX EX).
+
+        Used as a generation lock to prevent cache stampedes: only one caller
+        wins the lock and generates; the rest wait and read its result.
+
+        Returns:
+            True if the lock was acquired, False if it is already held,
+            or None if the cache is disabled (caller should just proceed).
+        """
+        if not self.enabled:
+            return None
+        try:
+            command = [["SET", key, value, "NX", "EX", ttl_seconds]]
+            url = f"{self.base_url}/pipeline"
+            req = Request(
+                url,
+                data=json.dumps(command).encode('utf-8'),
+                headers={
+                    'Authorization': f'Bearer {self.token}',
+                    'Content-Type': 'application/json',
+                },
+                method='POST',
+            )
+            with urlopen(req, timeout=10) as resp:
+                data = json.loads(resp.read().decode('utf-8'))
+            # Upstash returns one entry per command: [status, result, error]
+            result = data.get('result')
+            if isinstance(result, list):
+                first = result[0] if result else None
+                if isinstance(first, list):
+                    first = first[1] if len(first) > 1 else None
+                result = first
+            return result == 'OK'
+        except Exception as e:
+            logger.warning(f"[Redis] SETNX failed for {key}: {e}")
+            return None
+
+    def delete(self, key: str) -> None:
+        """Remove a key (used to release the generation lock). Best-effort."""
+        if not self.enabled:
+            return
+        try:
+            command = [["DEL", key]]
+            url = f"{self.base_url}/pipeline"
+            req = Request(
+                url,
+                data=json.dumps(command).encode('utf-8'),
+                headers={
+                    'Authorization': f'Bearer {self.token}',
+                    'Content-Type': 'application/json',
+                },
+                method='POST',
+            )
+            with urlopen(req, timeout=10) as resp:
+                resp.read()
+        except Exception as e:
+            logger.warning(f"[Redis] DEL failed for {key}: {e}")
+
 
 def seconds_until_end_of_day() -> int:
     """Seconds remaining until UTC midnight (self-healing daily cache)."""
@@ -227,6 +287,23 @@ def seconds_until_end_of_day() -> int:
     tomorrow = (now + timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
     seconds = int((tomorrow - now).total_seconds())
     return seconds if seconds > 0 else 3600
+
+
+def is_valid_brief(data: Optional[Dict[str, Any]]) -> bool:
+    """Validate a brief dict against the shared DailyAlphaBrief.tsx contract."""
+    if not data or not isinstance(data, dict):
+        return False
+    trend = data.get('trend') or {}
+    plan = (data.get('brief') or {}).get('plan') or {}
+    if not isinstance(trend, dict) or not isinstance(plan, dict):
+        return False
+    if not all(isinstance(trend.get(key), str) for key in ('title', 'description')):
+        return False
+    if trend.get('momentum') not in VALID_MOMENTUM:
+        return False
+    if not all(isinstance(plan.get(key), str) for key in ('hook', 'offer', 'cta')):
+        return False
+    return True
 
 
 # ============================================================================
@@ -258,17 +335,36 @@ class AlphaBriefGenerator:
 
         if not force_refresh:
             cached = self.cache.get(cache_key)
-            if cached:
+            if cached and is_valid_brief(cached):
                 logger.info(f"[AlphaBrief] CACHE HIT: {cache_key}")
                 return cached
+            if cached:
+                logger.warning(f"[AlphaBrief] CACHED PAYLOAD INVALID: regenerating {cache_key}")
+
+            # Cache stampede guard: claim the generation lock atomically so only
+            # one caller pays for a fresh Gemini call; the rest wait for its result.
+            lock_key = f"{cache_key}:lock"
+            lock_acquired = self.cache.set_if_absent(lock_key, '1', ttl_seconds=180)
+            if lock_acquired is False:
+                logger.info(f"[AlphaBrief] Generation already in flight for {today}; waiting for result...")
+                for _ in range(60):  # up to ~30s, well within Gemini's timeout
+                    time.sleep(0.5)
+                    cached = self.cache.get(cache_key)
+                    if cached and is_valid_brief(cached):
+                        return cached
+                logger.warning(f"[AlphaBrief] Waited too long for {today}; generating ourselves")
 
         logger.info(f"[AlphaBrief] CACHE MISS: generating fresh brief for {today}")
-        brief = self._generate()
-        brief['date'] = today
-        brief['generated_at'] = datetime.now(timezone.utc).isoformat().replace('+00:00', 'Z')
+        try:
+            brief = self._generate()
+            brief['date'] = today
+            brief['generated_at'] = datetime.now(timezone.utc).isoformat().replace('+00:00', 'Z')
 
-        self.cache.set(cache_key, brief, ttl_seconds=seconds_until_end_of_day())
-        return brief
+            self.cache.set(cache_key, brief, ttl_seconds=seconds_until_end_of_day())
+            return brief
+        finally:
+            if not force_refresh:
+                self.cache.delete(lock_key)
 
     # ------------------------------------------------------------------
     # RESILIENCE CASCADE
@@ -308,7 +404,11 @@ class AlphaBriefGenerator:
     # ------------------------------------------------------------------
 
     def _generate_with_gemini(self, api_key: str) -> Optional[Dict[str, Any]]:
-        """Call Gemini 3 Flash Preview via REST and parse the brief JSON."""
+        """Call Gemini 3 Flash Preview via REST and parse the brief JSON.
+
+        Retries once with a short backoff on transient failures (429/5xx or
+        network errors), then falls through to the next tier in the cascade.
+        """
         payload = {
             "contents": [{"role": "user", "parts": [{"text": ALPHA_BRIEF_PROMPT}]}],
             "generationConfig": {
@@ -318,15 +418,29 @@ class AlphaBriefGenerator:
             },
         }
 
-        req = Request(
-            GEMINI_ENDPOINT,
-            data=json.dumps(payload).encode('utf-8'),
-            headers={'Content-Type': 'application/json', 'x-goog-api-key': api_key},
-            method='POST',
-        )
-
-        with urlopen(req, timeout=60) as resp:
-            result = json.loads(resp.read().decode('utf-8'))
+        for attempt in (1, 2):
+            req = Request(
+                GEMINI_ENDPOINT,
+                data=json.dumps(payload).encode('utf-8'),
+                headers={'Content-Type': 'application/json', 'x-goog-api-key': api_key},
+                method='POST',
+            )
+            try:
+                with urlopen(req, timeout=60) as resp:
+                    result = json.loads(resp.read().decode('utf-8'))
+            except HTTPError as e:
+                if e.code in (429, 500, 502, 503, 504) and attempt == 1:
+                    logger.warning(f"[AlphaBrief] Gemini HTTP {e.code} on attempt {attempt}; retrying...")
+                    time.sleep(1.5)
+                    continue
+                raise
+            except URLError as e:
+                if attempt == 1:
+                    logger.warning(f"[AlphaBrief] Gemini network error ({e}); retrying...")
+                    time.sleep(1.5)
+                    continue
+                raise
+            break
 
         candidates = result.get('candidates') or []
         if not candidates:
