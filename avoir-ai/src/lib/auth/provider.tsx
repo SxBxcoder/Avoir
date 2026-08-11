@@ -81,6 +81,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
       setEmail(resolvedEmail);
       setAccessToken(resolvedToken);
+
+      // One-time legacy migration (email-keyed → sub-keyed DynamoDB rows).
+      // Fire-and-forget: safe to retry on every session refresh.
+      if (resolvedEmail && resolvedToken) {
+        fetch('/api/auth/link-email', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${resolvedToken}`,
+          },
+          body: JSON.stringify({ email: resolvedEmail }),
+        }).catch(() => {
+          // Non-blocking; the migration retries on the next refresh.
+        });
+      }
       return true;
     } catch {
       setUser(null);
