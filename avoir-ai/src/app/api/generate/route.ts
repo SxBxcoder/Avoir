@@ -20,6 +20,7 @@ import { canGenerateCampaign, PLANS } from '@/lib/stripe';
 import { createCampaign } from '@/lib/db/campaigns';
 import { checkRateLimit } from '@/lib/db/cache';
 import { isDemoMode, MOCK_CAMPAIGNS } from '@/lib/mockShield';
+import { requireUser, UnauthorizedError } from '@/lib/auth/requireUser';
 
 export async function POST(req: Request) {
   // Demo Mock Shield
@@ -35,13 +36,8 @@ export async function POST(req: Request) {
     const campaignGoal = goal || `Create a campaign for a ${business} focusing on ${topic}`;
     const conversationMessages = messages || [];
 
-    // Extract the JWT token sent from your frontend page.tsx
-    const authHeader = req.headers.get('Authorization');
-
-    // ========================================================================
-    // RATE LIMITING (Redis-backed — DDoS protection)
-    // ========================================================================
-    const userId = body.userId || body.user_id || 'anonymous';
+    // Identity comes from the verified Cognito JWT — never trust client input.
+    const { userId } = await requireUser(req);
     
     const rateLimit = await checkRateLimit(userId, 10, 60); // 10 requests per minute
     if (!rateLimit.allowed) {
@@ -101,7 +97,7 @@ export async function POST(req: Request) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': authHeader || '', // Securely pass the Cognito JWT
+        'Authorization': req.headers.get('Authorization') || '',
       },
       body: JSON.stringify({
         goal: campaignGoal,
@@ -163,6 +159,9 @@ export async function POST(req: Request) {
     });
 
   } catch (error: any) {
+    if (error instanceof UnauthorizedError) {
+      return NextResponse.json({ error: error.message }, { status: 401 });
+    }
     console.error("[Generate] Error:", error);
     return NextResponse.json(
       { error: error.message || 'Failed to generate campaign via Strands Agent' },
