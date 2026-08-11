@@ -3,8 +3,15 @@ import { deductCredits } from '@/lib/db/users';
 import { isDemoMode } from '@/lib/mockShield';
 import { requireUser, authErrorResponse } from '@/lib/auth/requireUser';
 import { logger } from '@/lib/logger';
+import { z } from 'zod';
+import { parseJsonBody } from '@/lib/validate';
 
 const PUBLISH_COST = 5;
+
+const publishSchema = z.object({
+  campaign_id: z.string().min(1),
+  platforms: z.array(z.string().min(1)).min(1),
+});
 
 export async function POST(request: Request) {
   // Demo Mock Shield
@@ -20,13 +27,11 @@ export async function POST(request: Request) {
     // Identity comes from the verified Cognito JWT, not the request body.
     const { userId } = await requireUser(request);
 
-    const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
-    const { campaign_id, platforms } = body;
-
-    const platformList = Array.isArray(platforms) ? platforms.filter((p): p is string => typeof p === 'string') : [];
-    if (platformList.length === 0) {
-        return NextResponse.json({ error: 'No platforms selected' }, { status: 400 });
+    const parsed = await parseJsonBody(request, publishSchema);
+    if (!parsed.ok) {
+      return NextResponse.json({ error: 'Invalid request body', issues: parsed.issues }, { status: 400 });
     }
+    const { campaign_id, platforms: platformList } = parsed.data;
 
     logger.info('publish', 'Attempting to publish campaign', { campaignId: campaign_id, platforms: platformList });
 
