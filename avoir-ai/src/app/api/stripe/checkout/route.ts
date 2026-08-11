@@ -12,7 +12,7 @@
 
 import { NextResponse } from 'next/server';
 import { getStripeServer } from '@/lib/stripe';
-import { requireUser, UnauthorizedError } from '@/lib/auth/requireUser';
+import { requireUser, authErrorResponse } from '@/lib/auth/requireUser';
 
 export async function POST(req: Request) {
   try {
@@ -81,9 +81,8 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ sessionId: session.id });
   } catch (err: any) {
-    if (err instanceof UnauthorizedError) {
-      return NextResponse.json({ error: err.message }, { status: 401 });
-    }
+    const authErr = authErrorResponse(err);
+    if (authErr) return authErr;
     console.error('[Checkout] Error creating checkout session:', err);
     return NextResponse.json(
       { error: err.message || 'Failed to create checkout session' },

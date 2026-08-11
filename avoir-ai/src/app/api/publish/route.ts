@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { deductCredits } from '@/lib/db/users';
 import { isDemoMode } from '@/lib/mockShield';
-import { requireUser, UnauthorizedError } from '@/lib/auth/requireUser';
+import { requireUser, authErrorResponse } from '@/lib/auth/requireUser';
 
 const PUBLISH_COST = 5;
 
@@ -53,9 +53,8 @@ export async function POST(request: Request) {
     });
 
   } catch (error: any) {
-    if (error instanceof UnauthorizedError) {
-      return NextResponse.json({ error: error.message }, { status: 401 });
-    }
+    const authErr = authErrorResponse(error);
+    if (authErr) return authErr;
     console.error('Publishing error:', error);
     return NextResponse.json({ error: error.message || 'Internal Server Error' }, { status: 500 });
   }

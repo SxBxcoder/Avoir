@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getBrandDNA, saveBrandDNA } from '@/lib/db/brandDna';
 import { isDemoMode, MOCK_BRAND_DNA } from '@/lib/mockShield';
-import { requireUser, UnauthorizedError } from '@/lib/auth/requireUser';
+import { requireUser, authErrorResponse } from '@/lib/auth/requireUser';
 
 export async function GET(req: Request) {
   // Demo Mock Shield
@@ -16,9 +16,8 @@ export async function GET(req: Request) {
     const dna = await getBrandDNA(userId);
     return NextResponse.json({ dna });
   } catch (error: any) {
-    if (error instanceof UnauthorizedError) {
-      return NextResponse.json({ error: error.message }, { status: 401 });
-    }
+    const authErr = authErrorResponse(error);
+    if (authErr) return authErr;
     console.error('[GET /api/brand-dna] Error:', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
@@ -44,9 +43,8 @@ export async function POST(req: Request) {
     const savedDNA = await saveBrandDNA(userId, dna);
     return NextResponse.json({ success: true, dna: savedDNA });
   } catch (error: any) {
-    if (error instanceof UnauthorizedError) {
-      return NextResponse.json({ error: error.message }, { status: 401 });
-    }
+    const authErr = authErrorResponse(error);
+    if (authErr) return authErr;
     console.error('[POST /api/brand-dna] Error:', error);
     return NextResponse.json({ error: 'Failed to save Brand DNA' }, { status: 500 });
   }

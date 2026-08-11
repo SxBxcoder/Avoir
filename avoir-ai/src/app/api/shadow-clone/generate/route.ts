@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getSubscription, deductCredits } from '@/lib/services/subscription';
 import { isDemoMode, createMockShadowCloneStream } from '@/lib/mockShield';
-import { requireUser, UnauthorizedError } from '@/lib/auth/requireUser';
+import { requireUser, authErrorResponse } from '@/lib/auth/requireUser';
 
 /**
  * Proxy for Shadow Clone SSE stream
@@ -66,12 +66,8 @@ export async function POST(req: Request) {
       },
     });
   } catch (error: any) {
-    if (error instanceof UnauthorizedError) {
-      return NextResponse.json(
-        { error: error.message },
-        { status: 401, headers: { 'Content-Type': 'application/json' } }
-      );
-    }
+    const authErr = authErrorResponse(error);
+    if (authErr) return authErr;
     console.error('Shadow Clone Proxy Error:', error);
     return new Response(
       JSON.stringify({ error: error.message || 'Stream failed' }),

@@ -1,13 +1,15 @@
 /**
  * Avoir — Intelligence API
  * 
- * GET /api/intelligence?userId=...
+ * GET /api/intelligence
+ * 
+ * Identity comes from the verified Cognito JWT (Authorization header).
  */
 
 import { NextResponse } from 'next/server';
 import { getIntelligenceBrief } from '@/lib/db/intelligence';
 import { isDemoMode, MOCK_INTELLIGENCE } from '@/lib/mockShield';
-import { requireUser, UnauthorizedError } from '@/lib/auth/requireUser';
+import { requireUser, authErrorResponse } from '@/lib/auth/requireUser';
 
 export async function GET(req: Request) {
   // Demo Mock Shield
@@ -34,9 +36,8 @@ export async function GET(req: Request) {
       }
     });
   } catch (error: any) {
-    if (error instanceof UnauthorizedError) {
-      return NextResponse.json({ error: error.message }, { status: 401 });
-    }
+    const authErr = authErrorResponse(error);
+    if (authErr) return authErr;
     console.error('[Intelligence API] GET error:', error);
     return NextResponse.json(
       { error: error.message || 'Failed to fetch intelligence brief' },

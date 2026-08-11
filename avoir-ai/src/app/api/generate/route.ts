@@ -20,7 +20,7 @@ import { canGenerateCampaign, PLANS } from '@/lib/stripe';
 import { createCampaign } from '@/lib/db/campaigns';
 import { checkRateLimit } from '@/lib/db/cache';
 import { isDemoMode, MOCK_CAMPAIGNS } from '@/lib/mockShield';
-import { requireUser, UnauthorizedError } from '@/lib/auth/requireUser';
+import { requireUser, authErrorResponse } from '@/lib/auth/requireUser';
 
 export async function POST(req: Request) {
   // Demo Mock Shield
@@ -159,9 +159,8 @@ export async function POST(req: Request) {
     });
 
   } catch (error: any) {
-    if (error instanceof UnauthorizedError) {
-      return NextResponse.json({ error: error.message }, { status: 401 });
-    }
+    const authErr = authErrorResponse(error);
+    if (authErr) return authErr;
     console.error("[Generate] Error:", error);
     return NextResponse.json(
       { error: error.message || 'Failed to generate campaign via Strands Agent' },

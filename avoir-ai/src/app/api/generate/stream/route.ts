@@ -28,7 +28,7 @@ import { getPerformanceInsights, formatInsightsForPrompt } from '@/lib/db/perfor
 import { getIntelligenceBrief, updateIntelligenceBrief, formatIntelligenceForPrompt } from '@/lib/db/intelligence';
 import { fetchCompetitorIntel, formatCompetitorContext } from '@/lib/db/competitors';
 import { fetchIndustryTrends, synthesizeTrendContext } from '@/lib/trends';
-import { requireUser, UnauthorizedError } from '@/lib/auth/requireUser';
+import { requireUser, authErrorResponse } from '@/lib/auth/requireUser';
 
 // Status messages that stream to the UI for the "AI is Cooking" experience
 const COOKING_MESSAGES = [
@@ -323,12 +323,8 @@ export async function POST(req: Request) {
       },
     });
   } catch (error: any) {
-    if (error instanceof UnauthorizedError) {
-      return new Response(
-        JSON.stringify({ error: error.message }),
-        { status: 401, headers: { 'Content-Type': 'application/json' } }
-      );
-    }
+    const authErr = authErrorResponse(error);
+    if (authErr) return authErr;
     console.error('[Stream] Error:', error);
     return new Response(
       JSON.stringify({ error: error.message || 'Stream failed' }),

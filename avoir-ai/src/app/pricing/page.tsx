@@ -33,7 +33,7 @@ function PricingContent() {
   const [loading, setLoading] = useState<string | null>(null);
   const [isAnnual, setIsAnnual] = useState(false);
   const router = useRouter();
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated, user, accessToken } = useAuth();
   const searchParams = useSearchParams();
   const canceled = searchParams.get('canceled');
 
@@ -81,12 +81,14 @@ function PricingContent() {
       }
 
       const userEmail = user?.email || '';
-      const userId = user?.userId || '';
 
       const response = await fetch('/api/stripe/checkout', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ priceId, email: userEmail, userId }),
+        headers: {
+          'Content-Type': 'application/json',
+          ...(accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {}),
+        },
+        body: JSON.stringify({ priceId, email: userEmail }),
       });
 
       if (!response.ok) {

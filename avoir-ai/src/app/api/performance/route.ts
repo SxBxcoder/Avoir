@@ -16,7 +16,7 @@ import {
   type CampaignSnapshot,
 } from '@/lib/db/performance';
 import { isDemoMode, MOCK_PERFORMANCE_HISTORY, MOCK_PERFORMANCE_INSIGHTS } from '@/lib/mockShield';
-import { requireUser, UnauthorizedError } from '@/lib/auth/requireUser';
+import { requireUser, authErrorResponse } from '@/lib/auth/requireUser';
 
 export async function POST(req: Request) {
   // Demo Mock Shield
@@ -63,9 +63,8 @@ export async function POST(req: Request) {
       message: 'Performance data recorded. Your AI is now smarter.',
     });
   } catch (error: any) {
-    if (error instanceof UnauthorizedError) {
-      return NextResponse.json({ error: error.message }, { status: 401 });
-    }
+    const authErr = authErrorResponse(error);
+    if (authErr) return authErr;
     console.error('[Performance API] POST error:', error);
     return NextResponse.json(
       { error: error.message || 'Failed to record performance' },
@@ -114,9 +113,8 @@ export async function GET(req: Request) {
       totalReported: history.length,
     });
   } catch (error: any) {
-    if (error instanceof UnauthorizedError) {
-      return NextResponse.json({ error: error.message }, { status: 401 });
-    }
+    const authErr = authErrorResponse(error);
+    if (authErr) return authErr;
     console.error('[Performance API] GET error:', error);
     return NextResponse.json(
       { error: error.message || 'Failed to fetch performance data' },

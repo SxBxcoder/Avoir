@@ -15,6 +15,7 @@
  */
 
 import { CognitoJwtVerifier } from 'aws-jwt-verify';
+import { NextResponse } from 'next/server';
 import { isDemoMode } from '@/lib/mockShield';
 
 export class UnauthorizedError extends Error {
@@ -25,6 +26,25 @@ export class UnauthorizedError extends Error {
   }
 }
 
+/**
+ * Shared 401 mapping for route handlers.
+ *
+ * Every protected route's catch block should call this first and return early
+ * on non-null, so no route can ever leak an internal error for a missing or
+ * invalid token, or forget to map UnauthorizedError to a 401.
+ */
+export function authErrorResponse(error: unknown): NextResponse | null {
+  if (error instanceof UnauthorizedError) {
+    return NextResponse.json({ error: error.message }, { status: 401 });
+  }
+  return null;
+}
+
+// NOTE: NEXT_PUBLIC_COGNITO_* values are Cognito *public identifiers* (user
+// pool id / app client id), not secrets — they are already shipped to the
+// browser by the Amplify SDK. They are read here on the server simply because
+// the repo has no server-only env file. Prefer COGNITO_USER_POOL_ID /
+// COGNITO_CLIENT_ID if you add one.
 const userPoolId = process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID;
 const clientId = process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID;
 
@@ -55,7 +75,9 @@ export interface AuthenticatedUser {
 
 export async function requireUser(req: Request): Promise<AuthenticatedUser> {
   if (isDemoMode()) {
-    return { userId: 'demo-user', email: 'demo@avoir.ai' };
+    // email is deliberately undefined in demo mode: routes that fall back to a
+    // client-supplied email (e.g. Stripe checkout) must NOT receive a fake one.
+    return { userId: 'demo-user', email: undefined };
   }
 
   const authHeader = req.headers.get('Authorization') || '';
@@ -65,8 +87,19 @@ export async function requireUser(req: Request): Promise<AuthenticatedUser> {
     throw new UnauthorizedError('Missing Authorization header');
   }
 
+  // getVerifier() fails closed on missing env config. It is deliberately kept
+  // OUTSIDE the try/catch so a deployment misconfiguration surfaces as a 500
+  // (and logs loudly) instead of being masked as a client 401.
+  const verifier = getVerifier();
+
   try {
-    const payload = await getVerifier().verify(token);
+    const payload = await verifier.verify(token);
+    // NOTE: Cognito access tokens only carry `email` if the app client has it
+    // configured in "Access token" claims — by default `email` lives only in
+    // the ID token. `payload.email` is therefore usually undefined, and any
+    // route that needs an email (checkout) falls back to a client value. If
+    // you want the JWT email to be authoritative, add an `email` custom
+    // access-token claim in the Cognito console for this app client.
     return {
       userId: payload.sub as string,
       email: (payload as { email?: string }).email,
