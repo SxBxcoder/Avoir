@@ -17,7 +17,7 @@
 import { NextResponse } from 'next/server';
 import { isDemoMode } from '@/lib/mockShield';
 import { requireUserEmail, authErrorResponse } from '@/lib/auth/requireUser';
-import { setEmailAlias } from '@/lib/db/aliases';
+import { getEmailAlias, setEmailAlias } from '@/lib/db/aliases';
 import { migrateLegacyUser } from '@/lib/auth/migrateUser';
 
 export async function POST(req: Request) {
@@ -27,6 +27,14 @@ export async function POST(req: Request) {
 
   try {
     const { userId, email } = await requireUserEmail(req);
+
+    // Early-return when this sub is already linked to the same email. Without
+    // this, every page load fires 5+ DynamoDB reads (and a write) for users
+    // who were never legacy users or migrated long ago.
+    const existing = await getEmailAlias(userId);
+    if (existing && existing.toLowerCase() === email.toLowerCase()) {
+      return NextResponse.json({ success: true, migrated: false, alreadyLinked: true });
+    }
 
     await setEmailAlias(userId, email);
     const migrated = await migrateLegacyUser(userId, email);
