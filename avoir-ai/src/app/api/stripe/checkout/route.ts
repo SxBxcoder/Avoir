@@ -18,6 +18,12 @@ import { NextResponse } from 'next/server';
 import { getStripeServer } from '@/lib/stripe';
 import { requireUserEmail, authErrorResponse } from '@/lib/auth/requireUser';
 import { logger } from '@/lib/logger';
+import { z } from 'zod';
+import { parseJsonBody } from '@/lib/validate';
+
+const checkoutSchema = z.object({
+  priceId: z.string().min(1),
+});
 
 // Only the server-configured price IDs are purchasable — a client can't pass
 // an arbitrary Stripe price (e.g. a discounted or one-time product). Keep the
@@ -35,13 +41,11 @@ export async function POST(req: Request) {
     // email for the Stripe customer is always the verified account email.
     const { userId, email } = await requireUserEmail(req);
 
-    const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;
-    const { priceId } = body;
-
-    // Input validation
-    if (typeof priceId !== 'string' || !priceId) {
-      return NextResponse.json({ error: 'Missing priceId' }, { status: 400 });
+    const parsed = await parseJsonBody(req, checkoutSchema);
+    if (!parsed.ok) {
+      return NextResponse.json({ error: 'Invalid request body', issues: parsed.issues }, { status: 400 });
     }
+    const { priceId } = parsed.data;
     if (!ALLOWED_PRICE_IDS.has(priceId)) {
       return NextResponse.json({ error: 'Unsupported priceId' }, { status: 400 });
     }
