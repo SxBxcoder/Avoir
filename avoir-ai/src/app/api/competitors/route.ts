@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { fetchCompetitorIntel } from '@/lib/db/competitors';
 import { isDemoMode, MOCK_COMPETITOR_INTEL } from '@/lib/mockShield';
 import { requireUser, authErrorResponse } from '@/lib/auth/requireUser';
+import { logger } from '@/lib/logger';
 
 export async function GET(req: Request) {
   // Demo Mock Shield
@@ -33,7 +34,7 @@ export async function GET(req: Request) {
   } catch (error: unknown) {
     const authErr = authErrorResponse(error);
     if (authErr) return authErr;
-    console.error('[Competitors API] GET error:', error);
+    logger.error('competitors', 'GET failed', { err: error });
     return NextResponse.json(
       { error: 'Failed to fetch competitor intel' },
       { status: 500 }

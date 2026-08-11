@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getBrandDNA, saveBrandDNA, type BrandDNA } from '@/lib/db/brandDna';
 import { isDemoMode, MOCK_BRAND_DNA } from '@/lib/mockShield';
 import { requireUser, authErrorResponse } from '@/lib/auth/requireUser';
+import { logger } from '@/lib/logger';
 
 // Only these fields are ever persisted — a client can't mass-assign unknown
 // columns onto the record.
@@ -30,7 +31,7 @@ export async function GET(req: Request) {
   } catch (error: any) {
     const authErr = authErrorResponse(error);
     if (authErr) return authErr;
-    console.error('[GET /api/brand-dna] Error:', error);
+    logger.error('brand-dna', 'GET failed', { err: error });
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }
@@ -65,7 +66,7 @@ export async function POST(req: Request) {
   } catch (error: any) {
     const authErr = authErrorResponse(error);
     if (authErr) return authErr;
-    console.error('[POST /api/brand-dna] Error:', error);
+    logger.error('brand-dna', 'POST failed', { err: error });
     return NextResponse.json({ error: 'Failed to save Brand DNA' }, { status: 500 });
   }
 }

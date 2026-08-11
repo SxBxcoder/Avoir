@@ -17,6 +17,7 @@ import {
 } from '@/lib/db/performance';
 import { isDemoMode, MOCK_PERFORMANCE_HISTORY, MOCK_PERFORMANCE_INSIGHTS } from '@/lib/mockShield';
 import { requireUser, authErrorResponse } from '@/lib/auth/requireUser';
+import { logger } from '@/lib/logger';
 
 export async function POST(req: Request) {
   // Demo Mock Shield
@@ -65,7 +66,7 @@ export async function POST(req: Request) {
   } catch (error: any) {
     const authErr = authErrorResponse(error);
     if (authErr) return authErr;
-    console.error('[Performance API] POST error:', error);
+    logger.error('performance', 'POST failed', { err: error });
     return NextResponse.json(
       { error: error.message || 'Failed to record performance' },
       { status: 500 }
@@ -115,7 +116,7 @@ export async function GET(req: Request) {
   } catch (error: any) {
     const authErr = authErrorResponse(error);
     if (authErr) return authErr;
-    console.error('[Performance API] GET error:', error);
+    logger.error('performance', 'GET failed', { err: error });
     return NextResponse.json(
       { error: error.message || 'Failed to fetch performance data' },
       { status: 500 }

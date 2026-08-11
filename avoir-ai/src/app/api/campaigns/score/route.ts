@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { updateCampaignScore } from '@/lib/db/campaigns';
 import { requireUser, authErrorResponse } from '@/lib/auth/requireUser';
+import { logger } from '@/lib/logger';
 
 export const dynamic = 'force-dynamic';
 
@@ -26,7 +27,7 @@ export async function PUT(req: NextRequest) {
   } catch (err: any) {
     const authErr = authErrorResponse(err);
     if (authErr) return authErr;
-    console.error('[Score API] Error:', err);
+    logger.error('score', 'Failed to update score', { err });
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

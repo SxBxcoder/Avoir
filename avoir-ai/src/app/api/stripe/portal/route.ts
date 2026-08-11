@@ -21,6 +21,7 @@ import { NextResponse } from 'next/server';
 import { getStripeServer } from '@/lib/stripe';
 import { getSubscription } from '@/lib/services/subscription';
 import { requireUser, authErrorResponse } from '@/lib/auth/requireUser';
+import { logger } from '@/lib/logger';
 
 export async function POST(req: Request) {
   try {
@@ -45,12 +46,12 @@ export async function POST(req: Request) {
       return_url: `${origin}/`,
     });
 
-    console.log(`[Portal] Session created for customer: ${customerId}`);
+    logger.info('portal', 'Portal session created');
     return NextResponse.json({ url: portalSession.url });
   } catch (err: any) {
     const authErr = authErrorResponse(err);
     if (authErr) return authErr;
-    console.error('[Portal] Error creating portal session:', err);
+    logger.error('portal', 'Failed to create portal session', { err });
     return NextResponse.json(
       { error: err.message || 'Failed to create portal session' },
       { status: 500 }

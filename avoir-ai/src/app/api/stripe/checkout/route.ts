@@ -17,6 +17,7 @@
 import { NextResponse } from 'next/server';
 import { getStripeServer } from '@/lib/stripe';
 import { requireUserEmail, authErrorResponse } from '@/lib/auth/requireUser';
+import { logger } from '@/lib/logger';
 
 export async function POST(req: Request) {
   try {
@@ -48,14 +49,14 @@ export async function POST(req: Request) {
 
     if (existingCustomers.data.length > 0) {
       customerId = existingCustomers.data[0].id;
-      console.log(`[Checkout] Reusing existing Stripe customer: ${customerId}`);
+      logger.debug('checkout', 'Reusing existing Stripe customer', { customerId });
     } else {
       const newCustomer = await stripe.customers.create({
         email: email,
         metadata: { cognitoUserId: userId },
       });
       customerId = newCustomer.id;
-      console.log(`[Checkout] Created new Stripe customer: ${customerId}`);
+      logger.debug('checkout', 'Created new Stripe customer', { customerId });
     }
 
     // ========================================================================
@@ -79,13 +80,13 @@ export async function POST(req: Request) {
       cancel_url: `${origin}/pricing?canceled=true`,
     });
 
-    console.log(`[Checkout] Session created: ${session.id} for user: ${userId}`);
+    logger.info('checkout', 'Checkout session created', { sessionId: session.id });
 
     return NextResponse.json({ sessionId: session.id });
   } catch (err: any) {
     const authErr = authErrorResponse(err);
     if (authErr) return authErr;
-    console.error('[Checkout] Error creating checkout session:', err);
+    logger.error('checkout', 'Failed to create checkout session', { err });
     return NextResponse.json(
       { error: err.message || 'Failed to create checkout session' },
       { status: 500 }

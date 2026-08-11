@@ -19,6 +19,7 @@ import { isDemoMode } from '@/lib/mockShield';
 import { requireUserEmail, authErrorResponse } from '@/lib/auth/requireUser';
 import { getEmailAlias, setEmailAlias } from '@/lib/db/aliases';
 import { migrateLegacyUser } from '@/lib/auth/migrateUser';
+import { logger } from '@/lib/logger';
 
 export async function POST(req: Request) {
   if (isDemoMode()) {
@@ -43,7 +44,7 @@ export async function POST(req: Request) {
   } catch (error: unknown) {
     const authErr = authErrorResponse(error);
     if (authErr) return authErr;
-    console.error('[Link Email] Error:', error);
+    logger.error('link-email', 'Link email failed', { err: error });
     return NextResponse.json({ error: 'Failed to link email' }, { status: 500 });
   }
 }

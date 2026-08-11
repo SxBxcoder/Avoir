@@ -21,6 +21,7 @@ import { createCampaign } from '@/lib/db/campaigns';
 import { checkRateLimit } from '@/lib/db/cache';
 import { isDemoMode, MOCK_CAMPAIGNS } from '@/lib/mockShield';
 import { requireUser, authErrorResponse } from '@/lib/auth/requireUser';
+import { logger } from '@/lib/logger';
 
 export async function POST(req: Request) {
   // Demo Mock Shield
@@ -41,7 +42,7 @@ export async function POST(req: Request) {
 
     const rateLimit = await checkRateLimit(userId, 10, 60); // 10 requests per minute
     if (!rateLimit.allowed) {
-      console.log(`[Generate] ⚡ Rate limited: ${userId}. Reset in ${rateLimit.resetIn}s`);
+      logger.warn('generate', 'Rate limited', { resetInSeconds: rateLimit.resetIn, userId });
       return NextResponse.json(
         {
           error: 'Rate limit exceeded',
@@ -66,7 +67,7 @@ export async function POST(req: Request) {
     const sub = await getSubscription(userId);
 
     if (!canGenerateCampaign(sub)) {
-      console.log(`[Generate] 🚫 User ${userId} blocked. Insufficient credits: ${sub.credits}.`);
+      logger.warn('generate', 'Blocked: insufficient credits', { credits: sub.credits, userId });
       return NextResponse.json(
         { 
           error: 'Insufficient Credits',
@@ -89,8 +90,8 @@ export async function POST(req: Request) {
       throw new Error("NEXT_PUBLIC_API_URL is missing from .env.local");
     }
 
-    console.log(`[Generate] 🚀 User ${userId} (${sub.tier}) — ${sub.credits} credits remaining`);
-    console.log(`[Generate] Firing payload to AWS Lambda: ${apiUrl}`);
+    logger.info('generate', 'Starting generation', { tier: sub.tier, credits: sub.credits });
+    logger.debug('generate', 'Firing payload to AWS Lambda', { apiUrl });
 
     // CALL THE LIVE AWS LAMBDA AGENT with stateful messages
     const response = await fetch(apiUrl, {
@@ -108,7 +109,7 @@ export async function POST(req: Request) {
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error("[Generate] Lambda Error:", errorText);
+      logger.error('generate', 'Lambda error', { response: errorText });
       throw new Error(`AWS Lambda Error: ${response.status}`);
     }
 
@@ -144,7 +145,7 @@ export async function POST(req: Request) {
     // DEDUCT 1 CREDIT (Atomic — DynamoDB)
     // ========================================================================
     await deductCredits(userId, 1);
-    console.log(`[Generate] ✅ Campaign ${campaign.campaignId} generated for ${userId}. Persisted to DynamoDB. Deducted 1 Credit.`);
+    logger.info('generate', 'Campaign generated', { campaignId: campaign.campaignId, creditsDeducted: 1 });
 
     // Map Python Agent response back to your Next.js UI format
     return NextResponse.json({
@@ -161,7 +162,7 @@ export async function POST(req: Request) {
   } catch (error: any) {
     const authErr = authErrorResponse(error);
     if (authErr) return authErr;
-    console.error("[Generate] Error:", error);
+    logger.error('generate', 'Generation failed', { err: error });
     return NextResponse.json(
       { error: error.message || 'Failed to generate campaign via Strands Agent' },
       { status: 500 }
