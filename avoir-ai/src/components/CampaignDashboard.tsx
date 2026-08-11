@@ -483,9 +483,8 @@ export default function CampaignDashboard({ accessToken, userEmail, onLogout }: 
 
   // P4: Fetch campaign list
   const refreshCampaignList = useCallback(async () => {
-    const userId = userEmail || 'anonymous';
     try {
-      const res = await fetch(`/api/campaigns?userId=${encodeURIComponent(userId)}&limit=30`);
+      const res = await fetch(`/api/campaigns?limit=30`);
       if (res.ok) {
         const data = await res.json();
         setCampaignHistory(prev => {
@@ -504,7 +503,7 @@ export default function CampaignDashboard({ accessToken, userEmail, onLogout }: 
     } catch (err) {
       console.error('Failed to load campaign history:', err);
     }
-  }, [userEmail]);
+  }, []);
 
   // P4: Load a past campaign into the active canvas
   const loadCampaign = useCallback((campaign: CampaignHistoryItem) => {
@@ -539,9 +538,8 @@ export default function CampaignDashboard({ accessToken, userEmail, onLogout }: 
 
   // P4: Delete a campaign
   const deleteCampaign = useCallback(async (campaignId: string) => {
-    const userId = userEmail || 'anonymous';
     try {
-      await fetch(`/api/campaigns?userId=${encodeURIComponent(userId)}&campaignId=${encodeURIComponent(campaignId)}`, { method: 'DELETE' });
+      await fetch(`/api/campaigns?campaignId=${encodeURIComponent(campaignId)}`, { method: 'DELETE' });
       setCampaignHistory(prev => prev.filter(c => c.campaignId !== campaignId));
       if (activeCampaignId === campaignId) {
         setActiveCampaignId(null);
@@ -551,16 +549,15 @@ export default function CampaignDashboard({ accessToken, userEmail, onLogout }: 
     } catch (err) {
       console.error('Failed to delete campaign:', err);
     }
-  }, [userEmail, activeCampaignId]);
+  }, [activeCampaignId]);
 
   // Fetch subscription, intelligence state, and campaign history on mount
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const userId = userEmail || 'anonymous';
         const [subRes, intelRes] = await Promise.all([
-          fetch(`/api/stripe/subscription?userId=${encodeURIComponent(userId)}`),
-          fetch(`/api/intelligence?userId=${encodeURIComponent(userId)}`)
+          fetch(`/api/stripe/subscription`),
+          fetch(`/api/intelligence`)
         ]);
 
         if (subRes.ok) {
@@ -626,7 +623,6 @@ export default function CampaignDashboard({ accessToken, userEmail, onLogout }: 
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          userId: userEmail || 'anonymous',
           campaignId: activeCampaignId,
           isWinner: true
         })
@@ -729,7 +725,6 @@ export default function CampaignDashboard({ accessToken, userEmail, onLogout }: 
         body: JSON.stringify({
           goal: finalGoal,
           messages: messages.concat(userMessage),
-          userId: userEmail || 'anonymous',
           genome_mode: genomeMode,
           pastWinningContext,
         }),
@@ -867,7 +862,6 @@ export default function CampaignDashboard({ accessToken, userEmail, onLogout }: 
           body: JSON.stringify({
             goal: goal || messages[messages.length - 1]?.content,
             messages: messages,
-            userId: userEmail || 'anonymous',
           }),
         });
 
@@ -1955,7 +1949,6 @@ export default function CampaignDashboard({ accessToken, userEmail, onLogout }: 
                     offer: currentCampaign.plan.offer,
                     cta: currentCampaign.plan.cta,
                   }}
-                  userId={userEmail || 'anonymous'}
                   onClose={() => setShowPerformanceReport(false)}
                   onReported={() => setShowPerformanceReport(false)}
                 />

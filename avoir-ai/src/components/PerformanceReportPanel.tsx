@@ -13,7 +13,6 @@ type Platform = 'instagram' | 'facebook' | 'linkedin' | 'tiktok' | 'google_ads' 
 interface PerformanceReportPanelProps {
   campaignId: string;
   campaignSnapshot: { hook: string; offer: string; cta: string };
-  userId: string;
   onClose: () => void;
   onReported: () => void;
 }
@@ -43,7 +42,6 @@ const METRIC_FIELDS = [
 export default function PerformanceReportPanel({
   campaignId,
   campaignSnapshot,
-  userId,
   onClose,
   onReported,
 }: PerformanceReportPanelProps) {
@@ -80,7 +78,6 @@ export default function PerformanceReportPanel({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          userId,
           campaignId,
           platform: selectedPlatform,
           metrics: numericMetrics,
