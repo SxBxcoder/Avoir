@@ -30,6 +30,16 @@ import { fetchCompetitorIntel, formatCompetitorContext } from '@/lib/db/competit
 import { fetchIndustryTrends, synthesizeTrendContext } from '@/lib/trends';
 import { requireUser, authErrorResponse } from '@/lib/auth/requireUser';
 import { logger } from '@/lib/logger';
+import { z } from 'zod';
+
+const streamSchema = z.object({
+  business: z.string().optional(),
+  topic: z.string().optional(),
+  goal: z.string().optional(),
+  messages: z.array(z.unknown()).optional(),
+  genome_mode: z.boolean().optional(),
+  pastWinningContext: z.string().optional(),
+});
 
 // Status messages that stream to the UI for the "AI is Cooking" experience
 const COOKING_MESSAGES = [
@@ -167,11 +177,11 @@ export async function POST(req: Request) {
     // Identity comes from the verified Cognito JWT — never trust client input.
     const { userId } = await requireUser(req);
 
-    const body = await req.json().catch(() => ({}));
+    const body: unknown = await req.json().catch(() => ({}));
 
     // Demo Mock Shield
     if (isDemoMode()) {
-      const isGenomeMode = body.genome_mode === true;
+      const isGenomeMode = (body as Record<string, unknown>).genome_mode === true;
       logger.info('stream', 'Demo shield active, returning mock SSE stream', { genomeMode: isGenomeMode });
       const stream = createMockSSEStream(isGenomeMode);
       return new Response(stream, {
@@ -184,7 +194,14 @@ export async function POST(req: Request) {
       });
     }
 
-    const { business, topic, goal, messages, genome_mode, pastWinningContext } = body;
+    const parsed = streamSchema.safeParse(body);
+    if (!parsed.success) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid request body', issues: parsed.error.issues.map((issue) => issue.message) }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+    const { business, topic, goal, messages, genome_mode, pastWinningContext } = parsed.data;
     const campaignGoal = goal || `Create a campaign for a ${business} focusing on ${topic}`;
     const conversationMessages = messages || [];
     const authHeader = req.headers.get('Authorization');
