@@ -1,7 +1,19 @@
 import { NextResponse } from 'next/server';
-import { getBrandDNA, saveBrandDNA } from '@/lib/db/brandDna';
+import { getBrandDNA, saveBrandDNA, type BrandDNA } from '@/lib/db/brandDna';
 import { isDemoMode, MOCK_BRAND_DNA } from '@/lib/mockShield';
 import { requireUser, authErrorResponse } from '@/lib/auth/requireUser';
+
+// Only these fields are ever persisted — a client can't mass-assign unknown
+// columns onto the record.
+const DNA_FIELDS = [
+  'brandName',
+  'industry',
+  'targetAudience',
+  'toneOfVoice',
+  'coreValues',
+  'uniqueSellingProposition',
+  'referenceUrl',
+] as const;
 
 export async function GET(req: Request) {
   // Demo Mock Shield
@@ -30,17 +42,25 @@ export async function POST(req: Request) {
   }
 
   try {
-    const body = await req.json();
-    const { ...dna } = body;
+    // Identity comes from the verified Cognito JWT, not the request body.
+    const { userId } = await requireUser(req);
+
+    const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;
+
+    // Allowlist: copy only known string fields, ignoring everything else.
+    const dna: Partial<Omit<BrandDNA, 'userId' | 'updatedAt'>> = {};
+    for (const field of DNA_FIELDS) {
+      const value = body[field];
+      if (typeof value === 'string') {
+        (dna as Record<string, unknown>)[field] = value;
+      }
+    }
 
     if (!dna.brandName || !dna.industry) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    // Identity comes from the verified Cognito JWT, not the request body.
-    const { userId } = await requireUser(req);
-
-    const savedDNA = await saveBrandDNA(userId, dna);
+    const savedDNA = await saveBrandDNA(userId, dna as Omit<BrandDNA, 'userId' | 'updatedAt'>);
     return NextResponse.json({ success: true, dna: savedDNA });
   } catch (error: any) {
     const authErr = authErrorResponse(error);
