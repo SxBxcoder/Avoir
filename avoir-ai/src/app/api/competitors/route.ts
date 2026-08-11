@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { fetchCompetitorIntel } from '@/lib/db/competitors';
 import { isDemoMode, MOCK_COMPETITOR_INTEL } from '@/lib/mockShield';
+import { requireUser, authErrorResponse } from '@/lib/auth/requireUser';
 
 export async function GET(req: Request) {
   // Demo Mock Shield
@@ -9,6 +10,9 @@ export async function GET(req: Request) {
   }
 
   try {
+    // Identity comes from the verified Cognito JWT — never trust client input.
+    await requireUser(req);
+
     const { searchParams } = new URL(req.url);
     const industry = searchParams.get('industry');
 
@@ -26,10 +30,12 @@ export async function GET(req: Request) {
     }
 
     return NextResponse.json({ intel });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const authErr = authErrorResponse(error);
+    if (authErr) return authErr;
     console.error('[Competitors API] GET error:', error);
     return NextResponse.json(
-      { error: error.message || 'Failed to fetch competitor intel' },
+      { error: 'Failed to fetch competitor intel' },
       { status: 500 }
     );
   }

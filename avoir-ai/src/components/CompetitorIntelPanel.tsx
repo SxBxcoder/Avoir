@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Shield, Eye, Flame, AlertTriangle, Target, Activity, Loader2, X } from 'lucide-react';
+import { useAuth } from '@/lib/auth/provider';
 
 interface CompetitorAd {
   id: string;
@@ -27,6 +28,7 @@ interface CompetitorIntelPanelProps {
 }
 
 export default function CompetitorIntelPanel({ industry, onClose, onInjectGap }: CompetitorIntelPanelProps) {
+  const { accessToken } = useAuth();
   const [intel, setIntel] = useState<CompetitorIntel | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -35,7 +37,9 @@ export default function CompetitorIntelPanel({ industry, onClose, onInjectGap }:
     const fetchIntel = async () => {
       setIsLoading(true);
       try {
-        const res = await fetch(`/api/competitors?industry=${encodeURIComponent(industry)}`);
+        const res = await fetch(`/api/competitors?industry=${encodeURIComponent(industry)}`, {
+          headers: accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {},
+        });
         if (res.ok) {
           const data = await res.json();
           if (data.intel && mounted) {
@@ -51,7 +55,7 @@ export default function CompetitorIntelPanel({ industry, onClose, onInjectGap }:
 
     fetchIntel();
     return () => { mounted = false; };
-  }, [industry]);
+  }, [industry, accessToken]);
 
   return (
     <motion.div
