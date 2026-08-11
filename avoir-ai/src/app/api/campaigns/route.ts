@@ -10,6 +10,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { listCampaigns, getCampaign, deleteCampaign } from '@/lib/db/campaigns';
 import { isDemoMode, MOCK_CAMPAIGNS } from '@/lib/mockShield';
+import { requireUser, UnauthorizedError } from '@/lib/auth/requireUser';
 
 export const dynamic = 'force-dynamic';
 
@@ -24,10 +25,8 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const userId = req.nextUrl.searchParams.get('userId');
-    if (!userId) {
-      return NextResponse.json({ error: 'Missing userId parameter' }, { status: 400 });
-    }
+    // Identity comes from the verified Cognito JWT, not the query string.
+    const { userId } = await requireUser(req);
 
     const limit = parseInt(req.nextUrl.searchParams.get('limit') || '20', 10);
     const campaignId = req.nextUrl.searchParams.get('campaignId');
@@ -49,6 +48,9 @@ export async function GET(req: NextRequest) {
       count: result.campaigns.length,
     });
   } catch (err: any) {
+    if (err instanceof UnauthorizedError) {
+      return NextResponse.json({ error: err.message }, { status: 401 });
+    }
     console.error('[Campaigns API] Error:', err);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
@@ -61,11 +63,13 @@ export async function DELETE(req: NextRequest) {
   }
 
   try {
-    const userId = req.nextUrl.searchParams.get('userId');
+    // Identity comes from the verified Cognito JWT, not the query string.
+    const { userId } = await requireUser(req);
+
     const campaignId = req.nextUrl.searchParams.get('campaignId');
 
-    if (!userId || !campaignId) {
-      return NextResponse.json({ error: 'Missing userId or campaignId' }, { status: 400 });
+    if (!campaignId) {
+      return NextResponse.json({ error: 'Missing campaignId' }, { status: 400 });
     }
 
     const success = await deleteCampaign(userId, campaignId);
