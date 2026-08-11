@@ -99,7 +99,7 @@ async def health_check():
 
 # Main campaign generation endpoint
 @app.post("/api/generate", response_model=CampaignResponse)
-async def generate_campaign(request: CampaignRequest):
+def generate_campaign(request: CampaignRequest):
     """
     Generate a complete social media campaign using the Creative Director Agent.
     
