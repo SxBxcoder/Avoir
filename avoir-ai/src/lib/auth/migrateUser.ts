@@ -10,6 +10,7 @@
  * legacy row is only deleted after its sub-keyed copy succeeded.
  */
 
+import type { NativeAttributeValue } from '@aws-sdk/util-dynamodb';
 import {
   DeleteCommand,
   GetCommand,
@@ -18,6 +19,8 @@ import {
   UpdateCommand,
 } from '@aws-sdk/lib-dynamodb';
 import { getDynamoClient, TABLES } from '@/lib/db/dynamodb';
+
+type DynamoItem = Record<string, NativeAttributeValue>;
 
 // Single-partition-key tables (PK: userId)
 const SINGLE_KEY_TABLES = [
@@ -31,29 +34,28 @@ const COMPOSITE_KEY_TABLES = [
   { table: TABLES.PERFORMANCE, sortKey: 'campaignId' },
 ] as const;
 
-// Fields merged when the sub-keyed users row already exists (it can only be
-// the auto-created free-tier default from getSubscription at this point, so
-// the legacy values are authoritative).
-const USER_MERGE_FIELDS = [
-  'tier',
-  'status',
-  'credits',
-  'stripeCustomerId',
-  'stripeSubscriptionId',
-  'currentPeriodEnd',
-  'cancelAtPeriodEnd',
-  'campaignsUsedThisMonth',
-  'lastResetDate',
-] as const;
-
 function isNonEmptyEmail(email: string): boolean {
   return typeof email === 'string' && email.length > 0 && email.includes('@') && email.length <= 254;
 }
 
-async function queryAllByUser(table: string, userId: string): Promise<Record<string, any>[]> {
+function isConditionalCheckFailed(err: unknown): boolean {
+  return err instanceof Error && err.name === 'ConditionalCheckFailedException';
+}
+
+function errorMessage(err: unknown): string {
+  return err instanceof Error ? err.message : String(err);
+}
+
+// DynamoDB attribute names are substituted via ExpressionAttributeNames, but a
+// name containing `#` or `:` would still break the generated expression.
+function isSafeExpressionField(field: string): boolean {
+  return /^[A-Za-z][A-Za-z0-9_]*$/.test(field);
+}
+
+async function queryAllByUser(table: string, userId: string): Promise<DynamoItem[]> {
   const client = getDynamoClient();
-  const items: Record<string, any>[] = [];
-  let lastKey: Record<string, any> | undefined;
+  const items: DynamoItem[] = [];
+  let lastKey: DynamoItem | undefined;
 
   do {
     const result = await client.send(
@@ -66,7 +68,7 @@ async function queryAllByUser(table: string, userId: string): Promise<Record<str
       })
     );
     items.push(...(result.Items || []));
-    lastKey = result.LastEvaluatedKey;
+    lastKey = result.LastEvaluatedKey as DynamoItem | undefined;
   } while (lastKey);
 
   return items;
@@ -78,7 +80,7 @@ async function migrateUsers(sub: string, email: string): Promise<boolean> {
     new GetCommand({ TableName: TABLES.USERS, Key: { userId: email } })
   );
   if (!legacy.Item) return false;
-  const legacyItem = legacy.Item;
+  const legacyItem: DynamoItem = legacy.Item;
 
   const now = new Date().toISOString();
   let claimed = false;
@@ -91,21 +93,29 @@ async function migrateUsers(sub: string, email: string): Promise<boolean> {
       })
     );
     claimed = true;
-  } catch (err: any) {
-    if (err.name !== 'ConditionalCheckFailedException') throw err;
+  } catch (err: unknown) {
+    if (!isConditionalCheckFailed(err)) throw err;
   }
 
   if (!claimed) {
-    // Sub row already exists (auto-created default) — merge legacy fields.
+    // The sub row already exists (auto-created free-tier default). Merge every
+    // legacy attribute that is ABSENT on the sub row — a fixed allowlist would
+    // silently drop attributes (createdAt, onboarding state, future schema
+    // fields) right before the legacy row is deleted.
+    const existing = await client.send(
+      new GetCommand({ TableName: TABLES.USERS, Key: { userId: sub } })
+    );
+    const existingItem: DynamoItem = existing.Item || {};
+
     const parts: string[] = [];
     const names: Record<string, string> = {};
-    const values: Record<string, any> = {};
-    for (const field of USER_MERGE_FIELDS) {
-      if (legacyItem[field] !== undefined) {
-        parts.push(`#${field} = :${field}`);
-        names[`#${field}`] = field;
-        values[`:${field}`] = legacyItem[field];
-      }
+    const values: Record<string, NativeAttributeValue> = {};
+    for (const [field, value] of Object.entries(legacyItem)) {
+      if (field === 'userId' || existingItem[field] !== undefined) continue;
+      if (!isSafeExpressionField(field)) continue;
+      parts.push(`#${field} = :${field}`);
+      names[`#${field}`] = field;
+      values[`:${field}`] = value;
     }
     if (parts.length > 0) {
       await client.send(
@@ -139,8 +149,8 @@ async function migrateSingleKey(table: string, sub: string, email: string): Prom
         ConditionExpression: 'attribute_not_exists(userId)',
       })
     );
-  } catch (err: any) {
-    if (err.name !== 'ConditionalCheckFailedException') throw err;
+  } catch (err: unknown) {
+    if (!isConditionalCheckFailed(err)) throw err;
     return false; // Already migrated; keep the legacy row untouched.
   }
 
@@ -160,7 +170,7 @@ async function migrateCompositeKey(
 
   let copied = 0;
   for (const item of items) {
-    const legacyKey = { userId: email, [sortKey]: item[sortKey] };
+    const legacyKey: DynamoItem = { userId: email, [sortKey]: item[sortKey] };
     try {
       await client.send(
         new PutCommand({
@@ -171,8 +181,8 @@ async function migrateCompositeKey(
       );
       await client.send(new DeleteCommand({ TableName: table, Key: legacyKey }));
       copied++;
-    } catch (err: any) {
-      if (err.name !== 'ConditionalCheckFailedException') throw err;
+    } catch (err: unknown) {
+      if (!isConditionalCheckFailed(err)) throw err;
     }
   }
 
@@ -193,23 +203,23 @@ export async function migrateLegacyUser(sub: string, email: string): Promise<boo
 
   try {
     migrated = (await migrateUsers(sub, email)) || migrated;
-  } catch (err: any) {
-    console.error(`[Migrate] users failed for ${sub}: ${err.message}`);
+  } catch (err: unknown) {
+    console.error(`[Migrate] users failed for ${sub}: ${errorMessage(err)}`);
   }
 
   for (const { table } of SINGLE_KEY_TABLES) {
     try {
       migrated = (await migrateSingleKey(table, sub, email)) || migrated;
-    } catch (err: any) {
-      console.error(`[Migrate] ${table} failed for ${sub}: ${err.message}`);
+    } catch (err: unknown) {
+      console.error(`[Migrate] ${table} failed for ${sub}: ${errorMessage(err)}`);
     }
   }
 
   for (const { table, sortKey } of COMPOSITE_KEY_TABLES) {
     try {
       migrated = (await migrateCompositeKey(table, sortKey, sub, email)) || migrated;
-    } catch (err: any) {
-      console.error(`[Migrate] ${table} failed for ${sub}: ${err.message}`);
+    } catch (err: unknown) {
+      console.error(`[Migrate] ${table} failed for ${sub}: ${errorMessage(err)}`);
     }
   }
 
