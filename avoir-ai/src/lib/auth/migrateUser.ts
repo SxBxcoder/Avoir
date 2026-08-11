@@ -189,21 +189,30 @@ async function migrateCompositeKey(
   return copied > 0;
 }
 
+export interface MigrationResult {
+  /** True when at least one legacy record was moved under the sub. */
+  migrated: boolean;
+  /** True when every table was processed without error. */
+  complete: boolean;
+}
+
 /**
  * Re-key all legacy data for a user from `email` to the Cognito `sub`.
  *
- * Returns true when anything was migrated. Never throws across tables — a
- * failure in one table is logged and the rest still run, and the whole thing
- * is retried on the next session refresh.
+ * Returns `migrated` (any rows moved) and `complete` (no table threw). A
+ * partial failure never throws — the failing table is logged, the rest still
+ * run, and `complete: false` tells the caller to stay retry-eligible.
  */
-export async function migrateLegacyUser(sub: string, email: string): Promise<boolean> {
-  if (!sub || !isNonEmptyEmail(email) || sub === email) return false;
+export async function migrateLegacyUser(sub: string, email: string): Promise<MigrationResult> {
+  if (!sub || !isNonEmptyEmail(email) || sub === email) return { migrated: false, complete: true };
 
   let migrated = false;
+  let complete = true;
 
   try {
     migrated = (await migrateUsers(sub, email)) || migrated;
   } catch (err: unknown) {
+    complete = false;
     console.error(`[Migrate] users failed for ${sub}: ${errorMessage(err)}`);
   }
 
@@ -211,6 +220,7 @@ export async function migrateLegacyUser(sub: string, email: string): Promise<boo
     try {
       migrated = (await migrateSingleKey(table, sub, email)) || migrated;
     } catch (err: unknown) {
+      complete = false;
       console.error(`[Migrate] ${table} failed for ${sub}: ${errorMessage(err)}`);
     }
   }
@@ -219,9 +229,10 @@ export async function migrateLegacyUser(sub: string, email: string): Promise<boo
     try {
       migrated = (await migrateCompositeKey(table, sortKey, sub, email)) || migrated;
     } catch (err: unknown) {
+      complete = false;
       console.error(`[Migrate] ${table} failed for ${sub}: ${errorMessage(err)}`);
     }
   }
 
-  return migrated;
+  return { migrated, complete };
 }
