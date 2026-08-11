@@ -1,5 +1,6 @@
 import { PutCommand, GetCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb';
 import { getDynamoClient, TABLES } from './dynamodb';
+import { logger } from '@/lib/logger';
 
 export interface BrandDNA {
   userId: string;
@@ -23,7 +24,7 @@ export async function getBrandDNA(userId: string): Promise<BrandDNA | null> {
     const { Item } = await getDynamoClient().send(new GetCommand(params));
     return Item ? (Item as BrandDNA) : null;
   } catch (error) {
-    console.error('DynamoDB Error [getBrandDNA]:', error);
+    logger.error('db.brand-dna', 'Get failed', { err: error });
     return null;
   }
 }
@@ -44,7 +45,7 @@ export async function saveBrandDNA(userId: string, dna: Omit<BrandDNA, 'userId' 
     await getDynamoClient().send(new PutCommand(params));
     return newDNA;
   } catch (error) {
-    console.error('DynamoDB Error [saveBrandDNA]:', error);
+    logger.error('db.brand-dna', 'Save failed', { err: error });
     throw new Error('Failed to save Brand DNA');
   }
 }
