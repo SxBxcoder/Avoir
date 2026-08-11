@@ -18,6 +18,16 @@ import { NextResponse } from 'next/server';
 import { getStripeServer } from '@/lib/stripe';
 import { requireUserEmail, authErrorResponse } from '@/lib/auth/requireUser';
 
+// Only the server-configured price IDs are purchasable — a client can't pass
+// an arbitrary Stripe price (e.g. a discounted or one-time product). Keep the
+// fallbacks in sync with PRICE_TO_TIER in the webhook route.
+const ALLOWED_PRICE_IDS = new Set([
+  process.env.NEXT_PUBLIC_STRIPE_PRO_MONTHLY_PRICE_ID || 'price_pro_monthly',
+  process.env.NEXT_PUBLIC_STRIPE_PRO_ANNUAL_PRICE_ID || 'price_pro_annual',
+  process.env.NEXT_PUBLIC_STRIPE_ENT_MONTHLY_PRICE_ID || 'price_ent_monthly',
+  process.env.NEXT_PUBLIC_STRIPE_ENT_ANNUAL_PRICE_ID || 'price_ent_annual',
+]);
+
 export async function POST(req: Request) {
   try {
     // Authenticate FIRST so a malformed body can't mask a 401/403, and so the
@@ -30,6 +40,9 @@ export async function POST(req: Request) {
     // Input validation
     if (typeof priceId !== 'string' || !priceId) {
       return NextResponse.json({ error: 'Missing priceId' }, { status: 400 });
+    }
+    if (!ALLOWED_PRICE_IDS.has(priceId)) {
+      return NextResponse.json({ error: 'Unsupported priceId' }, { status: 400 });
     }
 
     const stripe = getStripeServer();
