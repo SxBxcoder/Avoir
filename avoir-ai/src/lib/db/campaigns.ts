@@ -13,6 +13,7 @@
 import { PutCommand, QueryCommand, GetCommand, DeleteCommand } from '@aws-sdk/lib-dynamodb';
 import { getDynamoClient, TABLES } from './dynamodb';
 import { v4 as uuidv4 } from 'uuid';
+import { logger } from '@/lib/logger';
 
 // ============================================================================
 // TYPES
@@ -64,7 +65,7 @@ export async function createCampaign(
       })
     );
   } catch (err: any) {
-    console.error(`[DB] Campaign create failed: ${err.message}`);
+    logger.error('db.campaigns', 'Create failed', { err });
   }
 
   return campaign;
@@ -90,7 +91,7 @@ export async function getCampaign(
 
     return (result.Item as Campaign) || null;
   } catch (err: any) {
-    console.error(`[DB] Campaign get failed: ${err.message}`);
+    logger.error('db.campaigns', 'Get failed', { err });
     return null;
   }
 }
@@ -124,7 +125,7 @@ export async function listCampaigns(
       lastKey: result.LastEvaluatedKey,
     };
   } catch (err: any) {
-    console.error(`[DB] Campaign list failed: ${err.message}`);
+    logger.error('db.campaigns', 'List failed', { err });
     return { campaigns: [] };
   }
 }
@@ -159,7 +160,7 @@ export async function updateCampaignScore(
     );
     return true;
   } catch (err: any) {
-    console.error(`[DB] Campaign update failed: ${err.message}`);
+    logger.error('db.campaigns', 'Update failed', { err });
     return false;
   }
 }
@@ -180,7 +181,7 @@ export async function deleteCampaign(userId: string, campaignId: string): Promis
     );
     return true;
   } catch (err: any) {
-    console.error(`[DB] Campaign delete failed: ${err.message}`);
+    logger.error('db.campaigns', 'Delete failed', { err });
     return false;
   }
 }

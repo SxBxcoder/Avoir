@@ -13,6 +13,7 @@ import PerformanceReportPanel from './PerformanceReportPanel';
 import { PlatformExportPanel } from './PlatformExportPanel';
 import CompetitorIntelPanel from './CompetitorIntelPanel';
 import TrendRadar from './TrendRadar';
+import { clientLog } from '@/lib/logClient';
 import { LiveArbitrageFeed } from './LiveArbitrageFeed';
 import { CapitalDeploymentSimulator } from './CapitalDeploymentSimulator';
 import { type UserSubscription, canGenerateCampaign, getRemainingCampaigns, PLANS, DEFAULT_SUBSCRIPTION } from '@/lib/stripe';
@@ -503,7 +504,7 @@ export default function CampaignDashboard({ accessToken, userEmail, onLogout }: 
         });
       }
     } catch (err) {
-      console.error('Failed to load campaign history:', err);
+      clientLog.error('Failed to load campaign history:', err);
     }
   }, [accessToken]);
 
@@ -552,7 +553,7 @@ export default function CampaignDashboard({ accessToken, userEmail, onLogout }: 
         setCurrentCampaign(null);
       }
     } catch (err) {
-      console.error('Failed to delete campaign:', err);
+      clientLog.error('Failed to delete campaign:', err);
     }
   }, [activeCampaignId, accessToken]);
 
@@ -581,7 +582,7 @@ export default function CampaignDashboard({ accessToken, userEmail, onLogout }: 
           }
         }
       } catch (err) {
-        console.error('Failed to fetch data:', err);
+        clientLog.error('Failed to fetch data:', err);
         setSubscription({ ...DEFAULT_SUBSCRIPTION, userId: '' });
       }
     };
@@ -640,7 +641,7 @@ export default function CampaignDashboard({ accessToken, userEmail, onLogout }: 
         })
       });
     } catch (err) {
-      console.warn("Could not save winner status to DB (local dev).");
+      clientLog.warn("Could not save winner status to DB (local dev).");
     }
   };
 
@@ -669,7 +670,7 @@ export default function CampaignDashboard({ accessToken, userEmail, onLogout }: 
       setCopied('share-link');
       setTimeout(() => setCopied(null), 2000);
     } catch (err) {
-      console.error("Failed to share:", err);
+      clientLog.error("Failed to share:", err);
     } finally {
       setIsSharing(false);
     }
@@ -775,7 +776,7 @@ export default function CampaignDashboard({ accessToken, userEmail, onLogout }: 
               if (nextLine?.startsWith('data: ')) {
                 try {
                   const data = JSON.parse(nextLine.slice(6));
-                  console.log(`[SSE] Received event: ${eventType}`, data);
+                  clientLog.debug(`[SSE] Received event: ${eventType}`, data);
                   
                   switch (eventType) {
                     case 'status':
@@ -862,7 +863,7 @@ export default function CampaignDashboard({ accessToken, userEmail, onLogout }: 
         handleNonStreamingResponse(data, userMessage);
       }
     } catch (error: any) {
-      console.error('Generation failed:', error);
+      clientLog.error('Generation failed:', error);
       
       try {
         const fallbackResponse = await fetch('/api/generate', {
@@ -951,14 +952,14 @@ export default function CampaignDashboard({ accessToken, userEmail, onLogout }: 
                   setShadowCloneStatus(null);
                 }
               } catch (e) {
-                console.error(e);
+                clientLog.error(e);
               }
             }
           }
         }
       }
     } catch (err) {
-      console.error(err);
+      clientLog.error(err);
       setShadowCloneStatus({ step: 0, message: "ERROR: NEURAL CLONE SYNTHESIS FAILED" });
     }
   };
@@ -1363,7 +1364,7 @@ export default function CampaignDashboard({ accessToken, userEmail, onLogout }: 
                       const data = await res.json();
                       if (data.url) window.location.href = data.url;
                     } catch (err) {
-                      console.error('Portal error:', err);
+                      clientLog.error('Portal error:', err);
                     }
                   }
                 }}

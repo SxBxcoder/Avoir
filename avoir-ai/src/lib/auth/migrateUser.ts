@@ -18,6 +18,7 @@ import {
   QueryCommand,
   UpdateCommand,
 } from '@aws-sdk/lib-dynamodb';
+import { logger } from '@/lib/logger';
 import { getDynamoClient, TABLES } from '@/lib/db/dynamodb';
 
 type DynamoItem = Record<string, NativeAttributeValue>;
@@ -40,10 +41,6 @@ function isNonEmptyEmail(email: string): boolean {
 
 function isConditionalCheckFailed(err: unknown): boolean {
   return err instanceof Error && err.name === 'ConditionalCheckFailedException';
-}
-
-function errorMessage(err: unknown): string {
-  return err instanceof Error ? err.message : String(err);
 }
 
 // DynamoDB attribute names are substituted via ExpressionAttributeNames, but a
@@ -213,7 +210,7 @@ export async function migrateLegacyUser(sub: string, email: string): Promise<Mig
     migrated = (await migrateUsers(sub, email)) || migrated;
   } catch (err: unknown) {
     complete = false;
-    console.error(`[Migrate] users failed for ${sub}: ${errorMessage(err)}`);
+    logger.error('migrate', 'users migration failed', { sub, err });
   }
 
   for (const { table } of SINGLE_KEY_TABLES) {
@@ -221,7 +218,7 @@ export async function migrateLegacyUser(sub: string, email: string): Promise<Mig
       migrated = (await migrateSingleKey(table, sub, email)) || migrated;
     } catch (err: unknown) {
       complete = false;
-      console.error(`[Migrate] ${table} failed for ${sub}: ${errorMessage(err)}`);
+      logger.error('migrate', 'table migration failed', { table, sub, err });
     }
   }
 
@@ -230,7 +227,7 @@ export async function migrateLegacyUser(sub: string, email: string): Promise<Mig
       migrated = (await migrateCompositeKey(table, sortKey, sub, email)) || migrated;
     } catch (err: unknown) {
       complete = false;
-      console.error(`[Migrate] ${table} failed for ${sub}: ${errorMessage(err)}`);
+      logger.error('migrate', 'table migration failed', { table, sub, err });
     }
   }
 

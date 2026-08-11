@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Radar, TrendingUp, TrendingDown, Activity, ChevronRight, Sparkles, Loader2, Minimize2, Maximize2 } from 'lucide-react';
 import { useAuth } from '@/lib/auth/provider';
+import { clientLog } from '@/lib/logClient';
 
 interface TrendTopic {
   keyword: string;
@@ -43,7 +44,7 @@ export default function TrendRadar({ industry, onInjectTrend }: TrendRadarProps)
           }
         }
       } catch (err) {
-        console.error('Failed to fetch trends:', err);
+        clientLog.error('Failed to fetch trends:', err);
       } finally {
         if (mounted) setIsLoading(false);
       }
