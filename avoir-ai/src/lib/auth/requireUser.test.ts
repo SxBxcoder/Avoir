@@ -34,6 +34,7 @@ describe('requireUser', () => {
 
   describe('with Cognito env config', () => {
     let requireUser: typeof import('./requireUser').requireUser;
+    let requireUserEmail: typeof import('./requireUser').requireUserEmail;
     let authErrorResponse: typeof import('./requireUser').authErrorResponse;
     let UnauthorizedError: typeof import('./requireUser').UnauthorizedError;
     let isDemoMode: typeof import('@/lib/mockShield').isDemoMode;
@@ -46,6 +47,7 @@ describe('requireUser', () => {
 
       const mod = await import('./requireUser');
       requireUser = mod.requireUser;
+      requireUserEmail = mod.requireUserEmail;
       authErrorResponse = mod.authErrorResponse;
       UnauthorizedError = mod.UnauthorizedError;
       ({ isDemoMode } = await import('@/lib/mockShield'));
@@ -103,6 +105,44 @@ describe('requireUser', () => {
 
     it('returns null from authErrorResponse for non-auth errors', async () => {
       expect(authErrorResponse(new Error('boom'))).toBeNull();
+    });
+
+    describe('requireUserEmail', () => {
+      beforeEach(() => {
+        verify.mockReset();
+        vi.mocked(isDemoMode).mockReturnValue(false);
+      });
+
+      it('rejects with UnauthorizedError when the Authorization header is missing', async () => {
+        await expect(requireUserEmail(makeRequest())).rejects.toBeInstanceOf(UnauthorizedError);
+      });
+
+      it('rejects when the email is not verified', async () => {
+        verify.mockResolvedValue({ sub: 'sub-abc123', email: 'user@example.com', email_verified: false });
+        await expect(
+          requireUserEmail(makeRequest({ Authorization: 'Bearer token' }))
+        ).rejects.toBeInstanceOf(UnauthorizedError);
+      });
+
+      it('rejects when the token has no email claim', async () => {
+        verify.mockResolvedValue({ sub: 'sub-abc123' });
+        await expect(
+          requireUserEmail(makeRequest({ Authorization: 'Bearer token' }))
+        ).rejects.toBeInstanceOf(UnauthorizedError);
+      });
+
+      it('rejects when the token fails verification', async () => {
+        verify.mockRejectedValue(new Error('jwt invalid'));
+        await expect(
+          requireUserEmail(makeRequest({ Authorization: 'Bearer garbage' }))
+        ).rejects.toBeInstanceOf(UnauthorizedError);
+      });
+
+      it('returns the verified email for a valid ID token', async () => {
+        verify.mockResolvedValue({ sub: 'sub-abc123', email: 'user@example.com', email_verified: true });
+        const user = await requireUserEmail(makeRequest({ Authorization: 'Bearer valid.id.token' }));
+        expect(user).toEqual({ userId: 'sub-abc123', email: 'user@example.com' });
+      });
     });
   });
 });

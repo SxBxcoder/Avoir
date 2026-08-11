@@ -68,9 +68,76 @@ function getVerifier() {
   return verifier;
 }
 
+let idTokenVerifier: ReturnType<typeof CognitoJwtVerifier.create> | null = null;
+
+function getIdTokenVerifier() {
+  if (idTokenVerifier) return idTokenVerifier;
+  if (!userPoolId || !clientId) {
+    // Fail closed, same as getVerifier(): missing Cognito config is a
+    // deployment error, never a silent "allow everyone".
+    throw new Error(
+      'Auth misconfiguration: NEXT_PUBLIC_COGNITO_USER_POOL_ID and ' +
+        'NEXT_PUBLIC_COGNITO_CLIENT_ID are required when not in demo mode.'
+    );
+  }
+  idTokenVerifier = CognitoJwtVerifier.create({
+    userPoolId,
+    tokenUse: 'id',
+    clientId,
+  });
+  return idTokenVerifier;
+}
+
 export interface AuthenticatedUser {
   userId: string;
   email?: string;
+}
+
+export interface AuthenticatedUserEmail {
+  userId: string;
+  email: string;
+}
+
+/**
+ * Identity + verified-email guard for endpoints that need a trustworthy email
+ * (Stripe customer lookup, legacy migration keys).
+ *
+ * Unlike requireUser() (access token, whose `email` claim is usually absent),
+ * this verifies the Cognito ID token and requires `email_verified === true`.
+ * The returned email is therefore authoritative and must never be overridden
+ * by a client-supplied value from the request body.
+ */
+export async function requireUserEmail(req: Request): Promise<AuthenticatedUserEmail> {
+  if (isDemoMode()) {
+    // Defensive: real callers short-circuit on demo mode before reaching this.
+    return { userId: 'demo-user', email: 'demo@avoir.ai' };
+  }
+
+  const authHeader = req.headers.get('Authorization') || '';
+  const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
+
+  if (!token) {
+    throw new UnauthorizedError('Missing Authorization header');
+  }
+
+  // getIdTokenVerifier() fails closed on missing env config (surfaces as 500,
+  // never as a client 401). Deliberately kept outside the try/catch.
+  const verifier = getIdTokenVerifier();
+
+  try {
+    const payload = await verifier.verify(token);
+    const email = (payload as { email?: string }).email;
+    if (!email || (payload as { email_verified?: boolean }).email_verified !== true) {
+      throw new UnauthorizedError('Verified email claim is required');
+    }
+    return {
+      userId: payload.sub as string,
+      email,
+    };
+  } catch (error) {
+    if (error instanceof UnauthorizedError) throw error;
+    throw new UnauthorizedError('Invalid or expired ID token');
+  }
 }
 
 export async function requireUser(req: Request): Promise<AuthenticatedUser> {
