@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { deductCredits } from '@/lib/db/users';
 import { isDemoMode } from '@/lib/mockShield';
+import { requireUser, UnauthorizedError } from '@/lib/auth/requireUser';
 
 const PUBLISH_COST = 5;
 
@@ -15,15 +16,14 @@ export async function POST(request: Request) {
   }
 
   try {
-    const { userId, campaign_id, platforms } = await request.json();
-
-    if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const { campaign_id, platforms } = await request.json();
 
     if (!platforms || platforms.length === 0) {
         return NextResponse.json({ error: 'No platforms selected' }, { status: 400 });
     }
+
+    // Identity comes from the verified Cognito JWT, not the request body.
+    const { userId } = await requireUser(request);
 
     console.log(`[AutoPublish] Attempting to publish campaign ${campaign_id} to ${platforms.join(', ')} for user ${userId}`);
 
@@ -53,6 +53,9 @@ export async function POST(request: Request) {
     });
 
   } catch (error: any) {
+    if (error instanceof UnauthorizedError) {
+      return NextResponse.json({ error: error.message }, { status: 401 });
+    }
     console.error('Publishing error:', error);
     return NextResponse.json({ error: error.message || 'Internal Server Error' }, { status: 500 });
   }

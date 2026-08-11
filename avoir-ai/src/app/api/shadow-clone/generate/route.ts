@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getSubscription, deductCredits } from '@/lib/services/subscription';
 import { isDemoMode, createMockShadowCloneStream } from '@/lib/mockShield';
+import { requireUser, UnauthorizedError } from '@/lib/auth/requireUser';
 
 /**
  * Proxy for Shadow Clone SSE stream
@@ -19,29 +20,29 @@ export async function POST(req: Request) {
 
   try {
     const body = await req.json();
-    const userId = body.user_id || 'anonymous';
+
+    // Identity comes from the verified Cognito JWT — no anonymous bypass.
+    const { userId } = await requireUser(req);
 
     // 1. Check Credits
-    if (userId !== 'anonymous') {
-      const sub = await getSubscription(userId);
-      if (sub.credits < 50) {
-        console.log(`[ShadowClone] 🚫 User ${userId} blocked. Insufficient credits: ${sub.credits}.`);
-        return NextResponse.json(
-          { 
-            error: 'Insufficient Credits',
-            message: `Shadow Clone costs 50 credits. You have ${sub.credits}. Please upgrade to Pro or Enterprise.`,
-            upgradeRequired: true,
-            currentCredits: sub.credits,
-            cost: 50,
-          },
-          { status: 402 } // Payment Required
-        );
-      }
-      
-      // 2. Deduct Credits
-      await deductCredits(userId, 50);
-      console.log(`[ShadowClone] 🚀 Deducted 50 credits from User ${userId}. Remaining: ${sub.credits - 50}`);
+    const sub = await getSubscription(userId);
+    if (sub.credits < 50) {
+      console.log(`[ShadowClone] 🚫 User ${userId} blocked. Insufficient credits: ${sub.credits}.`);
+      return NextResponse.json(
+        { 
+          error: 'Insufficient Credits',
+          message: `Shadow Clone costs 50 credits. You have ${sub.credits}. Please upgrade to Pro or Enterprise.`,
+          upgradeRequired: true,
+          currentCredits: sub.credits,
+          cost: 50,
+        },
+        { status: 402 } // Payment Required
+      );
     }
+    
+    // 2. Deduct Credits
+    await deductCredits(userId, 50);
+    console.log(`[ShadowClone] 🚀 Deducted 50 credits from User ${userId}. Remaining: ${sub.credits - 50}`);
     
     // Call Python backend running on port 8000
     const response = await fetch('http://localhost:8000/api/shadow-clone/generate', {
@@ -65,6 +66,12 @@ export async function POST(req: Request) {
       },
     });
   } catch (error: any) {
+    if (error instanceof UnauthorizedError) {
+      return NextResponse.json(
+        { error: error.message },
+        { status: 401, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
     console.error('Shadow Clone Proxy Error:', error);
     return new Response(
       JSON.stringify({ error: error.message || 'Stream failed' }),

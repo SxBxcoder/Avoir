@@ -12,17 +12,19 @@
 
 import { NextResponse } from 'next/server';
 import { getStripeServer } from '@/lib/stripe';
+import { requireUser, UnauthorizedError } from '@/lib/auth/requireUser';
 
 export async function POST(req: Request) {
   try {
-    const { priceId, email, userId } = await req.json();
+    const { priceId, email: bodyEmail } = await req.json();
+
+    // Identity comes from the verified Cognito JWT, not the request body.
+    const { userId, email: tokenEmail } = await requireUser(req);
+    const email = tokenEmail || bodyEmail;
 
     // Input validation
     if (!priceId) {
       return NextResponse.json({ error: 'Missing priceId' }, { status: 400 });
-    }
-    if (!userId) {
-      return NextResponse.json({ error: 'Missing userId' }, { status: 400 });
     }
     if (!email) {
       return NextResponse.json({ error: 'Missing email' }, { status: 400 });
@@ -79,6 +81,9 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ sessionId: session.id });
   } catch (err: any) {
+    if (err instanceof UnauthorizedError) {
+      return NextResponse.json({ error: err.message }, { status: 401 });
+    }
     console.error('[Checkout] Error creating checkout session:', err);
     return NextResponse.json(
       { error: err.message || 'Failed to create checkout session' },
