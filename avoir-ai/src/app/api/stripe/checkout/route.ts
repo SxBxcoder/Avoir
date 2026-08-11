@@ -8,26 +8,28 @@
  *   - userId attached as metadata for webhook correlation
  *   - Proper success/cancel URLs
  *   - Idempotency-safe design
+ * 
+ * The customer email comes from the verified Cognito ID token claim
+ * (`email_verified === true`) — it is never taken from the request body, so a
+ * caller cannot create a Stripe customer under someone else's email.
  */
 
 import { NextResponse } from 'next/server';
 import { getStripeServer } from '@/lib/stripe';
-import { requireUser, authErrorResponse } from '@/lib/auth/requireUser';
+import { requireUserEmail, authErrorResponse } from '@/lib/auth/requireUser';
 
 export async function POST(req: Request) {
   try {
-    const { priceId, email: bodyEmail } = await req.json();
+    // Authenticate FIRST so a malformed body can't mask a 401/403, and so the
+    // email for the Stripe customer is always the verified account email.
+    const { userId, email } = await requireUserEmail(req);
 
-    // Identity comes from the verified Cognito JWT, not the request body.
-    const { userId, email: tokenEmail } = await requireUser(req);
-    const email = tokenEmail || bodyEmail;
+    const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;
+    const { priceId } = body;
 
     // Input validation
-    if (!priceId) {
+    if (typeof priceId !== 'string' || !priceId) {
       return NextResponse.json({ error: 'Missing priceId' }, { status: 400 });
-    }
-    if (!email) {
-      return NextResponse.json({ error: 'Missing email' }, { status: 400 });
     }
 
     const stripe = getStripeServer();

@@ -39,6 +39,8 @@ type AuthContextValue = {
   email: string | null;
   /** Raw access token for API Authorization headers. */
   accessToken: string | null;
+  /** Raw ID token for endpoints that verify the verified-email claim. */
+  idToken: string | null;
   /** True while the initial session restore is in flight. */
   isLoading: boolean;
   isAuthenticated: boolean;
@@ -54,6 +56,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [email, setEmail] = useState<string | null>(null);
   const [accessToken, setAccessToken] = useState<string | null>(null);
+  const [idToken, setIdToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   const refresh = useCallback(async (): Promise<boolean> => {
@@ -62,12 +65,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       let resolvedEmail = current.signInDetails?.loginId || current.username || null;
       let resolvedToken: string | null = null;
+      let resolvedIdToken: string | null = null;
 
       try {
         const session = await fetchAuthSession();
         const idTokenEmail = session.tokens?.idToken?.payload?.email as string | undefined;
         if (idTokenEmail) resolvedEmail = idTokenEmail;
         resolvedToken = session.tokens?.accessToken?.toString() || null;
+        resolvedIdToken = session.tokens?.idToken?.toString() || null;
       } catch {
         // Token retrieval can fail independently (e.g. token rotation) while
         // the user session is still valid — keep the user signed in.
@@ -81,17 +86,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
       setEmail(resolvedEmail);
       setAccessToken(resolvedToken);
+      setIdToken(resolvedIdToken);
 
       // One-time legacy migration (email-keyed → sub-keyed DynamoDB rows).
-      // Fire-and-forget: safe to retry on every session refresh.
-      if (resolvedEmail && resolvedToken) {
+      // Fire-and-forget: safe to retry on every session refresh. The email is
+      // derived server-side from the verified ID token, so the body is empty.
+      if (resolvedIdToken) {
         fetch('/api/auth/link-email', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${resolvedToken}`,
+            'Authorization': `Bearer ${resolvedIdToken}`,
           },
-          body: JSON.stringify({ email: resolvedEmail }),
         }).catch(() => {
           // Non-blocking; the migration retries on the next refresh.
         });
@@ -101,6 +107,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(null);
       setEmail(null);
       setAccessToken(null);
+      setIdToken(null);
       return false;
     } finally {
       setIsLoading(false);
@@ -150,6 +157,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
     setEmail(null);
     setAccessToken(null);
+    setIdToken(null);
   }, []);
 
   const value = useMemo<AuthContextValue>(
@@ -157,13 +165,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       user,
       email,
       accessToken,
+      idToken,
       isLoading,
       isAuthenticated: !!user,
       login,
       logout,
       refresh,
     }),
-    [user, email, accessToken, isLoading, login, logout, refresh]
+    [user, email, accessToken, idToken, isLoading, login, logout, refresh]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
