@@ -21,10 +21,6 @@ import { logger } from '@/lib/logger';
 import { z } from 'zod';
 import { parseJsonBody } from '@/lib/validate';
 
-const checkoutSchema = z.object({
-  priceId: z.string().min(1),
-});
-
 // Only the server-configured price IDs are purchasable — a client can't pass
 // an arbitrary Stripe price (e.g. a discounted or one-time product). Keep the
 // fallbacks in sync with PRICE_TO_TIER in the webhook route.
@@ -34,6 +30,13 @@ const ALLOWED_PRICE_IDS = new Set([
   process.env.NEXT_PUBLIC_STRIPE_ENT_MONTHLY_PRICE_ID || 'price_ent_monthly',
   process.env.NEXT_PUBLIC_STRIPE_ENT_ANNUAL_PRICE_ID || 'price_ent_annual',
 ]);
+
+const checkoutSchema = z.object({
+  priceId: z
+    .string()
+    .min(1)
+    .refine((id) => ALLOWED_PRICE_IDS.has(id), { message: 'Unsupported priceId' }),
+});
 
 export async function POST(req: Request) {
   try {
@@ -46,9 +49,6 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Invalid request body', issues: parsed.issues }, { status: 400 });
     }
     const { priceId } = parsed.data;
-    if (!ALLOWED_PRICE_IDS.has(priceId)) {
-      return NextResponse.json({ error: 'Unsupported priceId' }, { status: 400 });
-    }
 
     const stripe = getStripeServer();
     const origin = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
