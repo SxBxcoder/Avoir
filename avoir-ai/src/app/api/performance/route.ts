@@ -29,7 +29,10 @@ export async function POST(req: Request) {
   }
 
   try {
-    const body = await req.json();
+    // Identity comes from the verified Cognito JWT, not the request body.
+    const { userId } = await requireUser(req);
+
+    const body = await req.json().catch(() => ({}));
     const {
       campaignId,
       platform,
@@ -37,9 +40,6 @@ export async function POST(req: Request) {
       campaignSnapshot,
       tags,
     } = body;
-
-    // Identity comes from the verified Cognito JWT, not the request body.
-    const { userId } = await requireUser(req);
 
     if (!campaignId || !platform || !metrics) {
       return NextResponse.json(

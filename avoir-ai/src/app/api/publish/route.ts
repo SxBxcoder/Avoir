@@ -16,16 +16,18 @@ export async function POST(request: Request) {
   }
 
   try {
-    const { campaign_id, platforms } = await request.json();
-
-    if (!platforms || platforms.length === 0) {
-        return NextResponse.json({ error: 'No platforms selected' }, { status: 400 });
-    }
-
     // Identity comes from the verified Cognito JWT, not the request body.
     const { userId } = await requireUser(request);
 
-    console.log(`[AutoPublish] Attempting to publish campaign ${campaign_id} to ${platforms.join(', ')} for user ${userId}`);
+    const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
+    const { campaign_id, platforms } = body;
+
+    const platformList = Array.isArray(platforms) ? platforms.filter((p): p is string => typeof p === 'string') : [];
+    if (platformList.length === 0) {
+        return NextResponse.json({ error: 'No platforms selected' }, { status: 400 });
+    }
+
+    console.log(`[AutoPublish] Attempting to publish campaign ${campaign_id} to ${platformList.join(', ')} for user ${userId}`);
 
     // Deduct credits for publishing
     const success = await deductCredits(userId, PUBLISH_COST);
@@ -52,10 +54,11 @@ export async function POST(request: Request) {
         cost: PUBLISH_COST
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     const authErr = authErrorResponse(error);
     if (authErr) return authErr;
     console.error('Publishing error:', error);
-    return NextResponse.json({ error: error.message || 'Internal Server Error' }, { status: 500 });
+    const message = error instanceof Error ? error.message : 'Internal Server Error';
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

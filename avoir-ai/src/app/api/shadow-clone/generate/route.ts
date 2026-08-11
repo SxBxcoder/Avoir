@@ -19,10 +19,10 @@ export async function POST(req: Request) {
   }
 
   try {
-    const body = await req.json();
-
     // Identity comes from the verified Cognito JWT — no anonymous bypass.
     const { userId } = await requireUser(req);
+
+    const body = await req.json().catch(() => ({}));
 
     // 1. Check Credits
     const sub = await getSubscription(userId);
@@ -40,22 +40,25 @@ export async function POST(req: Request) {
       );
     }
     
-    // 2. Deduct Credits
-    await deductCredits(userId, 50);
-    console.log(`[ShadowClone] 🚀 Deducted 50 credits from User ${userId}. Remaining: ${sub.credits - 50}`);
-    
     // Call Python backend running on port 8000
     const response = await fetch('http://localhost:8000/api/shadow-clone/generate', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        ...(req.headers.get('Authorization') ? { 'Authorization': req.headers.get('Authorization') as string } : {}),
       },
       body: JSON.stringify(body),
     });
 
     if (!response.ok) {
+      // Backend refused the job — do NOT charge the user for a stream they
+      // never received.
       throw new Error(`Backend Error: ${response.status}`);
     }
+
+    // 2. Deduct Credits (only after the backend accepted the job)
+    await deductCredits(userId, 50);
+    console.log(`[ShadowClone] 🚀 Deducted 50 credits from User ${userId}. Remaining: ${sub.credits - 50}`);
 
     // Return the SSE stream directly
     return new Response(response.body, {
@@ -65,12 +68,13 @@ export async function POST(req: Request) {
         'Connection': 'keep-alive',
       },
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     const authErr = authErrorResponse(error);
     if (authErr) return authErr;
     console.error('Shadow Clone Proxy Error:', error);
+    const message = error instanceof Error ? error.message : 'Stream failed';
     return new Response(
-      JSON.stringify({ error: error.message || 'Stream failed' }),
+      JSON.stringify({ error: message }),
       { status: 500, headers: { 'Content-Type': 'application/json' } }
     );
   }

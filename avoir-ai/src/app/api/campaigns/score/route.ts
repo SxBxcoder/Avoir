@@ -6,14 +6,15 @@ export const dynamic = 'force-dynamic';
 
 export async function PUT(req: NextRequest) {
   try {
-    const { campaignId, isWinner } = await req.json();
-
-    if (!campaignId || typeof isWinner !== 'boolean') {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
-    }
-
     // Identity comes from the verified Cognito JWT, not the request body.
     const { userId } = await requireUser(req);
+
+    const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;
+    const { campaignId, isWinner } = body;
+
+    if (typeof campaignId !== 'string' || !campaignId || typeof isWinner !== 'boolean') {
+      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+    }
 
     const success = await updateCampaignScore(userId, campaignId, isWinner);
     

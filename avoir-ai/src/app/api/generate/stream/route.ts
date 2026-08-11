@@ -163,8 +163,11 @@ import { isDemoMode, createMockSSEStream } from '@/lib/mockShield';
 
 export async function POST(req: Request) {
   try {
-    const body = await req.json();
-    
+    // Identity comes from the verified Cognito JWT — never trust client input.
+    const { userId } = await requireUser(req);
+
+    const body = await req.json().catch(() => ({}));
+
     // Demo Mock Shield
     if (isDemoMode()) {
       const isGenomeMode = body.genome_mode === true;
@@ -185,9 +188,6 @@ export async function POST(req: Request) {
     const conversationMessages = messages || [];
     const authHeader = req.headers.get('Authorization');
     const isGenomeMode = genome_mode === true;
-
-    // Identity comes from the verified Cognito JWT — never trust client input.
-    const { userId } = await requireUser(req);
 
     // Rate limiting
     const rateLimit = await checkRateLimit(userId, 10, 60);
