@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getBrandDNA, saveBrandDNA } from '@/lib/db/brandDna';
 import { isDemoMode, MOCK_BRAND_DNA } from '@/lib/mockShield';
+import { requireUser, UnauthorizedError } from '@/lib/auth/requireUser';
 
 export async function GET(req: Request) {
   // Demo Mock Shield
@@ -9,16 +10,15 @@ export async function GET(req: Request) {
   }
 
   try {
-    const url = new URL(req.url);
-    const userId = url.searchParams.get('userId');
-
-    if (!userId) {
-      return NextResponse.json({ error: 'Missing userId' }, { status: 400 });
-    }
+    // Identity comes from the verified Cognito JWT, not the query string.
+    const { userId } = await requireUser(req);
 
     const dna = await getBrandDNA(userId);
     return NextResponse.json({ dna });
   } catch (error: any) {
+    if (error instanceof UnauthorizedError) {
+      return NextResponse.json({ error: error.message }, { status: 401 });
+    }
     console.error('[GET /api/brand-dna] Error:', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
@@ -32,15 +32,21 @@ export async function POST(req: Request) {
 
   try {
     const body = await req.json();
-    const { userId, ...dna } = body;
+    const { ...dna } = body;
 
-    if (!userId || !dna.brandName || !dna.industry) {
+    if (!dna.brandName || !dna.industry) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
+
+    // Identity comes from the verified Cognito JWT, not the request body.
+    const { userId } = await requireUser(req);
 
     const savedDNA = await saveBrandDNA(userId, dna);
     return NextResponse.json({ success: true, dna: savedDNA });
   } catch (error: any) {
+    if (error instanceof UnauthorizedError) {
+      return NextResponse.json({ error: error.message }, { status: 401 });
+    }
     console.error('[POST /api/brand-dna] Error:', error);
     return NextResponse.json({ error: 'Failed to save Brand DNA' }, { status: 500 });
   }
