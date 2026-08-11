@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { deductCredits } from '@/lib/db/users';
 import { isDemoMode } from '@/lib/mockShield';
 import { requireUser, authErrorResponse } from '@/lib/auth/requireUser';
+import { logger } from '@/lib/logger';
 
 const PUBLISH_COST = 5;
 
@@ -27,7 +28,7 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: 'No platforms selected' }, { status: 400 });
     }
 
-    console.log(`[AutoPublish] Attempting to publish campaign ${campaign_id} to ${platformList.join(', ')} for user ${userId}`);
+    logger.info('publish', 'Attempting to publish campaign', { campaignId: campaign_id, platforms: platformList });
 
     // Deduct credits for publishing
     const success = await deductCredits(userId, PUBLISH_COST);
@@ -46,7 +47,7 @@ export async function POST(request: Request) {
     // Simulate slight delay for "Network"
     await new Promise(resolve => setTimeout(resolve, 1500));
 
-    console.log(`[AutoPublish] ✅ Successfully published! Deducted ${PUBLISH_COST} credits.`);
+    logger.info('publish', 'Campaign published', { creditsDeducted: PUBLISH_COST });
 
     return NextResponse.json({ 
         status: 'success', 
@@ -57,7 +58,7 @@ export async function POST(request: Request) {
   } catch (error: unknown) {
     const authErr = authErrorResponse(error);
     if (authErr) return authErr;
-    console.error('Publishing error:', error);
+    logger.error('publish', 'Publishing failed', { err: error });
     const message = error instanceof Error ? error.message : 'Internal Server Error';
     return NextResponse.json({ error: message }, { status: 500 });
   }

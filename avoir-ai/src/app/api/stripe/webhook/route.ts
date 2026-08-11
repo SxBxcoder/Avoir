@@ -18,6 +18,7 @@ import { headers } from 'next/headers';
 import { getStripeServer, type PlanTier } from '@/lib/stripe';
 import { upsertSubscription } from '@/lib/services/subscription';
 import type Stripe from 'stripe';
+import { logger } from '@/lib/logger';
 
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!;
 
@@ -50,7 +51,7 @@ export async function POST(req: Request) {
   const signature = headers().get('stripe-signature');
 
   if (!signature) {
-    console.error('[Webhook] Missing stripe-signature header');
+    logger.warn('webhook', 'Missing stripe-signature header');
     return NextResponse.json({ error: 'Missing signature' }, { status: 400 });
   }
 
@@ -59,11 +60,11 @@ export async function POST(req: Request) {
   try {
     event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
   } catch (err: any) {
-    console.error(`[Webhook] Signature verification failed: ${err.message}`);
+    logger.warn('webhook', 'Signature verification failed', { err });
     return NextResponse.json({ error: `Signature invalid: ${err.message}` }, { status: 400 });
   }
 
-  console.log(`[Webhook] Received event: ${event.type} (${event.id})`);
+  logger.info('webhook', 'Received event', { type: event.type, eventId: event.id });
 
   // 3. Process event
   try {
@@ -79,7 +80,7 @@ export async function POST(req: Request) {
         const subscriptionId = session.subscription as string;
 
         if (!userId) {
-          console.error('[Webhook] checkout.session.completed missing userId in metadata');
+          logger.warn('webhook', 'checkout.session.completed missing userId in metadata');
           break;
         }
 
@@ -101,7 +102,7 @@ export async function POST(req: Request) {
           lastResetDate: new Date().toISOString(),
         });
 
-        console.log(`[Webhook] ✅ User ${userId} upgraded to ${tier}. Customer: ${customerId}`);
+        logger.info('webhook', 'User upgraded', { tier });
         break;
       }
 
@@ -135,7 +136,7 @@ export async function POST(req: Request) {
             credits: creditsToAdd, // Refill credits
             lastResetDate: new Date().toISOString(),
           });
-          console.log(`[Webhook] ✅ Invoice paid for user ${userId}. Counter reset.`);
+          logger.info('webhook', 'Invoice paid, credits refilled');
         }
         break;
       }
@@ -156,7 +157,7 @@ export async function POST(req: Request) {
 
         if (userId) {
           await upsertSubscription(userId, { status: 'past_due' });
-          console.log(`[Webhook] ⚠️ Payment failed for user ${userId}. Status: past_due.`);
+          logger.warn('webhook', 'Payment failed, subscription past_due');
         }
         break;
       }
@@ -183,7 +184,7 @@ export async function POST(req: Request) {
             currentPeriodEnd: new Date((subscription as any).current_period_end * 1000).toISOString(),
             cancelAtPeriodEnd: (subscription as any).cancel_at_period_end,
           });
-          console.log(`[Webhook] ✅ Subscription updated for user ${userId}. Tier: ${tier}, Cancel at end: ${subscription.cancel_at_period_end}`);
+          logger.info('webhook', 'Subscription updated', { tier, cancelAtPeriodEnd: subscription.cancel_at_period_end });
         }
         break;
       }
@@ -206,18 +207,18 @@ export async function POST(req: Request) {
             cancelAtPeriodEnd: false,
             // We do not strip credits away, they keep what they paid for until they use them
           });
-          console.log(`[Webhook] ✅ Subscription deleted for user ${userId}. Downgraded to free.`);
+          logger.info('webhook', 'Subscription deleted, downgraded to free');
         }
         break;
       }
 
       default:
-        console.log(`[Webhook] Unhandled event type: ${event.type}`);
+        logger.debug('webhook', 'Unhandled event type', { type: event.type });
     }
 
     return NextResponse.json({ received: true });
   } catch (err: any) {
-    console.error(`[Webhook] Error processing event ${event.type}:`, err);
+    logger.error('webhook', 'Error processing event', { type: event.type, err });
     // Return 200 anyway to prevent Stripe from retrying (we logged the error)
     return NextResponse.json({ received: true, error: err.message });
   }

@@ -10,6 +10,7 @@ import { NextResponse } from 'next/server';
 import { getIntelligenceBrief } from '@/lib/db/intelligence';
 import { isDemoMode, MOCK_INTELLIGENCE } from '@/lib/mockShield';
 import { requireUser, authErrorResponse } from '@/lib/auth/requireUser';
+import { logger } from '@/lib/logger';
 
 export async function GET(req: Request) {
   // Demo Mock Shield
@@ -38,7 +39,7 @@ export async function GET(req: Request) {
   } catch (error: any) {
     const authErr = authErrorResponse(error);
     if (authErr) return authErr;
-    console.error('[Intelligence API] GET error:', error);
+    logger.error('intelligence', 'GET failed', { err: error });
     return NextResponse.json(
       { error: error.message || 'Failed to fetch intelligence brief' },
       { status: 500 }
