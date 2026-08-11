@@ -1351,10 +1351,14 @@ export default function CampaignDashboard({ accessToken, userEmail, onLogout }: 
                 onClick={async () => {
                   if (subscription?.stripeCustomerId) {
                     try {
+                      // The customer is derived server-side from the verified
+                      // JWT — never send a customerId from the client.
                       const res = await fetch('/api/stripe/portal', {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ customerId: subscription.stripeCustomerId }),
+                        headers: {
+                          'Content-Type': 'application/json',
+                          ...(accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {}),
+                        },
                       });
                       const data = await res.json();
                       if (data.url) window.location.href = data.url;
