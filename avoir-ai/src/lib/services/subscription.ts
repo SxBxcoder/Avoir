@@ -12,6 +12,7 @@ import {
   getSubscription as dbGetSubscription,
   upsertSubscription as dbUpsertSubscription,
   deductCredits as dbDeductCredits,
+  addCredits as dbAddCredits,
   type CreditDeductionResult,
 } from '@/lib/db';
 import { PLANS, type UserSubscription } from '@/lib/stripe';
@@ -34,6 +35,14 @@ export async function upsertSubscription(
 ): Promise<UserSubscription> {
   const result = await dbUpsertSubscription(userId, updates);
   return result;
+}
+
+/**
+ * Add credits atomically.
+ * Used to refund a reservation when a paid operation fails after reserving.
+ */
+export async function addCredits(userId: string, amount: number): Promise<UserSubscription> {
+  return await dbAddCredits(userId, amount);
 }
 
 /**

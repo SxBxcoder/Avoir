@@ -15,8 +15,7 @@
  */
 
 import { NextResponse } from 'next/server';
-import { getSubscription, deductCredits } from '@/lib/services/subscription';
-import { canGenerateCampaign, PLANS } from '@/lib/stripe';
+import { addCredits, deductCredits } from '@/lib/services/subscription';
 import { createCampaign } from '@/lib/db/campaigns';
 import { checkRateLimit } from '@/lib/db/cache';
 import { isDemoMode, MOCK_CAMPAIGNS } from '@/lib/mockShield';
@@ -59,20 +58,21 @@ export async function POST(req: Request) {
     }
 
     // ========================================================================
-    // SERVER-SIDE QUOTA ENFORCEMENT (DynamoDB-backed)
-    // This runs on the server — users CANNOT bypass this from the browser.
+    // SERVER-SIDE QUOTA ENFORCEMENT (Atomic reserve BEFORE any paid compute)
+    // The credit is reserved up-front via a conditional decrement, so no paid
+    // AI work can start unless the balance really covers it. Concurrent
+    // requests cannot overdraw — only `balance` of them can ever reserve.
     // ========================================================================
 
-    const sub = await getSubscription(userId);
+    const deduction = await deductCredits(userId, 1);
 
-    if (!canGenerateCampaign(sub)) {
-      console.log(`[Generate] 🚫 User ${userId} blocked. Insufficient credits: ${sub.credits}.`);
+    if (!deduction.success) {
       return NextResponse.json(
-        { 
+        {
           error: 'Insufficient Credits',
           message: `You don't have enough credits to run this operation (Cost: 1 Credit). Please upgrade to Pro or Enterprise.`,
           upgradeRequired: true,
-          currentCredits: sub.credits,
+          currentCredits: deduction.subscription.credits,
           cost: 1,
         },
         { status: 402 } // Payment Required
@@ -86,41 +86,48 @@ export async function POST(req: Request) {
     const apiUrl = process.env.NEXT_PUBLIC_API_URL;
 
     if (!apiUrl) {
+      // Refund the reservation — nothing was generated.
+      await addCredits(userId, 1);
       throw new Error("NEXT_PUBLIC_API_URL is missing from .env.local");
     }
 
-    console.log(`[Generate] 🚀 User ${userId} (${sub.tier}) — ${sub.credits} credits remaining`);
-    console.log(`[Generate] Firing payload to AWS Lambda: ${apiUrl}`);
+    let parsedData: any;
+    try {
+      // CALL THE LIVE AWS LAMBDA AGENT with stateful messages
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': req.headers.get('Authorization') || '',
+        },
+        body: JSON.stringify({
+          goal: campaignGoal,
+          messages: conversationMessages,
+          user_id: userId,
+        }),
+      });
 
-    // CALL THE LIVE AWS LAMBDA AGENT with stateful messages
-    const response = await fetch(apiUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': req.headers.get('Authorization') || '',
-      },
-      body: JSON.stringify({
-        goal: campaignGoal,
-        messages: conversationMessages,
-        user_id: userId,
-      }),
-    });
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("[Generate] Lambda Error:", errorText);
+        throw new Error(`AWS Lambda Error: ${response.status}`);
+      }
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error("[Generate] Lambda Error:", errorText);
-      throw new Error(`AWS Lambda Error: ${response.status}`);
-    }
+      const data = await response.json();
 
-    const data = await response.json();
-
-    // Lambda Function URLs often wrap the response in a "body" string.
-    // This safely extracts it whether it's wrapped or raw.
-    let parsedData = data;
-    if (data.body && typeof data.body === 'string') {
-      parsedData = JSON.parse(data.body);
-    } else if (data.body && typeof data.body === 'object') {
-      parsedData = data.body;
+      // Lambda Function URLs often wrap the response in a "body" string.
+      // This safely extracts it whether it's wrapped or raw.
+      parsedData = data;
+      if (data.body && typeof data.body === 'string') {
+        parsedData = JSON.parse(data.body);
+      } else if (data.body && typeof data.body === 'object') {
+        parsedData = data.body;
+      }
+    } catch (error: any) {
+      // Refund the reservation — the user should not pay for a campaign that
+      // was never generated.
+      await addCredits(userId, 1);
+      throw error;
     }
 
     // ========================================================================
@@ -139,15 +146,6 @@ export async function POST(req: Request) {
       tier: parsedData.tier || 'TIER_1_GEMINI',
       status: parsedData.status || 'completed',
     });
-
-    // ========================================================================
-    // DEDUCT 1 CREDIT (Atomic + Conditional — DynamoDB)
-    // ========================================================================
-    const deduction = await deductCredits(userId, 1);
-    if (!deduction.success) {
-      console.error(`[Generate] ⚠️ Failed to deduct 1 credit for ${userId} (balance too low).`);
-    }
-    console.log(`[Generate] ✅ Campaign ${campaign.campaignId} generated for ${userId}. Persisted to DynamoDB. Deducted 1 Credit.`);
 
     // Map Python Agent response back to your Next.js UI format
     return NextResponse.json({

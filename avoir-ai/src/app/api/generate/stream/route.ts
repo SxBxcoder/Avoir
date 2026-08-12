@@ -18,8 +18,7 @@
  *   - done       → Stream complete
  */
 
-import { getSubscription, deductCredits } from '@/lib/services/subscription';
-import { canGenerateCampaign, PLANS } from '@/lib/stripe';
+import { addCredits, deductCredits, getSubscription } from '@/lib/services/subscription';
 import { createCampaign } from '@/lib/db/campaigns';
 import { checkRateLimit } from '@/lib/db/cache';
 import { generateGenomeVariants } from '@/lib/bedrock';
@@ -59,7 +58,30 @@ function createSSEStream(
         );
       };
 
+      // Cost depends on the generation mode — reserved up-front and refunded
+      // if generation fails, so a user only ever pays for a real campaign.
+      const cost = genomeMode ? 2 : 1;
+      let reserved = false;
+
       try {
+        // Atomic reserve BEFORE any paid AI work. The conditional decrement
+        // (users.ts deductCredits) means concurrent streams can never overdraw:
+        // once the balance is exhausted, further reservations fail cleanly and
+        // generation never starts for them.
+        const deduction = await deductCredits(userId, cost);
+        if (!deduction.success) {
+          send('error', {
+            error: 'Insufficient credits',
+            message: `This operation costs ${cost} credit${cost > 1 ? 's' : ''}. Your balance is ${deduction.subscription.credits}.`,
+            upgradeRequired: true,
+            currentCredits: deduction.subscription.credits,
+            cost,
+          });
+          send('done', { success: false });
+          return;
+        }
+        reserved = true;
+
         // Stream cooking status messages
         let messageIdx = 0;
         const msgInterval = setInterval(() => {
@@ -102,12 +124,6 @@ function createSSEStream(
           campaignId = campaign.campaignId;
         }
 
-        // Deduct credits and update intelligence brief
-        const cost = genomeMode ? 2 : 1;
-        const deduction = await deductCredits(userId, cost);
-        if (!deduction.success) {
-            console.error(`[STREAM API] Failed to deduct ${cost} credits for user ${userId} (balance too low).`);
-        }
         await updateIntelligenceBrief(userId, { totalCampaignsGenerated: genomeMode ? 3 : 1 });
 
         send('status', { message: '✅ Campaign compiled. Deploying assets...', timestamp: Date.now() });
@@ -148,6 +164,12 @@ function createSSEStream(
 
         send('done', { success: true });
       } catch (error: any) {
+        // Only refund when we actually reserved the credits — otherwise a
+        // failure before the reservation would mint free credits. Refund is
+        // best-effort; addCredits never throws.
+        if (reserved) {
+          await addCredits(userId, cost).catch(() => {});
+        }
         send('error', { message: error.message || 'Generation failed' });
         send('done', { success: false });
       } finally {
@@ -198,21 +220,23 @@ export async function POST(req: Request) {
       );
     }
 
-    // Quota enforcement
+    // Quota pre-check (fast UX gate for all tiers). This is only an early
+    // exit — the authoritative, race-safe reservation happens atomically
+    // inside the stream (createSSEStream) before any paid AI work starts, so
+    // this read can never be raced into an overdraw.
     const sub = await getSubscription(userId);
     const requiredCredits = isGenomeMode ? 2 : 1;
-    
-    if (sub.tier === 'free' && sub.credits < requiredCredits) {
-      const plan = PLANS[sub.tier];
+
+    if (sub.credits < requiredCredits) {
       return new Response(
         JSON.stringify({
           error: 'Insufficient credits',
-          message: isGenomeMode 
-            ? `Genome mode requires 2 credits. You have ${sub.credits}. Upgrade to Pro.`
-            : `You've used all your free campaigns. Upgrade to Pro.`,
+          message: `This operation requires ${requiredCredits} credits. You have ${sub.credits}. Upgrade to Pro or Enterprise for more.`,
           upgradeRequired: true,
+          currentCredits: sub.credits,
+          cost: requiredCredits,
         }),
-        { status: 429, headers: { 'Content-Type': 'application/json' } }
+        { status: 402, headers: { 'Content-Type': 'application/json' } }
       );
     }
 

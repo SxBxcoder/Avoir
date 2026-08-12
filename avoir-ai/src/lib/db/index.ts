@@ -13,6 +13,7 @@ export {
   getSubscription,
   upsertSubscription,
   deductCredits,
+  addCredits,
   type CreditDeductionResult,
 } from './users';
 

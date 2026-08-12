@@ -126,6 +126,40 @@ export async function upsertSubscription(
 }
 
 // ============================================================================
+// ADD CREDITS (Atomic) — used to refund a reservation when generation fails
+// ============================================================================
+
+export async function addCredits(userId: string, amount: number): Promise<UserSubscription> {
+  const client = getDynamoClient();
+
+  try {
+    const result = await client.send(
+      new UpdateCommand({
+        TableName: TABLES.USERS,
+        Key: { userId },
+        UpdateExpression:
+          'SET #credits = if_not_exists(#credits, :zero) + :amount, #updated = :now',
+        ExpressionAttributeNames: {
+          '#credits': 'credits',
+          '#updated': 'updatedAt',
+        },
+        ExpressionAttributeValues: {
+          ':zero': 0,
+          ':amount': amount,
+          ':now': new Date().toISOString(),
+        },
+        ReturnValues: 'ALL_NEW',
+      })
+    );
+
+    return result.Attributes as UserSubscription;
+  } catch (err: any) {
+    // Non-fatal: the caller falls back to the current balance on failure.
+    return getSubscription(userId);
+  }
+}
+
+// ============================================================================
 // DEDUCT CREDITS (Atomic + Conditional)
 // ============================================================================
 
