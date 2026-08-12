@@ -145,6 +145,17 @@ describe('POST /api/generate quota enforcement', () => {
     expect(addCredits).not.toHaveBeenCalled();
   });
 
+  it('applies a timeout signal to the Lambda call so hung invocations refund', async () => {
+    deductCredits.mockResolvedValue({ success: true, subscription: subscription(9) });
+    fetchMock.mockResolvedValue(new Response(JSON.stringify({ plan: {}, captions: [] }), { status: 200 }));
+    createCampaign.mockResolvedValue({ campaignId: 'camp-123' });
+
+    await POST(makeRequest({ goal: 'Launch a product' }));
+
+    const [, init] = fetchMock.mock.calls[0];
+    expect((init as RequestInit).signal).toBeDefined();
+  });
+
   it('forwards the verified JWT userId to the Lambda, never a client-supplied one', async () => {
     deductCredits.mockResolvedValue({ success: true, subscription: subscription(9) });
     fetchMock.mockResolvedValue(

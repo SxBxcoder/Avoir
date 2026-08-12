@@ -99,13 +99,16 @@ export async function POST(req: Request) {
 
     let parsedData: any;
     try {
-      // CALL THE LIVE AWS LAMBDA AGENT with stateful messages
+      // CALL THE LIVE AWS LAMBDA AGENT with stateful messages. A 60s timeout
+      // prevents a hung invocation from holding the reservation and the
+      // request forever; the catch path below refunds on abort.
       const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': req.headers.get('Authorization') || '',
         },
+        signal: AbortSignal.timeout(60_000),
         body: JSON.stringify({
           goal: campaignGoal,
           messages: conversationMessages,

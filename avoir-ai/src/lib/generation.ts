@@ -9,16 +9,28 @@
  * paid generation.
  */
 
+export interface CampaignMessage {
+  role: string;
+  content: string;
+  displayContent?: string;
+}
+
 export interface ParsedCampaignRequest {
   goal: string;
-  messages: unknown[];
+  messages: CampaignMessage[];
+}
+
+function isCampaignMessage(value: unknown): value is CampaignMessage {
+  if (typeof value !== 'object' || value === null) return false;
+  const record = value as Record<string, unknown>;
+  return typeof record.role === 'string' && typeof record.content === 'string';
 }
 
 export function parseCampaignRequest(body: Record<string, unknown>): ParsedCampaignRequest | null {
   const goal = typeof body.goal === 'string' ? body.goal.trim() : '';
   const business = typeof body.business === 'string' ? body.business.trim() : '';
   const topic = typeof body.topic === 'string' ? body.topic.trim() : '';
-  const messages = Array.isArray(body.messages) ? body.messages : [];
+  const messages = Array.isArray(body.messages) ? body.messages.filter(isCampaignMessage) : [];
 
   if (goal) return { goal, messages };
   if (business && topic) {
