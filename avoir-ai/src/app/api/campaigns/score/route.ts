@@ -1,10 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { updateCampaignScore } from '@/lib/db/campaigns';
+import { isDemoMode } from '@/lib/mockShield';
 import { requireUser, authErrorResponse } from '@/lib/auth/requireUser';
 
 export const dynamic = 'force-dynamic';
 
 export async function PUT(req: NextRequest) {
+  // Demo Mock Shield: never write scores to DynamoDB under the shared demo
+  // identity — mock data would otherwise be persisted for every viewer.
+  if (isDemoMode()) {
+    return NextResponse.json({ success: true });
+  }
+
   try {
     // Identity comes from the verified Cognito JWT, not the request body.
     const { userId } = await requireUser(req);
