@@ -27,7 +27,7 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: 'No platforms selected' }, { status: 400 });
     }
 
-    console.log(`[AutoPublish] Attempting to publish campaign ${campaign_id} to ${platformList.join(', ')} for user ${userId}`);
+    console.log(`[AutoPublish] Attempting to publish campaign ${campaign_id} to ${platformList.join(', ')}`);
 
     // Deduct credits for publishing (atomic + conditional: only succeeds when
     // the balance covers the cost)

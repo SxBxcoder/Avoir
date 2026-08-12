@@ -92,7 +92,7 @@ export async function POST(req: Request) {
       cancel_url: `${origin}/pricing?canceled=true`,
     });
 
-    console.log(`[Checkout] Session created: ${session.id} for user: ${userId}`);
+    console.log(`[Checkout] Session created: ${session.id}`);
 
     return NextResponse.json({ sessionId: session.id });
   } catch (err: any) {
