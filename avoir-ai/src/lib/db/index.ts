@@ -13,6 +13,7 @@ export {
   getSubscription,
   upsertSubscription,
   deductCredits,
+  type CreditDeductionResult,
 } from './users';
 
 // Campaign Repository

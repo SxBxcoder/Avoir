@@ -126,10 +126,17 @@ export async function upsertSubscription(
 }
 
 // ============================================================================
-// DEDUCT CREDITS (Atomic)
+// DEDUCT CREDITS (Atomic + Conditional)
 // ============================================================================
 
-export async function deductCredits(userId: string, amount: number): Promise<UserSubscription> {
+export interface CreditDeductionResult {
+  /** Whether the balance had `amount` credits available and the decrement ran. */
+  success: boolean;
+  /** The subscription state after the attempt (unchanged when `success` is false). */
+  subscription: UserSubscription;
+}
+
+export async function deductCredits(userId: string, amount: number): Promise<CreditDeductionResult> {
   const client = getDynamoClient();
 
   try {
@@ -137,14 +144,17 @@ export async function deductCredits(userId: string, amount: number): Promise<Use
       new UpdateCommand({
         TableName: TABLES.USERS,
         Key: { userId },
-        UpdateExpression:
-          'SET #credits = if_not_exists(#credits, :zero) - :amount, #updated = :now',
+        // The ConditionExpression makes the decrement atomic: a concurrent
+        // spend can never drive the balance below zero, and callers learn
+        // whether the balance was actually available instead of blindly going
+        // negative (previously any caller could overdraw and keep spending).
+        UpdateExpression: 'SET #credits = #credits - :amount, #updated = :now',
+        ConditionExpression: '#credits >= :amount',
         ExpressionAttributeNames: {
           '#credits': 'credits',
           '#updated': 'updatedAt',
         },
         ExpressionAttributeValues: {
-          ':zero': 0,
           ':amount': amount,
           ':now': new Date().toISOString(),
         },
@@ -152,10 +162,18 @@ export async function deductCredits(userId: string, amount: number): Promise<Use
       })
     );
 
-    return result.Attributes as UserSubscription;
+    return {
+      success: true,
+      subscription: result.Attributes as UserSubscription,
+    };
   } catch (err: any) {
+    // ConditionalCheckFailedException is the expected "balance too low" outcome.
+    if (err?.name === 'ConditionalCheckFailedException') {
+      const subscription = await getSubscription(userId);
+      return { success: false, subscription };
+    }
     console.error(`[DB] DynamoDB deduct failed for ${userId}: ${err.message}`);
-    // Fallback: return current state
-    return getSubscription(userId);
+    // Fail closed: when we cannot prove the deduction, do not grant the spend.
+    return { success: false, subscription: await getSubscription(userId) };
   }
 }

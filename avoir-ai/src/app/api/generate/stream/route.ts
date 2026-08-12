@@ -104,9 +104,9 @@ function createSSEStream(
 
         // Deduct credits and update intelligence brief
         const cost = genomeMode ? 2 : 1;
-        const deductionSuccess = await deductCredits(userId, cost);
-        if (!deductionSuccess) {
-            console.error(`[STREAM API] Failed to deduct ${cost} credits for user ${userId}`);
+        const deduction = await deductCredits(userId, cost);
+        if (!deduction.success) {
+            console.error(`[STREAM API] Failed to deduct ${cost} credits for user ${userId} (balance too low).`);
         }
         await updateIntelligenceBrief(userId, { totalCampaignsGenerated: genomeMode ? 3 : 1 });
 

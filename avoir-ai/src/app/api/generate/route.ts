@@ -141,9 +141,12 @@ export async function POST(req: Request) {
     });
 
     // ========================================================================
-    // DEDUCT 1 CREDIT (Atomic — DynamoDB)
+    // DEDUCT 1 CREDIT (Atomic + Conditional — DynamoDB)
     // ========================================================================
-    await deductCredits(userId, 1);
+    const deduction = await deductCredits(userId, 1);
+    if (!deduction.success) {
+      console.error(`[Generate] ⚠️ Failed to deduct 1 credit for ${userId} (balance too low).`);
+    }
     console.log(`[Generate] ✅ Campaign ${campaign.campaignId} generated for ${userId}. Persisted to DynamoDB. Deducted 1 Credit.`);
 
     // Map Python Agent response back to your Next.js UI format

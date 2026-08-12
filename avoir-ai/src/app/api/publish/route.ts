@@ -29,8 +29,9 @@ export async function POST(request: Request) {
 
     console.log(`[AutoPublish] Attempting to publish campaign ${campaign_id} to ${platformList.join(', ')} for user ${userId}`);
 
-    // Deduct credits for publishing
-    const success = await deductCredits(userId, PUBLISH_COST);
+    // Deduct credits for publishing (atomic + conditional: only succeeds when
+    // the balance covers the cost)
+    const { success } = await deductCredits(userId, PUBLISH_COST);
     
     if (!success) {
       return NextResponse.json({ 
