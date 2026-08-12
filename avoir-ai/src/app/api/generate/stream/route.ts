@@ -63,6 +63,7 @@ function createSSEStream(
       // if generation fails, so a user only ever pays for a real campaign.
       const cost = genomeMode ? 2 : 1;
       let reserved = false;
+      let committed = false;
       let msgInterval: ReturnType<typeof setInterval> | null = null;
 
       try {
@@ -125,6 +126,11 @@ function createSSEStream(
           campaignId = campaign.campaignId;
         }
 
+        // The deliverable now exists (a persisted campaign row, or completed
+        // genome variants). Failures from here on must NOT refund — a transport
+        // error after commit must not hand the user the campaign AND the credit.
+        committed = true;
+
         await updateIntelligenceBrief(userId, { totalCampaignsGenerated: genomeMode ? 3 : 1 });
 
         send('status', { message: '✅ Campaign compiled. Deploying assets...', timestamp: Date.now() });
@@ -165,10 +171,11 @@ function createSSEStream(
 
         send('done', { success: true });
       } catch (error: any) {
-        // Only refund when we actually reserved the credits — otherwise a
-        // failure before the reservation would mint free credits. Refund is
-        // best-effort; addCredits never throws.
-        if (reserved) {
+        // Refund only when we actually reserved the credits AND the work was
+        // not already committed. A refund after commit (e.g. a client
+        // disconnect once the campaign row exists) would hand out free
+        // campaigns. Refund is best-effort; addCredits never throws.
+        if (reserved && !committed) {
           await addCredits(userId, cost).catch(() => {});
         }
         send('error', { message: error.message || 'Generation failed' });

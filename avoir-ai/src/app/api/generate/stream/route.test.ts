@@ -134,7 +134,8 @@ beforeEach(() => {
   vi.mocked(fetchIndustryTrends).mockResolvedValue(null);
   vi.mocked(fetchCompetitorIntel).mockResolvedValue(null);
   vi.mocked(updateIntelligenceBrief).mockResolvedValue(undefined);
-  vi.mocked(createCampaign).mockResolvedValue({ campaignId: 'camp-1' });
+  createCampaign.mockReset();
+  createCampaign.mockResolvedValue({ campaignId: 'camp-1' });
   vi.mocked(runSyntheticFocusGroup).mockResolvedValue({
     simulation: [],
     predicted_score: 90,
@@ -193,6 +194,26 @@ describe('POST /api/generate/stream quota enforcement', () => {
 
     expect(deductCredits).toHaveBeenCalledWith('user-1', 1);
     expect(addCredits).toHaveBeenCalledWith('user-1', 1);
+    expect(events.map((e) => e.event)).toEqual(
+      expect.arrayContaining(['error', 'done'])
+    );
+  });
+
+  it('does not refund once the campaign is committed even if a later step fails', async () => {
+    deductCredits.mockResolvedValue({ success: true, subscription: subscription(9) });
+    fetchMock.mockResolvedValue(
+      new Response(
+        JSON.stringify({ body: JSON.stringify({ plan: { hook: 'H', offer: 'O', cta: 'C' }, captions: [] }) }),
+        { status: 200 }
+      )
+    );
+    vi.mocked(updateIntelligenceBrief).mockRejectedValueOnce(new Error('Simulated DB failure'));
+
+    const res = await POST(makeRequest({ goal: 'Launch a product' }));
+    const events = await readStreamEvents(res);
+
+    expect(createCampaign).toHaveBeenCalled();
+    expect(addCredits).not.toHaveBeenCalled();
     expect(events.map((e) => e.event)).toEqual(
       expect.arrayContaining(['error', 'done'])
     );
