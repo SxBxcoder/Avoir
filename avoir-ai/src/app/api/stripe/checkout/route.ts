@@ -16,6 +16,7 @@
 
 import { NextResponse } from 'next/server';
 import { getStripeServer } from '@/lib/stripe';
+import { isDemoMode } from '@/lib/mockShield';
 import { requireUserEmail, authErrorResponse } from '@/lib/auth/requireUser';
 
 // Only the server-configured price IDs are purchasable — a client can't pass
@@ -29,6 +30,12 @@ const ALLOWED_PRICE_IDS = new Set([
 ]);
 
 export async function POST(req: Request) {
+  // Demo Mock Shield: never create live Stripe customers or checkout sessions
+  // with the synthetic demo identity.
+  if (isDemoMode()) {
+    return NextResponse.json({ sessionId: 'cs_demo_checkout' });
+  }
+
   try {
     // Authenticate FIRST so a malformed body can't mask a 401/403, and so the
     // email for the Stripe customer is always the verified account email.
