@@ -24,7 +24,9 @@ let legacyRows = new Map<string, unknown>();
 let failingTable: string | null = null;
 
 function fakeSend(command: unknown): Promise<unknown> {
-  const { input } = command as { input?: { TableName?: string; Key?: Record<string, string> } };
+  const { input } = command as {
+    input?: { TableName?: string; Key?: Record<string, string>; Item?: Record<string, unknown> };
+  };
 
   if (command instanceof GetCommand) {
     const row = legacyRows.get(`${input?.TableName}:${input?.Key?.userId}`);
@@ -42,7 +44,7 @@ function fakeSend(command: unknown): Promise<unknown> {
     // Simulate the condition expression: a put with a userId that already has a
     // row fails, forcing the merge path (sub rows that were auto-created as
     // free-tier defaults).
-    const target = (input?.Item as { userId?: string } | undefined)?.userId;
+    const target = input?.Item?.userId;
     if (target && legacyRows.has(`${input?.TableName}:${target}`)) {
       const err = new Error('The conditional request failed') as Error & { name: string };
       err.name = 'ConditionalCheckFailedException';

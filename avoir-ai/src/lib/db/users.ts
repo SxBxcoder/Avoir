@@ -20,6 +20,14 @@ import { getDynamoClient, TABLES } from './dynamodb';
 import { DEFAULT_SUBSCRIPTION, type UserSubscription, type PlanTier } from '@/lib/stripe';
 import { logger } from '@/lib/logger';
 
+function errorMessage(err: unknown): string {
+  return err instanceof Error ? err.message : String(err);
+}
+
+function isConditionalCheckFailed(err: unknown): boolean {
+  return err instanceof Error && err.name === 'ConditionalCheckFailedException';
+}
+
 // ============================================================================
 // READ
 // ============================================================================
@@ -39,9 +47,9 @@ export async function getSubscription(userId: string): Promise<UserSubscription>
       const sub = result.Item as UserSubscription;
       return sub;
     }
-  } catch (err: any) {
+  } catch (err: unknown) {
     // If DynamoDB is unreachable (local dev without AWS), fall through to default
-    logger.warn(`[DB] DynamoDB read failed: ${err.message}. Using in-memory fallback.`);
+    logger.warn(`[DB] DynamoDB read failed: ${errorMessage(err)}. Using in-memory fallback.`);
   }
 
   // New user — create default free tier entry
@@ -62,10 +70,10 @@ export async function getSubscription(userId: string): Promise<UserSubscription>
         ConditionExpression: 'attribute_not_exists(userId)', // Don't overwrite existing
       })
     );
-  } catch (err: any) {
+  } catch (err: unknown) {
     // ConditionalCheckFailedException is fine — means user already exists
-    if (err.name !== 'ConditionalCheckFailedException') {
-      logger.warn(`[DB] DynamoDB write failed: ${err.message}`);
+    if (!isConditionalCheckFailed(err)) {
+      logger.warn(`[DB] DynamoDB write failed: ${errorMessage(err)}`);
     }
   }
 
@@ -119,8 +127,8 @@ export async function upsertSubscription(
     );
 
     return result.Attributes as UserSubscription;
-  } catch (err: any) {
-    logger.error(`[DB] DynamoDB upsert failed: ${err.message}`);
+  } catch (err: unknown) {
+    logger.error(`[DB] DynamoDB upsert failed: ${errorMessage(err)}`);
     // Fallback: return current state
     return getSubscription(userId);
   }
@@ -154,7 +162,7 @@ export async function addCredits(userId: string, amount: number): Promise<UserSu
     );
 
     return result.Attributes as UserSubscription;
-  } catch (err: any) {
+  } catch {
     // Non-fatal: the caller falls back to the current balance on failure.
     return getSubscription(userId);
   }
@@ -209,9 +217,9 @@ async function deductCreditsOnce(
       success: true,
       subscription: result.Attributes as UserSubscription,
     };
-  } catch (err: any) {
+  } catch (err: unknown) {
     // ConditionalCheckFailedException is the expected "balance too low" outcome.
-    if (err?.name === 'ConditionalCheckFailedException') {
+    if (isConditionalCheckFailed(err)) {
       const subscription = await getSubscription(userId);
       // A brand-new user has no DynamoDB row yet, so their first conditional
       // decrement fails and getSubscription just bootstrapped the default row
@@ -222,7 +230,7 @@ async function deductCreditsOnce(
       }
       return { success: false, subscription };
     }
-    logger.error(`[DB] DynamoDB deduct failed: ${err.message}`);
+    logger.error(`[DB] DynamoDB deduct failed: ${errorMessage(err)}`);
     // Fail closed: when we cannot prove the deduction, do not grant the spend.
     return { success: false, subscription: await getSubscription(userId) };
   }
