@@ -35,12 +35,13 @@ export async function GET(req: Request) {
         lastUpdated: new Date().toISOString(),
       }
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     const authErr = authErrorResponse(error);
     if (authErr) return authErr;
     console.error('[Intelligence API] GET error:', error);
+    // Never leak internal error text (DynamoDB/AWS SDK messages) to the client.
     return NextResponse.json(
-      { error: error.message || 'Failed to fetch intelligence brief' },
+      { error: 'Failed to fetch intelligence brief' },
       { status: 500 }
     );
   }
