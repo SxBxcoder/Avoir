@@ -22,7 +22,8 @@ function sub(overrides: Partial<UserSubscription> = {}): UserSubscription {
 
 function fakeSend(command: unknown): Promise<unknown> {
   const input = (command as { input?: any })?.input ?? {};
-  const key = input.Key?.userId as string | undefined;
+  // GetCommand/UpdateCommand carry the primary key in `Key`; PutCommand in `Item`.
+  const key = (input.Key?.userId ?? input.Item?.userId) as string | undefined;
 
   if (command instanceof GetCommand) {
     return Promise.resolve({ Item: store.get(key!) });
@@ -116,13 +117,13 @@ describe('deductCredits', () => {
     expect(after.credits).toBe(0);
   });
 
-  it('bootstraps a default free-tier row for a brand-new user', async () => {
+  it('bootstraps a default free-tier row and succeeds for a brand-new user', async () => {
     const result = await deductCredits('user-1', 1);
 
-    // No row exists yet, so the conditional decrement fails closed and the
-    // default free-tier subscription (with its initial credit balance) is created.
-    expect(result.success).toBe(false);
-    expect(result.subscription.credits).toBe(DEFAULT_SUBSCRIPTION.credits);
+    // No row exists yet: the first conditional decrement fails, getSubscription
+    // creates the default free-tier row, and the retry completes the deduction.
+    expect(result.success).toBe(true);
+    expect(result.subscription.credits).toBe(DEFAULT_SUBSCRIPTION.credits - 1);
   });
 });
 

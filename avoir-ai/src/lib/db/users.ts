@@ -171,6 +171,14 @@ export interface CreditDeductionResult {
 }
 
 export async function deductCredits(userId: string, amount: number): Promise<CreditDeductionResult> {
+  return deductCreditsOnce(userId, amount, false);
+}
+
+async function deductCreditsOnce(
+  userId: string,
+  amount: number,
+  retried: boolean
+): Promise<CreditDeductionResult> {
   const client = getDynamoClient();
 
   try {
@@ -204,6 +212,13 @@ export async function deductCredits(userId: string, amount: number): Promise<Cre
     // ConditionalCheckFailedException is the expected "balance too low" outcome.
     if (err?.name === 'ConditionalCheckFailedException') {
       const subscription = await getSubscription(userId);
+      // A brand-new user has no DynamoDB row yet, so their first conditional
+      // decrement fails and getSubscription just bootstrapped the default row
+      // with the full free-tier balance. Retry the deduction once now that the
+      // row exists; a genuinely insufficient balance still fails.
+      if (!retried && subscription.credits >= amount) {
+        return deductCreditsOnce(userId, amount, true);
+      }
       return { success: false, subscription };
     }
     console.error(`[DB] DynamoDB deduct failed for ${userId}: ${err.message}`);
