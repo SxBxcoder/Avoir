@@ -57,12 +57,7 @@ export async function POST(req: Request) {
     }
 
     // 2. Deduct Credits (only after the backend accepted the job)
-    const deduction = await deductCredits(userId, 50);
-    if (!deduction.success) {
-      console.error(`[ShadowClone] ⚠️ Failed to deduct 50 credits from User ${userId} (balance too low).`);
-    } else {
-      console.log(`[ShadowClone] 🚀 Deducted 50 credits from User ${userId}. Remaining: ${deduction.subscription.credits}`);
-    }
+    await deductCredits(userId, 50);
 
     // Return the SSE stream directly
     return new Response(response.body, {
