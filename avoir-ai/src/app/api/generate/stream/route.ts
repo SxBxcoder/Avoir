@@ -62,6 +62,7 @@ function createSSEStream(
       // if generation fails, so a user only ever pays for a real campaign.
       const cost = genomeMode ? 2 : 1;
       let reserved = false;
+      let msgInterval: ReturnType<typeof setInterval> | null = null;
 
       try {
         // Atomic reserve BEFORE any paid AI work. The conditional decrement
@@ -84,19 +85,18 @@ function createSSEStream(
 
         // Stream cooking status messages
         let messageIdx = 0;
-        const msgInterval = setInterval(() => {
+        msgInterval = setInterval(() => {
           if (messageIdx < statusMessages.length) {
             send('status', { message: statusMessages[messageIdx].text, timestamp: Date.now() });
             messageIdx++;
           } else {
-            clearInterval(msgInterval);
+            clearInterval(msgInterval ?? undefined);
           }
         }, 800);
 
         // Run the dynamic generation workflow
         const data = await runner(send);
         clearInterval(msgInterval);
-
         // Parse Lambda response
         let parsedData = data;
         if (data.body && typeof data.body === 'string') {
@@ -173,6 +173,9 @@ function createSSEStream(
         send('error', { message: error.message || 'Generation failed' });
         send('done', { success: false });
       } finally {
+        // The status timer must stop on every path (success, failure, and
+        // stream abort) or it leaks and keeps the process alive.
+        if (msgInterval) clearInterval(msgInterval);
         controller.close();
       }
     },
