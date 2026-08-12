@@ -156,9 +156,17 @@ describe('POST /api/generate/stream quota enforcement', () => {
   it('returns 402 from the pre-check and never reserves when credits are insufficient', async () => {
     vi.mocked(getSubscription).mockResolvedValue(subscription(0));
 
-    const res = await POST(makeRequest());
+    const res = await POST(makeRequest({ goal: 'Launch a product' }));
 
     expect(res.status).toBe(402);
+    expect(deductCredits).not.toHaveBeenCalled();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('returns 400 and reserves nothing for an invalid or empty body', async () => {
+    const res = await POST(makeRequest());
+
+    expect(res.status).toBe(400);
     expect(deductCredits).not.toHaveBeenCalled();
     expect(fetchMock).not.toHaveBeenCalled();
   });
@@ -166,7 +174,7 @@ describe('POST /api/generate/stream quota enforcement', () => {
   it('emits an error event without minting credits when the reservation loses the race', async () => {
     deductCredits.mockResolvedValue({ success: false, subscription: subscription(0) });
 
-    const res = await POST(makeRequest());
+    const res = await POST(makeRequest({ goal: 'Launch a product' }));
     const events = await readStreamEvents(res);
 
     expect(events.map((e) => e.event)).toEqual(
@@ -180,7 +188,7 @@ describe('POST /api/generate/stream quota enforcement', () => {
     deductCredits.mockResolvedValue({ success: true, subscription: subscription(9) });
     fetchMock.mockRejectedValue(new Error('Simulated Lambda failure'));
 
-    const res = await POST(makeRequest());
+    const res = await POST(makeRequest({ goal: 'Launch a product' }));
     const events = await readStreamEvents(res);
 
     expect(deductCredits).toHaveBeenCalledWith('user-1', 1);

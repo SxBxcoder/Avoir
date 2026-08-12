@@ -27,6 +27,7 @@ import { getPerformanceInsights, formatInsightsForPrompt } from '@/lib/db/perfor
 import { getIntelligenceBrief, updateIntelligenceBrief, formatIntelligenceForPrompt } from '@/lib/db/intelligence';
 import { fetchCompetitorIntel, formatCompetitorContext } from '@/lib/db/competitors';
 import { fetchIndustryTrends, synthesizeTrendContext } from '@/lib/trends';
+import { parseCampaignRequest } from '@/lib/generation';
 import { requireUser, authErrorResponse } from '@/lib/auth/requireUser';
 
 // Status messages that stream to the UI for the "AI is Cooking" experience
@@ -208,9 +209,17 @@ export async function POST(req: Request) {
       });
     }
 
-    const { business, topic, goal, messages, genome_mode, pastWinningContext } = body;
-    const campaignGoal = goal || `Create a campaign for a ${business} focusing on ${topic}`;
-    const conversationMessages = messages || [];
+    // Validate BEFORE any paid work: an empty/malformed body must never reach
+    // the credit reservation or the generation pipeline.
+    const parsed = parseCampaignRequest(body);
+    if (!parsed) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid request: provide a goal, or both business and topic' }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+    const { goal: campaignGoal, messages: conversationMessages } = parsed;
+    const { genome_mode, pastWinningContext } = body;
     const authHeader = req.headers.get('Authorization');
     const isGenomeMode = genome_mode === true;
 
@@ -260,7 +269,8 @@ export async function POST(req: Request) {
       performanceContext += '\n\n' + formatIntelligenceForPrompt(intelBrief);
     }
     // Fetch Cultural Trends & Competitor Intel
-    const industry = business || dna?.industry || 'general';
+    const industryHint = typeof body.business === 'string' ? body.business.trim() : '';
+    const industry = industryHint || dna?.industry || 'general';
     const [trends, compIntel] = await Promise.all([
       fetchIndustryTrends(industry),
       fetchCompetitorIntel(industry)

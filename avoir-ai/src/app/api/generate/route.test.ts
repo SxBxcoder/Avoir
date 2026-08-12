@@ -79,7 +79,7 @@ describe('POST /api/generate quota enforcement', () => {
   it('returns 402 and never calls the paid Lambda when the credit reservation fails', async () => {
     deductCredits.mockResolvedValue({ success: false, subscription: subscription(0) });
 
-    const res = await POST(makeRequest());
+    const res = await POST(makeRequest({ goal: 'Launch a product' }));
 
     expect(res.status).toBe(402);
     expect(fetchMock).not.toHaveBeenCalled();
@@ -90,7 +90,7 @@ describe('POST /api/generate quota enforcement', () => {
     deductCredits.mockResolvedValue({ success: true, subscription: subscription(9) });
     fetchMock.mockRejectedValue(new Error('Simulated Lambda failure'));
 
-    const res = await POST(makeRequest());
+    const res = await POST(makeRequest({ goal: 'Launch a product' }));
 
     expect(res.status).toBe(500);
     expect(deductCredits).toHaveBeenCalledWith('user-1', 1);
@@ -100,7 +100,7 @@ describe('POST /api/generate quota enforcement', () => {
   it('does not reserve credits when rate limited', async () => {
     vi.mocked(checkRateLimit).mockResolvedValue({ allowed: false, remaining: 0, resetIn: 42 });
 
-    const res = await POST(makeRequest());
+    const res = await POST(makeRequest({ goal: 'Launch a product' }));
 
     expect(res.status).toBe(429);
     expect(deductCredits).not.toHaveBeenCalled();
@@ -136,6 +136,15 @@ describe('POST /api/generate quota enforcement', () => {
     expect(body.campaignId).toBe('camp-123');
   });
 
+  it('returns 400 and reserves nothing for an invalid or empty body', async () => {
+    const res = await POST(makeRequest());
+
+    expect(res.status).toBe(400);
+    expect(deductCredits).not.toHaveBeenCalled();
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(addCredits).not.toHaveBeenCalled();
+  });
+
   it('forwards the verified JWT userId to the Lambda, never a client-supplied one', async () => {
     deductCredits.mockResolvedValue({ success: true, subscription: subscription(9) });
     fetchMock.mockResolvedValue(
@@ -143,7 +152,7 @@ describe('POST /api/generate quota enforcement', () => {
     );
     createCampaign.mockResolvedValue({ campaignId: 'camp-123' });
 
-    await POST(makeRequest({ user_id: 'attacker-supplied' }));
+    await POST(makeRequest({ user_id: 'attacker-supplied', goal: 'Launch a product' }));
 
     const [url, init] = fetchMock.mock.calls[0];
     const sent = JSON.parse((init as RequestInit).body as string);

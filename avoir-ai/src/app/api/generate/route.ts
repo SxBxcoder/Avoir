@@ -19,6 +19,7 @@ import { addCredits, deductCredits } from '@/lib/services/subscription';
 import { createCampaign } from '@/lib/db/campaigns';
 import { checkRateLimit } from '@/lib/db/cache';
 import { isDemoMode, MOCK_CAMPAIGNS } from '@/lib/mockShield';
+import { parseCampaignRequest } from '@/lib/generation';
 import { requireUser, authErrorResponse } from '@/lib/auth/requireUser';
 
 export async function POST(req: Request) {
@@ -31,12 +32,18 @@ export async function POST(req: Request) {
     // Identity comes from the verified Cognito JWT — never trust client input.
     const { userId } = await requireUser(req);
 
-    const body = await req.json().catch(() => ({}));
-    const { business, topic, goal, messages } = body;
+    const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;
 
-    // Support both old format (business + topic) and new format (goal + messages)
-    const campaignGoal = goal || `Create a campaign for a ${business} focusing on ${topic}`;
-    const conversationMessages = messages || [];
+    // Validate BEFORE any paid work: an empty/malformed body must never reach
+    // the credit reservation or the paid Lambda.
+    const parsed = parseCampaignRequest(body);
+    if (!parsed) {
+      return NextResponse.json(
+        { error: 'Invalid request: provide a goal, or both business and topic' },
+        { status: 400 }
+      );
+    }
+    const { goal: campaignGoal, messages: conversationMessages } = parsed;
 
     const rateLimit = await checkRateLimit(userId, 10, 60); // 10 requests per minute
     if (!rateLimit.allowed) {
