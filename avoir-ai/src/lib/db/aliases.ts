@@ -13,6 +13,7 @@
 
 import { GetCommand, PutCommand } from '@aws-sdk/lib-dynamodb';
 import { getDynamoClient, TABLES } from './dynamodb';
+import { logger } from '@/lib/logger';
 
 export async function setEmailAlias(userId: string, email: string): Promise<void> {
   try {
@@ -29,7 +30,7 @@ export async function setEmailAlias(userId: string, email: string): Promise<void
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
     // Non-fatal: the migration can be re-run on the next session refresh.
-    console.warn(`[DB] Alias write failed for ${userId}: ${message}`);
+    logger.warn(`[DB] Alias write failed: ${message}`);
   }
 }
 
@@ -45,7 +46,7 @@ export async function getEmailAlias(userId: string): Promise<string | null> {
     return typeof Item?.email === 'string' ? Item.email : null;
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
-    console.warn(`[DB] Alias read failed for ${userId}: ${message}`);
+    logger.warn(`[DB] Alias read failed: ${message}`);
     return null;
   }
 }

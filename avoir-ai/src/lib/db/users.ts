@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Avoir — Enterprise User Repository
  * 
  * DynamoDB-backed user subscription management.
@@ -18,6 +18,7 @@
 import { GetCommand, PutCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb';
 import { getDynamoClient, TABLES } from './dynamodb';
 import { DEFAULT_SUBSCRIPTION, type UserSubscription, type PlanTier } from '@/lib/stripe';
+import { logger } from '@/lib/logger';
 
 // ============================================================================
 // READ
@@ -40,7 +41,7 @@ export async function getSubscription(userId: string): Promise<UserSubscription>
     }
   } catch (err: any) {
     // If DynamoDB is unreachable (local dev without AWS), fall through to default
-    console.warn(`[DB] DynamoDB read failed for ${userId}: ${err.message}. Using in-memory fallback.`);
+    logger.warn(`[DB] DynamoDB read failed: ${err.message}. Using in-memory fallback.`);
   }
 
   // New user — create default free tier entry
@@ -64,7 +65,7 @@ export async function getSubscription(userId: string): Promise<UserSubscription>
   } catch (err: any) {
     // ConditionalCheckFailedException is fine — means user already exists
     if (err.name !== 'ConditionalCheckFailedException') {
-      console.warn(`[DB] DynamoDB write failed for ${userId}: ${err.message}`);
+      logger.warn(`[DB] DynamoDB write failed: ${err.message}`);
     }
   }
 
@@ -119,7 +120,7 @@ export async function upsertSubscription(
 
     return result.Attributes as UserSubscription;
   } catch (err: any) {
-    console.error(`[DB] DynamoDB upsert failed for ${userId}: ${err.message}`);
+    logger.error(`[DB] DynamoDB upsert failed: ${err.message}`);
     // Fallback: return current state
     return getSubscription(userId);
   }
@@ -221,8 +222,9 @@ async function deductCreditsOnce(
       }
       return { success: false, subscription };
     }
-    console.error(`[DB] DynamoDB deduct failed for ${userId}: ${err.message}`);
+    logger.error(`[DB] DynamoDB deduct failed: ${err.message}`);
     // Fail closed: when we cannot prove the deduction, do not grant the spend.
     return { success: false, subscription: await getSubscription(userId) };
   }
 }
+

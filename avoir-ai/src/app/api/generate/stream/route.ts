@@ -336,8 +336,6 @@ export async function POST(req: Request) {
       return draft;
     };
 
-    console.log(`[Stream] 🚀 SSE stream started for ${userId} (${sub.tier}), GenomeMode: ${isGenomeMode}`);
-
     // Create the SSE stream
     const stream = createSSEStream(COOKING_MESSAGES, runner, userId, campaignGoal, isGenomeMode);
 

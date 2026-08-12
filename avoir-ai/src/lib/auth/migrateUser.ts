@@ -19,6 +19,7 @@ import {
   UpdateCommand,
 } from '@aws-sdk/lib-dynamodb';
 import { getDynamoClient, TABLES } from '@/lib/db/dynamodb';
+import { logger } from '@/lib/logger';
 
 type DynamoItem = Record<string, NativeAttributeValue>;
 
@@ -213,7 +214,7 @@ export async function migrateLegacyUser(sub: string, email: string): Promise<Mig
     migrated = (await migrateUsers(sub, email)) || migrated;
   } catch (err: unknown) {
     complete = false;
-    console.error(`[Migrate] users failed for ${sub}: ${errorMessage(err)}`);
+    logger.error(`[Migrate] users migration failed: ${errorMessage(err)}`);
   }
 
   for (const { table } of SINGLE_KEY_TABLES) {
@@ -221,7 +222,7 @@ export async function migrateLegacyUser(sub: string, email: string): Promise<Mig
       migrated = (await migrateSingleKey(table, sub, email)) || migrated;
     } catch (err: unknown) {
       complete = false;
-      console.error(`[Migrate] ${table} failed for ${sub}: ${errorMessage(err)}`);
+      logger.error(`[Migrate] ${table} migration failed: ${errorMessage(err)}`);
     }
   }
 
@@ -230,7 +231,7 @@ export async function migrateLegacyUser(sub: string, email: string): Promise<Mig
       migrated = (await migrateCompositeKey(table, sortKey, sub, email)) || migrated;
     } catch (err: unknown) {
       complete = false;
-      console.error(`[Migrate] ${table} failed for ${sub}: ${errorMessage(err)}`);
+      logger.error(`[Migrate] ${table} migration failed: ${errorMessage(err)}`);
     }
   }
 

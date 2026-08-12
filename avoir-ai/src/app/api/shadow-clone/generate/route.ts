@@ -27,7 +27,6 @@ export async function POST(req: Request) {
     // 1. Check Credits
     const sub = await getSubscription(userId);
     if (sub.credits < 50) {
-      console.log(`[ShadowClone] 🚫 User ${userId} blocked. Insufficient credits: ${sub.credits}.`);
       return NextResponse.json(
         { 
           error: 'Insufficient Credits',

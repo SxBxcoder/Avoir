@@ -40,7 +40,6 @@ export async function POST(req: Request) {
 
     const rateLimit = await checkRateLimit(userId, 10, 60); // 10 requests per minute
     if (!rateLimit.allowed) {
-      console.log(`[Generate] ⚡ Rate limited: ${userId}. Reset in ${rateLimit.resetIn}s`);
       return NextResponse.json(
         {
           error: 'Rate limit exceeded',
