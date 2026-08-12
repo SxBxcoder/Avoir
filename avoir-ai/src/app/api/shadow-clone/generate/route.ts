@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getSubscription, deductCredits } from '@/lib/services/subscription';
+import { getSubscription, deductCredits, addCredits } from '@/lib/services/subscription';
 import { isDemoMode, createMockShadowCloneStream } from '@/lib/mockShield';
 import { requireUser, authErrorResponse } from '@/lib/auth/requireUser';
 
@@ -24,7 +24,7 @@ export async function POST(req: Request) {
 
     const body = await req.json().catch(() => ({}));
 
-    // 1. Check Credits
+    // 1. Check Credits (fast UX gate — the authoritative reservation is below)
     const sub = await getSubscription(userId);
     if (sub.credits < 50) {
       return NextResponse.json(
@@ -38,7 +38,24 @@ export async function POST(req: Request) {
         { status: 402 } // Payment Required
       );
     }
-    
+
+    // 2. Reserve credits atomically BEFORE starting the paid job. The
+    // conditional decrement means concurrent requests can never all pass the
+    // read-only pre-check and overdraw — only the balance can reserve.
+    const deduction = await deductCredits(userId, 50);
+    if (!deduction.success) {
+      return NextResponse.json(
+        {
+          error: 'Insufficient Credits',
+          message: `Shadow Clone costs 50 credits. You have ${deduction.subscription.credits}. Please upgrade to Pro or Enterprise.`,
+          upgradeRequired: true,
+          currentCredits: deduction.subscription.credits,
+          cost: 50,
+        },
+        { status: 402 } // Payment Required
+      );
+    }
+
     // Call Python backend running on port 8000
     const response = await fetch('http://localhost:8000/api/shadow-clone/generate', {
       method: 'POST',
@@ -50,15 +67,14 @@ export async function POST(req: Request) {
     });
 
     if (!response.ok) {
-      // Backend refused the job — do NOT charge the user for a stream they
-      // never received.
+      // Backend refused the job — refund the reservation; the user never
+      // received a stream. Best-effort: addCredits never throws.
+      await addCredits(userId, 50).catch(() => {});
       throw new Error(`Backend Error: ${response.status}`);
     }
 
-    // 2. Deduct Credits (only after the backend accepted the job)
-    await deductCredits(userId, 50);
-
-    // Return the SSE stream directly
+    // Return the SSE stream directly (the reservation stands — the backend
+    // accepted the job)
     return new Response(response.body, {
       headers: {
         'Content-Type': 'text/event-stream',
