@@ -11,17 +11,30 @@
  * 
  * This is the enterprise-standard way to handle subscription management
  * without building custom UI for billing.
+ * 
+ * The customer is derived from the verified Cognito JWT — the client never
+ * supplies a customerId (a caller could otherwise open any user's billing
+ * portal by guessing a Stripe customer ID).
  */
 
 import { NextResponse } from 'next/server';
 import { getStripeServer } from '@/lib/stripe';
+import { getSubscription } from '@/lib/services/subscription';
+import { requireUser, authErrorResponse } from '@/lib/auth/requireUser';
 
 export async function POST(req: Request) {
   try {
-    const { customerId } = await req.json();
+    // Identity comes from the verified Cognito JWT, not the request body.
+    const { userId } = await requireUser(req);
+
+    const sub = await getSubscription(userId);
+    const customerId = sub?.stripeCustomerId;
 
     if (!customerId) {
-      return NextResponse.json({ error: 'Missing customerId' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'No billing account linked to this user' },
+        { status: 400 }
+      );
     }
 
     const stripe = getStripeServer();
@@ -35,6 +48,8 @@ export async function POST(req: Request) {
     console.log(`[Portal] Session created for customer: ${customerId}`);
     return NextResponse.json({ url: portalSession.url });
   } catch (err: any) {
+    const authErr = authErrorResponse(err);
+    if (authErr) return authErr;
     console.error('[Portal] Error creating portal session:', err);
     return NextResponse.json(
       { error: err.message || 'Failed to create portal session' },

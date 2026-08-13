@@ -8,24 +8,41 @@
  *   - userId attached as metadata for webhook correlation
  *   - Proper success/cancel URLs
  *   - Idempotency-safe design
+ * 
+ * The customer email comes from the verified Cognito ID token claim
+ * (`email_verified === true`) — it is never taken from the request body, so a
+ * caller cannot create a Stripe customer under someone else's email.
  */
 
 import { NextResponse } from 'next/server';
 import { getStripeServer } from '@/lib/stripe';
+import { requireUserEmail, authErrorResponse } from '@/lib/auth/requireUser';
+
+// Only the server-configured price IDs are purchasable — a client can't pass
+// an arbitrary Stripe price (e.g. a discounted or one-time product). Keep the
+// fallbacks in sync with PRICE_TO_TIER in the webhook route.
+const ALLOWED_PRICE_IDS = new Set([
+  process.env.NEXT_PUBLIC_STRIPE_PRO_MONTHLY_PRICE_ID || 'price_pro_monthly',
+  process.env.NEXT_PUBLIC_STRIPE_PRO_ANNUAL_PRICE_ID || 'price_pro_annual',
+  process.env.NEXT_PUBLIC_STRIPE_ENT_MONTHLY_PRICE_ID || 'price_ent_monthly',
+  process.env.NEXT_PUBLIC_STRIPE_ENT_ANNUAL_PRICE_ID || 'price_ent_annual',
+]);
 
 export async function POST(req: Request) {
   try {
-    const { priceId, email, userId } = await req.json();
+    // Authenticate FIRST so a malformed body can't mask a 401/403, and so the
+    // email for the Stripe customer is always the verified account email.
+    const { userId, email } = await requireUserEmail(req);
+
+    const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;
+    const { priceId } = body;
 
     // Input validation
-    if (!priceId) {
+    if (typeof priceId !== 'string' || !priceId) {
       return NextResponse.json({ error: 'Missing priceId' }, { status: 400 });
     }
-    if (!userId) {
-      return NextResponse.json({ error: 'Missing userId' }, { status: 400 });
-    }
-    if (!email) {
-      return NextResponse.json({ error: 'Missing email' }, { status: 400 });
+    if (!ALLOWED_PRICE_IDS.has(priceId)) {
+      return NextResponse.json({ error: 'Unsupported priceId' }, { status: 400 });
     }
 
     const stripe = getStripeServer();
@@ -79,6 +96,8 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ sessionId: session.id });
   } catch (err: any) {
+    const authErr = authErrorResponse(err);
+    if (authErr) return authErr;
     console.error('[Checkout] Error creating checkout session:', err);
     return NextResponse.json(
       { error: err.message || 'Failed to create checkout session' },

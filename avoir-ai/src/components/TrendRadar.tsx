@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Radar, TrendingUp, TrendingDown, Activity, ChevronRight, Sparkles, Loader2, Minimize2, Maximize2 } from 'lucide-react';
+import { useAuth } from '@/lib/auth/provider';
 
 interface TrendTopic {
   keyword: string;
@@ -18,6 +19,7 @@ interface TrendRadarProps {
 }
 
 export default function TrendRadar({ industry, onInjectTrend }: TrendRadarProps) {
+  const { accessToken } = useAuth();
   const [trends, setTrends] = useState<TrendTopic[]>([]);
   const [viralHooks, setViralHooks] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -30,7 +32,9 @@ export default function TrendRadar({ industry, onInjectTrend }: TrendRadarProps)
     const fetchTrends = async () => {
       setIsLoading(true);
       try {
-        const res = await fetch(`/api/trends?industry=${encodeURIComponent(industry)}`);
+        const res = await fetch(`/api/trends?industry=${encodeURIComponent(industry)}`, {
+          headers: accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {},
+        });
         if (res.ok) {
           const data = await res.json();
           if (data.trends && mounted) {
@@ -50,7 +54,7 @@ export default function TrendRadar({ industry, onInjectTrend }: TrendRadarProps)
     return () => {
       mounted = false;
     };
-  }, [industry]);
+  }, [industry, accessToken]);
 
   if (isMinimized) {
     return (

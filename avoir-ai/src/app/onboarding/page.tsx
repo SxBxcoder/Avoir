@@ -19,7 +19,7 @@ const QUESTIONS = [
 
 export default function OnboardingPage() {
   const router = useRouter();
-  const { email } = useAuth();
+  const { email, accessToken } = useAuth();
   const [currentStep, setCurrentStep] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [inputValue, setInputValue] = useState('');
@@ -60,13 +60,15 @@ export default function OnboardingPage() {
     setIsSubmitting(true);
     try {
       const payload = {
-        userId: userEmail,
         ...finalAnswers
       };
 
       const res = await fetch('/api/brand-dna', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {}),
+        },
         body: JSON.stringify(payload),
       });
 

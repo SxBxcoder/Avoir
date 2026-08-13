@@ -1,13 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { updateCampaignScore } from '@/lib/db/campaigns';
+import { requireUser, authErrorResponse } from '@/lib/auth/requireUser';
 
 export const dynamic = 'force-dynamic';
 
 export async function PUT(req: NextRequest) {
   try {
-    const { userId, campaignId, isWinner } = await req.json();
+    // Identity comes from the verified Cognito JWT, not the request body.
+    const { userId } = await requireUser(req);
 
-    if (!userId || !campaignId || typeof isWinner !== 'boolean') {
+    const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;
+    const { campaignId, isWinner } = body;
+
+    if (typeof campaignId !== 'string' || !campaignId || typeof isWinner !== 'boolean') {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
@@ -19,6 +24,8 @@ export async function PUT(req: NextRequest) {
 
     return NextResponse.json({ success: true, campaignId, isWinner });
   } catch (err: any) {
+    const authErr = authErrorResponse(err);
+    if (authErr) return authErr;
     console.error('[Score API] Error:', err);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }

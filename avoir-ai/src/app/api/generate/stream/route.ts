@@ -28,6 +28,7 @@ import { getPerformanceInsights, formatInsightsForPrompt } from '@/lib/db/perfor
 import { getIntelligenceBrief, updateIntelligenceBrief, formatIntelligenceForPrompt } from '@/lib/db/intelligence';
 import { fetchCompetitorIntel, formatCompetitorContext } from '@/lib/db/competitors';
 import { fetchIndustryTrends, synthesizeTrendContext } from '@/lib/trends';
+import { requireUser, authErrorResponse } from '@/lib/auth/requireUser';
 
 // Status messages that stream to the UI for the "AI is Cooking" experience
 const COOKING_MESSAGES = [
@@ -162,8 +163,11 @@ import { isDemoMode, createMockSSEStream } from '@/lib/mockShield';
 
 export async function POST(req: Request) {
   try {
-    const body = await req.json();
-    
+    // Identity comes from the verified Cognito JWT — never trust client input.
+    const { userId } = await requireUser(req);
+
+    const body = await req.json().catch(() => ({}));
+
     // Demo Mock Shield
     if (isDemoMode()) {
       const isGenomeMode = body.genome_mode === true;
@@ -183,7 +187,6 @@ export async function POST(req: Request) {
     const campaignGoal = goal || `Create a campaign for a ${business} focusing on ${topic}`;
     const conversationMessages = messages || [];
     const authHeader = req.headers.get('Authorization');
-    const userId = body.userId || body.user_id || 'anonymous';
     const isGenomeMode = genome_mode === true;
 
     // Rate limiting
@@ -320,6 +323,8 @@ export async function POST(req: Request) {
       },
     });
   } catch (error: any) {
+    const authErr = authErrorResponse(error);
+    if (authErr) return authErr;
     console.error('[Stream] Error:', error);
     return new Response(
       JSON.stringify({ error: error.message || 'Stream failed' }),

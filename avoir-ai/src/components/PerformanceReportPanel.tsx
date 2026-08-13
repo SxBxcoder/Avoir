@@ -13,7 +13,7 @@ type Platform = 'instagram' | 'facebook' | 'linkedin' | 'tiktok' | 'google_ads' 
 interface PerformanceReportPanelProps {
   campaignId: string;
   campaignSnapshot: { hook: string; offer: string; cta: string };
-  userId: string;
+  accessToken: string;
   onClose: () => void;
   onReported: () => void;
 }
@@ -43,7 +43,7 @@ const METRIC_FIELDS = [
 export default function PerformanceReportPanel({
   campaignId,
   campaignSnapshot,
-  userId,
+  accessToken,
   onClose,
   onReported,
 }: PerformanceReportPanelProps) {
@@ -78,9 +78,11 @@ export default function PerformanceReportPanel({
 
       await fetch('/api/performance', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {}),
+        },
         body: JSON.stringify({
-          userId,
           campaignId,
           platform: selectedPlatform,
           metrics: numericMetrics,

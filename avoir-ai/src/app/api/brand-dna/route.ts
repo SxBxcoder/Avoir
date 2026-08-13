@@ -1,6 +1,19 @@
 import { NextResponse } from 'next/server';
-import { getBrandDNA, saveBrandDNA } from '@/lib/db/brandDna';
+import { getBrandDNA, saveBrandDNA, type BrandDNA } from '@/lib/db/brandDna';
 import { isDemoMode, MOCK_BRAND_DNA } from '@/lib/mockShield';
+import { requireUser, authErrorResponse } from '@/lib/auth/requireUser';
+
+// Only these fields are ever persisted — a client can't mass-assign unknown
+// columns onto the record.
+const DNA_FIELDS = [
+  'brandName',
+  'industry',
+  'targetAudience',
+  'toneOfVoice',
+  'coreValues',
+  'uniqueSellingProposition',
+  'referenceUrl',
+] as const;
 
 export async function GET(req: Request) {
   // Demo Mock Shield
@@ -9,16 +22,14 @@ export async function GET(req: Request) {
   }
 
   try {
-    const url = new URL(req.url);
-    const userId = url.searchParams.get('userId');
-
-    if (!userId) {
-      return NextResponse.json({ error: 'Missing userId' }, { status: 400 });
-    }
+    // Identity comes from the verified Cognito JWT, not the query string.
+    const { userId } = await requireUser(req);
 
     const dna = await getBrandDNA(userId);
     return NextResponse.json({ dna });
   } catch (error: any) {
+    const authErr = authErrorResponse(error);
+    if (authErr) return authErr;
     console.error('[GET /api/brand-dna] Error:', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
@@ -31,16 +42,29 @@ export async function POST(req: Request) {
   }
 
   try {
-    const body = await req.json();
-    const { userId, ...dna } = body;
+    // Identity comes from the verified Cognito JWT, not the request body.
+    const { userId } = await requireUser(req);
 
-    if (!userId || !dna.brandName || !dna.industry) {
+    const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;
+
+    // Allowlist: copy only known string fields, ignoring everything else.
+    const dna: Partial<Omit<BrandDNA, 'userId' | 'updatedAt'>> = {};
+    for (const field of DNA_FIELDS) {
+      const value = body[field];
+      if (typeof value === 'string') {
+        (dna as Record<string, unknown>)[field] = value;
+      }
+    }
+
+    if (!dna.brandName || !dna.industry) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    const savedDNA = await saveBrandDNA(userId, dna);
+    const savedDNA = await saveBrandDNA(userId, dna as Omit<BrandDNA, 'userId' | 'updatedAt'>);
     return NextResponse.json({ success: true, dna: savedDNA });
   } catch (error: any) {
+    const authErr = authErrorResponse(error);
+    if (authErr) return authErr;
     console.error('[POST /api/brand-dna] Error:', error);
     return NextResponse.json({ error: 'Failed to save Brand DNA' }, { status: 500 });
   }

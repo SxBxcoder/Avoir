@@ -16,6 +16,7 @@ import {
   type CampaignSnapshot,
 } from '@/lib/db/performance';
 import { isDemoMode, MOCK_PERFORMANCE_HISTORY, MOCK_PERFORMANCE_INSIGHTS } from '@/lib/mockShield';
+import { requireUser, authErrorResponse } from '@/lib/auth/requireUser';
 
 export async function POST(req: Request) {
   // Demo Mock Shield
@@ -28,9 +29,11 @@ export async function POST(req: Request) {
   }
 
   try {
-    const body = await req.json();
+    // Identity comes from the verified Cognito JWT, not the request body.
+    const { userId } = await requireUser(req);
+
+    const body = await req.json().catch(() => ({}));
     const {
-      userId,
       campaignId,
       platform,
       metrics,
@@ -38,9 +41,9 @@ export async function POST(req: Request) {
       tags,
     } = body;
 
-    if (!userId || !campaignId || !platform || !metrics) {
+    if (!campaignId || !platform || !metrics) {
       return NextResponse.json(
-        { error: 'Missing required fields: userId, campaignId, platform, metrics' },
+        { error: 'Missing required fields: campaignId, platform, metrics' },
         { status: 400 }
       );
     }
@@ -60,6 +63,8 @@ export async function POST(req: Request) {
       message: 'Performance data recorded. Your AI is now smarter.',
     });
   } catch (error: any) {
+    const authErr = authErrorResponse(error);
+    if (authErr) return authErr;
     console.error('[Performance API] POST error:', error);
     return NextResponse.json(
       { error: error.message || 'Failed to record performance' },
@@ -80,15 +85,10 @@ export async function GET(req: Request) {
 
   try {
     const { searchParams } = new URL(req.url);
-    const userId = searchParams.get('userId');
     const action = searchParams.get('action') || 'history';
 
-    if (!userId) {
-      return NextResponse.json(
-        { error: 'Missing userId parameter' },
-        { status: 400 }
-      );
-    }
+    // Identity comes from the verified Cognito JWT, not the query string.
+    const { userId } = await requireUser(req);
 
     if (action === 'insights') {
       const insights = await getPerformanceInsights(userId);
@@ -113,6 +113,8 @@ export async function GET(req: Request) {
       totalReported: history.length,
     });
   } catch (error: any) {
+    const authErr = authErrorResponse(error);
+    if (authErr) return authErr;
     console.error('[Performance API] GET error:', error);
     return NextResponse.json(
       { error: error.message || 'Failed to fetch performance data' },

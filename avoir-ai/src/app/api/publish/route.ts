@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { deductCredits } from '@/lib/db/users';
 import { isDemoMode } from '@/lib/mockShield';
+import { requireUser, authErrorResponse } from '@/lib/auth/requireUser';
 
 const PUBLISH_COST = 5;
 
@@ -15,17 +16,18 @@ export async function POST(request: Request) {
   }
 
   try {
-    const { userId, campaign_id, platforms } = await request.json();
+    // Identity comes from the verified Cognito JWT, not the request body.
+    const { userId } = await requireUser(request);
 
-    if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
+    const { campaign_id, platforms } = body;
 
-    if (!platforms || platforms.length === 0) {
+    const platformList = Array.isArray(platforms) ? platforms.filter((p): p is string => typeof p === 'string') : [];
+    if (platformList.length === 0) {
         return NextResponse.json({ error: 'No platforms selected' }, { status: 400 });
     }
 
-    console.log(`[AutoPublish] Attempting to publish campaign ${campaign_id} to ${platforms.join(', ')} for user ${userId}`);
+    console.log(`[AutoPublish] Attempting to publish campaign ${campaign_id} to ${platformList.join(', ')} for user ${userId}`);
 
     // Deduct credits for publishing
     const success = await deductCredits(userId, PUBLISH_COST);
@@ -52,8 +54,11 @@ export async function POST(request: Request) {
         cost: PUBLISH_COST
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const authErr = authErrorResponse(error);
+    if (authErr) return authErr;
     console.error('Publishing error:', error);
-    return NextResponse.json({ error: error.message || 'Internal Server Error' }, { status: 500 });
+    const message = error instanceof Error ? error.message : 'Internal Server Error';
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
