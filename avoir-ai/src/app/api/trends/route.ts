@@ -12,6 +12,7 @@ import { NextResponse } from 'next/server';
 import { fetchIndustryTrends } from '@/lib/trends';
 import { isDemoMode, MOCK_TRENDS } from '@/lib/mockShield';
 import { requireUser, authErrorResponse } from '@/lib/auth/requireUser';
+import { logger } from '@/lib/logger';
 
 export async function GET(req: Request) {
   // Demo Mock Shield
@@ -43,7 +44,7 @@ export async function GET(req: Request) {
   } catch (error: unknown) {
     const authErr = authErrorResponse(error);
     if (authErr) return authErr;
-    console.error('[Trends API] GET error:', error);
+    logger.error('trends', 'GET failed', { err: error });
     return NextResponse.json(
       { error: 'Failed to fetch trends' },
       { status: 500 }

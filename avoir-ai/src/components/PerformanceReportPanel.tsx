@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { BarChart3, TrendingUp, X, ArrowRight, Check, Loader2, Activity, Target, Globe } from 'lucide-react';
+import { clientLog } from '@/lib/logClient';
 
 // ============================================================================
 // TYPES
@@ -96,7 +97,7 @@ export default function PerformanceReportPanel({
         onReported();
       }, 2000);
     } catch (err) {
-      console.error('Performance report error:', err);
+        clientLog.error('Performance report error:', err);
     } finally {
       setIsSubmitting(false);
     }

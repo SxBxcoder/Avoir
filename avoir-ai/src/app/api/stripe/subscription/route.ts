@@ -12,6 +12,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSubscription } from '@/lib/services/subscription';
 import { isDemoMode, MOCK_SUBSCRIPTION } from '@/lib/mockShield';
 import { requireUser, authErrorResponse } from '@/lib/auth/requireUser';
+import { logger } from '@/lib/logger';
 
 // Force dynamic rendering — this route reads the request
 export const dynamic = 'force-dynamic';
@@ -31,7 +32,7 @@ export async function GET(req: NextRequest) {
   } catch (err: any) {
     const authErr = authErrorResponse(err);
     if (authErr) return authErr;
-    console.error('[Subscription API] Error:', err);
+    logger.error('subscription', 'GET failed', { err });
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

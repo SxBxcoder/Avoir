@@ -8,6 +8,7 @@ import { getStripe, PLANS, type PlanTier } from '@/lib/stripe';
 import { useAuth } from '@/lib/auth/provider';
 import Link from 'next/link';
 import Image from 'next/image';
+import { clientLog } from '@/lib/logClient';
 
 const springSmooth = { type: 'spring' as const, stiffness: 100, damping: 30 };
 const springBouncy = { type: 'spring' as const, stiffness: 400, damping: 25 };
@@ -102,7 +103,7 @@ function PricingContent() {
         if (error) throw error;
       }
     } catch (error: any) {
-      console.error('Subscription error:', error);
+      clientLog.error('Subscription error:', error);
       alert(error.message || 'Subscription failed. Please try again.');
     } finally {
       setLoading(null);

@@ -11,6 +11,7 @@
 
 import { PutCommand, QueryCommand, GetCommand } from '@aws-sdk/lib-dynamodb';
 import { getDynamoClient, TABLES } from './dynamodb';
+import { logger } from '@/lib/logger';
 
 // ============================================================================
 // TYPES
@@ -97,7 +98,7 @@ export async function reportPerformance(
       })
     );
   } catch (err: any) {
-    console.error(`[DB] Performance report failed: ${err.message}`);
+    logger.error('db.performance', 'Report failed', { err });
   }
 
   return record;
@@ -127,7 +128,7 @@ export async function getPerformanceHistory(
 
     return (result.Items as PerformanceRecord[]) || [];
   } catch (err: any) {
-    console.error(`[DB] Performance history fetch failed: ${err.message}`);
+    logger.error('db.performance', 'History fetch failed', { err });
     return [];
   }
 }

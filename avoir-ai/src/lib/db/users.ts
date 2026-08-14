@@ -18,6 +18,7 @@
 import { GetCommand, PutCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb';
 import { getDynamoClient, TABLES } from './dynamodb';
 import { DEFAULT_SUBSCRIPTION, type UserSubscription, type PlanTier } from '@/lib/stripe';
+import { logger } from '@/lib/logger';
 
 // ============================================================================
 // READ
@@ -40,7 +41,7 @@ export async function getSubscription(userId: string): Promise<UserSubscription>
     }
   } catch (err: any) {
     // If DynamoDB is unreachable (local dev without AWS), fall through to default
-    console.warn(`[DB] DynamoDB read failed for ${userId}: ${err.message}. Using in-memory fallback.`);
+    logger.warn('db.users', 'DynamoDB read failed, using default subscription', { userId, err });
   }
 
   // New user — create default free tier entry
@@ -64,7 +65,7 @@ export async function getSubscription(userId: string): Promise<UserSubscription>
   } catch (err: any) {
     // ConditionalCheckFailedException is fine — means user already exists
     if (err.name !== 'ConditionalCheckFailedException') {
-      console.warn(`[DB] DynamoDB write failed for ${userId}: ${err.message}`);
+      logger.warn('db.users', 'DynamoDB write failed', { userId, err });
     }
   }
 
@@ -119,7 +120,7 @@ export async function upsertSubscription(
 
     return result.Attributes as UserSubscription;
   } catch (err: any) {
-    console.error(`[DB] DynamoDB upsert failed for ${userId}: ${err.message}`);
+    logger.error('db.users', 'DynamoDB upsert failed', { userId, err });
     // Fallback: return current state
     return getSubscription(userId);
   }
@@ -154,7 +155,7 @@ export async function deductCredits(userId: string, amount: number): Promise<Use
 
     return result.Attributes as UserSubscription;
   } catch (err: any) {
-    console.error(`[DB] DynamoDB deduct failed for ${userId}: ${err.message}`);
+    logger.error('db.users', 'DynamoDB deduct failed', { userId, err });
     // Fallback: return current state
     return getSubscription(userId);
   }

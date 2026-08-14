@@ -4,6 +4,7 @@ import { useEffect, useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CheckCircle2, XCircle, Loader2, Send, Bot, User } from 'lucide-react';
 import { useParams } from 'next/navigation';
+import { clientLog } from '@/lib/logClient';
 
 export default function ClientApprovalPage() {
   const params = useParams();
@@ -71,7 +72,7 @@ export default function ClientApprovalPage() {
         }
       }
     } catch (err) {
-      console.error('Failed to revise', err);
+      clientLog.error('Failed to revise', err);
     } finally {
       setStatus('PENDING');
     }

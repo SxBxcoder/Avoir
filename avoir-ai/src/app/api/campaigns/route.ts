@@ -12,6 +12,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { listCampaigns, getCampaign, deleteCampaign } from '@/lib/db/campaigns';
 import { isDemoMode, MOCK_CAMPAIGNS } from '@/lib/mockShield';
 import { requireUser, authErrorResponse } from '@/lib/auth/requireUser';
+import { logger } from '@/lib/logger';
 
 export const dynamic = 'force-dynamic';
 
@@ -51,7 +52,7 @@ export async function GET(req: NextRequest) {
   } catch (err: any) {
     const authErr = authErrorResponse(err);
     if (authErr) return authErr;
-    console.error('[Campaigns API] Error:', err);
+    logger.error('campaigns', 'GET failed', { err });
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
@@ -81,7 +82,7 @@ export async function DELETE(req: NextRequest) {
   } catch (err: any) {
     const authErr = authErrorResponse(err);
     if (authErr) return authErr;
-    console.error('[Campaigns API] Delete Error:', err);
+    logger.error('campaigns', 'DELETE failed', { err });
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

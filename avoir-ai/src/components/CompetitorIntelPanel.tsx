@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Shield, Eye, Flame, AlertTriangle, Target, Activity, Loader2, X } from 'lucide-react';
 import { useAuth } from '@/lib/auth/provider';
+import { clientLog } from '@/lib/logClient';
 
 interface CompetitorAd {
   id: string;
@@ -47,7 +48,7 @@ export default function CompetitorIntelPanel({ industry, onClose, onInjectGap }:
           }
         }
       } catch (err) {
-        console.error('Failed to fetch competitor intel:', err);
+        clientLog.error('Failed to fetch competitor intel:', err);
       } finally {
         if (mounted) setIsLoading(false);
       }

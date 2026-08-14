@@ -1,4 +1,5 @@
 import { isDemoMode, createMockEngagementStream } from '@/lib/mockShield';
+import { logger } from '@/lib/logger';
 
 export async function GET(req: Request) {
   // Demo Mock Shield
@@ -34,7 +35,7 @@ export async function GET(req: Request) {
       },
     });
   } catch (error: any) {
-    console.error('Engagement Stream Proxy Error:', error);
+    logger.error('engagement-stream', 'Proxy failed', { err: error });
     return new Response(
       JSON.stringify({ error: error.message || 'Stream failed' }),
       { status: 500, headers: { 'Content-Type': 'application/json' } }
