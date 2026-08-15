@@ -48,12 +48,13 @@ export async function POST(req: Request) {
 
     logger.info('portal', 'Portal session created');
     return NextResponse.json({ url: portalSession.url });
-  } catch (err: any) {
+  } catch (err: unknown) {
     const authErr = authErrorResponse(err);
     if (authErr) return authErr;
+    // Never leak internal Stripe error text to the client.
     logger.error('portal', 'Failed to create portal session', { err });
     return NextResponse.json(
-      { error: err.message || 'Failed to create portal session' },
+      { error: 'Failed to create portal session' },
       { status: 500 }
     );
   }

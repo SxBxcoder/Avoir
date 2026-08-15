@@ -1,5 +1,5 @@
 import { describe, expect, it, beforeEach, vi } from 'vitest';
-import { GetCommand, PutCommand, QueryCommand } from '@aws-sdk/lib-dynamodb';
+import { GetCommand, PutCommand, QueryCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb';
 import { migrateLegacyUser } from './migrateUser';
 
 // The DynamoDB client is the only I/O boundary — command classes are inert
@@ -24,7 +24,9 @@ let legacyRows = new Map<string, unknown>();
 let failingTable: string | null = null;
 
 function fakeSend(command: unknown): Promise<unknown> {
-  const { input } = command as { input?: { TableName?: string; Key?: Record<string, string> } };
+  const { input } = command as {
+    input?: { TableName?: string; Key?: Record<string, string>; Item?: Record<string, unknown> };
+  };
 
   if (command instanceof GetCommand) {
     const row = legacyRows.get(`${input?.TableName}:${input?.Key?.userId}`);
@@ -38,6 +40,15 @@ function fakeSend(command: unknown): Promise<unknown> {
   if (command instanceof PutCommand) {
     if (failingTable && input?.TableName === failingTable) {
       return Promise.reject(new Error(`Simulated DynamoDB failure on ${input?.TableName}`));
+    }
+    // Simulate the condition expression: a put with a userId that already has a
+    // row fails, forcing the merge path (sub rows that were auto-created as
+    // free-tier defaults).
+    const target = input?.Item?.userId;
+    if (target && legacyRows.has(`${input?.TableName}:${target}`)) {
+      const err = new Error('The conditional request failed') as Error & { name: string };
+      err.name = 'ConditionalCheckFailedException';
+      return Promise.reject(err);
     }
     return Promise.resolve({});
   }
@@ -90,5 +101,28 @@ describe('migrateLegacyUser', () => {
 
     expect(sendMock).not.toHaveBeenCalled();
     expect(result).toEqual({ migrated: false, complete: true });
+  });
+
+  it('preserves legacy attributes with non-identifier names via indexed placeholders', async () => {
+    legacyRows = new Map<string, unknown>([
+      ['avoir-users:sub-123', { userId: 'sub-123', tier: 'free' }],
+      [
+        'avoir-users:legacy@example.com',
+        { userId: 'legacy@example.com', tier: 'pro', 'custom.field': 'x', 'created-at': '2024-01-01', '0th': true },
+      ],
+    ]);
+
+    const result = await migrateLegacyUser('sub-123', 'legacy@example.com');
+
+    expect(result).toEqual({ migrated: true, complete: true });
+
+    const updateCalls = sendMock.mock.calls.filter(([c]) => c instanceof UpdateCommand);
+    expect(updateCalls.length).toBe(1);
+    const input = updateCalls[0][0].input;
+    expect(input.UpdateExpression).toContain('#f0 = :v0');
+    expect(input.ExpressionAttributeNames['#f0']).toBe('custom.field');
+    expect(input.ExpressionAttributeValues[':v0']).toBe('x');
+    expect(input.ExpressionAttributeNames['#f1']).toBe('created-at');
+    expect(input.ExpressionAttributeNames['#f2']).toBe('0th');
   });
 });

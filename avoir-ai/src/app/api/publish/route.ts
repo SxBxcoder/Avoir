@@ -35,8 +35,9 @@ export async function POST(request: Request) {
 
     logger.info('publish', 'Attempting to publish campaign', { campaignId: campaign_id, platforms: platformList });
 
-    // Deduct credits for publishing
-    const success = await deductCredits(userId, PUBLISH_COST);
+    // Deduct credits for publishing (atomic + conditional: only succeeds when
+    // the balance covers the cost)
+    const { success } = await deductCredits(userId, PUBLISH_COST);
     
     if (!success) {
       return NextResponse.json({ 
