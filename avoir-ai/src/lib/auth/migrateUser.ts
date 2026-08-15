@@ -43,12 +43,6 @@ function isConditionalCheckFailed(err: unknown): boolean {
   return err instanceof Error && err.name === 'ConditionalCheckFailedException';
 }
 
-// DynamoDB attribute names are substituted via ExpressionAttributeNames, but a
-// name containing `#` or `:` would still break the generated expression.
-function isSafeExpressionField(field: string): boolean {
-  return /^[A-Za-z][A-Za-z0-9_]*$/.test(field);
-}
-
 async function queryAllByUser(table: string, userId: string): Promise<DynamoItem[]> {
   const client = getDynamoClient();
   const items: DynamoItem[] = [];
@@ -104,17 +98,24 @@ async function migrateUsers(sub: string, email: string): Promise<boolean> {
     );
     const existingItem: DynamoItem = existing.Item || {};
 
-    const parts: string[] = [];
-    const names: Record<string, string> = {};
-    const values: Record<string, NativeAttributeValue> = {};
+    const missing: Array<[string, NativeAttributeValue]> = [];
     for (const [field, value] of Object.entries(legacyItem)) {
       if (field === 'userId' || existingItem[field] !== undefined) continue;
-      if (!isSafeExpressionField(field)) continue;
-      parts.push(`#${field} = :${field}`);
-      names[`#${field}`] = field;
-      values[`:${field}`] = value;
+      missing.push([field, value]);
     }
-    if (parts.length > 0) {
+    if (missing.length > 0) {
+      // Index-based placeholders (#f0 / :v0) instead of embedding the raw
+      // attribute name, so names containing `.`, `-`, or a leading digit (all
+      // legal in DynamoDB) are preserved instead of being silently dropped
+      // before the legacy row is deleted.
+      const parts: string[] = [];
+      const names: Record<string, string> = {};
+      const values: Record<string, NativeAttributeValue> = {};
+      missing.forEach(([field, value], idx) => {
+        parts.push(`#f${idx} = :v${idx}`);
+        names[`#f${idx}`] = field;
+        values[`:v${idx}`] = value;
+      });
       await client.send(
         new UpdateCommand({
           TableName: TABLES.USERS,

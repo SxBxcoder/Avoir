@@ -25,6 +25,7 @@ export default function OnboardingPage() {
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [inputValue, setInputValue] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -59,7 +60,15 @@ export default function OnboardingPage() {
 
   const submitBrandDNA = async (finalAnswers: Record<string, string>) => {
     setIsSubmitting(true);
+    setSubmitError(null);
     try {
+      // Fail fast when the session token isn't ready yet (e.g. mid-refresh):
+      // omitting the header would send an unauthenticated request that the
+      // server rejects with 401 and the user would never know why.
+      if (!accessToken) {
+        throw new Error('Your session is still loading. Please try again.');
+      }
+
       const payload = {
         ...finalAnswers
       };
@@ -68,7 +77,7 @@ export default function OnboardingPage() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...(accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {}),
+          'Authorization': `Bearer ${accessToken}`,
         },
         body: JSON.stringify(payload),
       });
@@ -79,6 +88,7 @@ export default function OnboardingPage() {
       router.push('/');
     } catch (err) {
       clientLog.error(err);
+      setSubmitError(err instanceof Error ? err.message : 'Failed to save your brand profile. Please try again.');
       setIsSubmitting(false);
     }
   };
@@ -175,6 +185,10 @@ export default function OnboardingPage() {
 
               {QUESTIONS[currentStep].optional && (
                 <p className="text-xs text-zinc-500">Press Enter to skip</p>
+              )}
+
+              {submitError && (
+                <p className="text-sm text-red-400" role="alert">{submitError}</p>
               )}
             </motion.div>
           </AnimatePresence>

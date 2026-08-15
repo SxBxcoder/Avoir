@@ -119,8 +119,11 @@ export async function checkRateLimit(
       resetIn: ttl > 0 ? ttl : windowSeconds,
     };
   } catch (err: unknown) {
+    // Fail closed: when the limiter is configured but unreachable, deny rather
+    // than disabling the cap (an attacker should not be able to turn off rate
+    // limiting by saturating Redis).
     logger.warn('db.cache', 'Rate limit check failed', { err });
-    return { allowed: true, remaining: maxRequests, resetIn: 0 };
+    return { allowed: false, remaining: 0, resetIn: windowSeconds };
   }
 }
 
