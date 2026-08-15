@@ -37,10 +37,15 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: true, migrated: false, alreadyLinked: true });
     }
 
-    await setEmailAlias(userId, email);
-    const migrated = await migrateLegacyUser(userId, email);
+    // Only record the alias once the whole migration completed. A partial
+    // failure must not leave an alias behind — otherwise the early-return
+    // above would skip the retry on the next session.
+    const result = await migrateLegacyUser(userId, email);
+    if (result.complete) {
+      await setEmailAlias(userId, email);
+    }
 
-    return NextResponse.json({ success: true, migrated });
+    return NextResponse.json({ success: true, migrated: result.migrated });
   } catch (error: unknown) {
     const authErr = authErrorResponse(error);
     if (authErr) return authErr;

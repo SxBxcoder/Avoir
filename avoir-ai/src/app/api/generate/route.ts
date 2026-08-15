@@ -22,6 +22,21 @@ import { checkRateLimit } from '@/lib/db/cache';
 import { isDemoMode, MOCK_CAMPAIGNS } from '@/lib/mockShield';
 import { requireUser, authErrorResponse } from '@/lib/auth/requireUser';
 import { logger } from '@/lib/logger';
+import { z } from 'zod';
+import { parseJsonBody } from '@/lib/validate';
+
+const campaignMessageSchema = z.object({
+  role: z.string(),
+  content: z.string(),
+  displayContent: z.string().optional(),
+});
+
+const generateSchema = z.object({
+  business: z.string().optional(),
+  topic: z.string().optional(),
+  goal: z.string().optional(),
+  messages: z.array(campaignMessageSchema).optional(),
+});
 
 export async function POST(req: Request) {
   // Demo Mock Shield
@@ -33,8 +48,11 @@ export async function POST(req: Request) {
     // Identity comes from the verified Cognito JWT — never trust client input.
     const { userId } = await requireUser(req);
 
-    const body = await req.json().catch(() => ({}));
-    const { business, topic, goal, messages } = body;
+    const parsed = await parseJsonBody(req, generateSchema);
+    if (!parsed.ok) {
+      return NextResponse.json({ error: 'Invalid request body', issues: parsed.issues }, { status: 400 });
+    }
+    const { business, topic, goal, messages } = parsed.data;
 
     // Support both old format (business + topic) and new format (goal + messages)
     const campaignGoal = goal || `Create a campaign for a ${business} focusing on ${topic}`;

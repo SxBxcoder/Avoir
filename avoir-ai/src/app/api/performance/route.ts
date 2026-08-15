@@ -11,13 +11,34 @@ import {
   getPerformanceHistory,
   getPerformanceInsights,
   getTopPerformingCampaigns,
-  type Platform,
   type PerformanceMetrics,
-  type CampaignSnapshot,
 } from '@/lib/db/performance';
 import { isDemoMode, MOCK_PERFORMANCE_HISTORY, MOCK_PERFORMANCE_INSIGHTS } from '@/lib/mockShield';
 import { requireUser, authErrorResponse } from '@/lib/auth/requireUser';
 import { logger } from '@/lib/logger';
+import { z } from 'zod';
+import { parseJsonBody } from '@/lib/validate';
+
+const performanceSchema = z.object({
+  campaignId: z.string().min(1),
+  platform: z.enum(['instagram', 'facebook', 'linkedin', 'tiktok', 'google_ads', 'email']),
+  metrics: z.object({
+    impressions: z.number().min(0),
+    clicks: z.number().min(0),
+    ctr: z.number(),
+    engagementRate: z.number(),
+    conversions: z.number().min(0),
+    costPerClick: z.number(),
+    roas: z.number(),
+  }),
+  campaignSnapshot: z.object({
+    hook: z.string(),
+    offer: z.string(),
+    cta: z.string(),
+    genome_type: z.string().optional(),
+  }),
+  tags: z.array(z.string()).optional(),
+});
 
 export async function POST(req: Request) {
   // Demo Mock Shield
@@ -33,28 +54,18 @@ export async function POST(req: Request) {
     // Identity comes from the verified Cognito JWT, not the request body.
     const { userId } = await requireUser(req);
 
-    const body = await req.json().catch(() => ({}));
-    const {
-      campaignId,
-      platform,
-      metrics,
-      campaignSnapshot,
-      tags,
-    } = body;
-
-    if (!campaignId || !platform || !metrics) {
-      return NextResponse.json(
-        { error: 'Missing required fields: campaignId, platform, metrics' },
-        { status: 400 }
-      );
+    const parsed = await parseJsonBody(req, performanceSchema);
+    if (!parsed.ok) {
+      return NextResponse.json({ error: 'Invalid request body', issues: parsed.issues }, { status: 400 });
     }
+    const { campaignId, platform, metrics, campaignSnapshot, tags } = parsed.data;
 
     const record = await reportPerformance(
       userId,
       campaignId,
-      platform as Platform,
-      metrics as PerformanceMetrics,
-      campaignSnapshot as CampaignSnapshot,
+      platform,
+      metrics,
+      campaignSnapshot,
       tags || []
     );
 

@@ -49,5 +49,6 @@ jobs:
       - name: Publish version
         working-directory: backend
         run: |
+          sleep 15
           aws lambda publish-version \
             --function-name ${{ secrets.LAMBDA_FN_NAME }}
