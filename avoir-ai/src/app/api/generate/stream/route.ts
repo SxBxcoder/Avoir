@@ -29,6 +29,17 @@ import { fetchCompetitorIntel, formatCompetitorContext } from '@/lib/db/competit
 import { fetchIndustryTrends, synthesizeTrendContext } from '@/lib/trends';
 import { parseCampaignRequest } from '@/lib/generation';
 import { requireUser, authErrorResponse } from '@/lib/auth/requireUser';
+import { logger } from '@/lib/logger';
+import { z } from 'zod';
+
+const streamSchema = z.object({
+  business: z.string().optional(),
+  topic: z.string().optional(),
+  goal: z.string().optional(),
+  messages: z.array(z.unknown()).optional(),
+  genome_mode: z.boolean().optional(),
+  pastWinningContext: z.string().optional(),
+});
 
 // Status messages that stream to the UI for the "AI is Cooking" experience
 const COOKING_MESSAGES = [
@@ -130,7 +141,6 @@ function createSSEStream(
         // genome variants). Failures from here on must NOT refund — a transport
         // error after commit must not hand the user the campaign AND the credit.
         committed = true;
-
         await updateIntelligenceBrief(userId, { totalCampaignsGenerated: genomeMode ? 3 : 1 });
 
         send('status', { message: '✅ Campaign compiled. Deploying assets...', timestamp: Date.now() });
@@ -199,12 +209,12 @@ export async function POST(req: Request) {
     // Identity comes from the verified Cognito JWT — never trust client input.
     const { userId } = await requireUser(req);
 
-    const body = await req.json().catch(() => ({}));
+    const body: unknown = await req.json().catch(() => ({}));
 
     // Demo Mock Shield
     if (isDemoMode()) {
-      const isGenomeMode = body.genome_mode === true;
-      console.log(`[Stream] 🛡️ DEMO SHIELD ACTIVE. Returning curated SSE mock stream. GenomeMode: ${isGenomeMode}`);
+      const isGenomeMode = (body as Record<string, unknown>).genome_mode === true;
+      logger.info('stream', 'Demo shield active, returning mock SSE stream', { genomeMode: isGenomeMode });
       const stream = createMockSSEStream(isGenomeMode);
       return new Response(stream, {
         headers: {
@@ -216,17 +226,25 @@ export async function POST(req: Request) {
       });
     }
 
+    const parsed = streamSchema.safeParse(body);
+    if (!parsed.success) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid request body', issues: parsed.error.issues.map((issue) => issue.message) }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
     // Validate BEFORE any paid work: an empty/malformed body must never reach
     // the credit reservation or the generation pipeline.
-    const parsed = parseCampaignRequest(body);
-    if (!parsed) {
+    const parsedRequest = parseCampaignRequest(parsed.data);
+    if (!parsedRequest) {
       return new Response(
         JSON.stringify({ error: 'Invalid request: provide a goal, or both business and topic' }),
         { status: 400, headers: { 'Content-Type': 'application/json' } }
       );
     }
-    const { goal: campaignGoal, messages: conversationMessages } = parsed;
-    const { genome_mode, pastWinningContext } = body;
+    const { goal: campaignGoal, messages: conversationMessages } = parsedRequest;
+    const { genome_mode, pastWinningContext } = parsed.data;
     const authHeader = req.headers.get('Authorization');
     const isGenomeMode = genome_mode === true;
 
@@ -353,6 +371,7 @@ export async function POST(req: Request) {
       return draft;
     };
 
+    logger.info('stream', 'SSE stream started', { tier: sub.tier, genomeMode: isGenomeMode });
     // Create the SSE stream
     const stream = createSSEStream(COOKING_MESSAGES, runner, userId, campaignGoal, isGenomeMode);
 
@@ -367,7 +386,7 @@ export async function POST(req: Request) {
   } catch (error: any) {
     const authErr = authErrorResponse(error);
     if (authErr) return authErr;
-    console.error('[Stream] Error:', error);
+    logger.error('stream', 'Stream failed', { err: error });
     return new Response(
       JSON.stringify({ error: error.message || 'Stream failed' }),
       { status: 500, headers: { 'Content-Type': 'application/json' } }

@@ -21,6 +21,22 @@ import { checkRateLimit } from '@/lib/db/cache';
 import { isDemoMode, MOCK_CAMPAIGNS } from '@/lib/mockShield';
 import { parseCampaignRequest } from '@/lib/generation';
 import { requireUser, authErrorResponse } from '@/lib/auth/requireUser';
+import { logger } from '@/lib/logger';
+import { z } from 'zod';
+import { parseJsonBody } from '@/lib/validate';
+
+const campaignMessageSchema = z.object({
+  role: z.string(),
+  content: z.string(),
+  displayContent: z.string().optional(),
+});
+
+const generateSchema = z.object({
+  business: z.string().optional(),
+  topic: z.string().optional(),
+  goal: z.string().optional(),
+  messages: z.array(campaignMessageSchema).optional(),
+});
 
 export async function POST(req: Request) {
   // Demo Mock Shield
@@ -32,21 +48,25 @@ export async function POST(req: Request) {
     // Identity comes from the verified Cognito JWT — never trust client input.
     const { userId } = await requireUser(req);
 
-    const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;
+    const parsed = await parseJsonBody(req, generateSchema);
+    if (!parsed.ok) {
+      return NextResponse.json({ error: 'Invalid request body', issues: parsed.issues }, { status: 400 });
+    }
 
     // Validate BEFORE any paid work: an empty/malformed body must never reach
     // the credit reservation or the paid Lambda.
-    const parsed = parseCampaignRequest(body);
-    if (!parsed) {
+    const parsedRequest = parseCampaignRequest(parsed.data);
+    if (!parsedRequest) {
       return NextResponse.json(
         { error: 'Invalid request: provide a goal, or both business and topic' },
         { status: 400 }
       );
     }
-    const { goal: campaignGoal, messages: conversationMessages } = parsed;
+    const { goal: campaignGoal, messages: conversationMessages } = parsedRequest;
 
     const rateLimit = await checkRateLimit(userId, 10, 60); // 10 requests per minute
     if (!rateLimit.allowed) {
+      logger.warn('generate', 'Rate limited', { resetInSeconds: rateLimit.resetIn, userId });
       return NextResponse.json(
         {
           error: 'Rate limit exceeded',
@@ -118,7 +138,7 @@ export async function POST(req: Request) {
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error("[Generate] Lambda Error:", errorText);
+        logger.error('generate', 'Lambda error', { response: errorText });
         throw new Error(`AWS Lambda Error: ${response.status}`);
       }
 
@@ -171,7 +191,7 @@ export async function POST(req: Request) {
   } catch (error: any) {
     const authErr = authErrorResponse(error);
     if (authErr) return authErr;
-    console.error("[Generate] Error:", error);
+    logger.error('generate', 'Generation failed', { err: error });
     return NextResponse.json(
       { error: error.message || 'Failed to generate campaign via Strands Agent' },
       { status: 500 }

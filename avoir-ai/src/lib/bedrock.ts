@@ -1,5 +1,7 @@
 // src/lib/bedrock.ts
 
+import { logger } from '@/lib/logger';
+
 // --- THE "PREMIUM BRAND" PROMPT (with Strategic Reasoning & Funnel Matrix) ---
 const ELITE_SYSTEM_PROMPT = `
 You are a World-Class Copywriter and Campaign Strategist for a luxury brand (think Apple, Nike, Cred).
@@ -179,7 +181,7 @@ async function runCrucible(initialDraftJson: any): Promise<any> {
     const text = await callGeminiDirect(`Evaluate and fix this campaign:\n\n${inputStr}`, CRUCIBLE_SYSTEM_PROMPT);
     return parseResponse(text);
   } catch (err) {
-    console.log("Crucible failed or timed out, using initial draft.");
+    logger.warn('bedrock', 'Crucible failed or timed out, using initial draft', { err });
     return initialDraftJson;
   }
 }
@@ -191,12 +193,12 @@ export async function runSyntheticFocusGroup(initialDraftJson: any): Promise<any
     const text = await callGeminiDirect(`Run the synthetic focus group on this campaign:\n\n${inputStr}`, SYNTHETIC_FOCUS_GROUP_PROMPT, 15000);
     return parseResponse(text);
   } catch (err) {
-    console.log("Synthetic Focus Group Gemini failed, trying Pollinations backup...", err);
+    logger.warn('bedrock', 'Synthetic focus group Gemini failed, trying backup', { err });
     try {
       const text = await callPollinationsText(`Run the synthetic focus group on this campaign:\n\n${inputStr}`, SYNTHETIC_FOCUS_GROUP_PROMPT);
       return parseResponse(text);
     } catch (backupErr) {
-      console.log("Synthetic Focus Group Pollinations failed, falling back to initial draft.", backupErr);
+      logger.warn('bedrock', 'Synthetic focus group backup failed, using initial draft', { err: backupErr });
       return {
         simulation: [
           { name: "System", role: "Failsafe", critique: "Simulation timeout. Proceeding with baseline.", approved: true }
@@ -240,7 +242,7 @@ export async function generateMarketingCopy(topic: string, businessType: string,
     if (score >= 80) {
       return initialDraft;
     } else {
-      console.log(`Initial score ${score} < 80. Running through the Crucible...`);
+      logger.info('bedrock', 'Running campaign through the Crucible', { score });
       const finalDraft = await runCrucible(initialDraft);
       return finalDraft;
     }

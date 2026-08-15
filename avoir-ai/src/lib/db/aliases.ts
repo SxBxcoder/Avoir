@@ -28,9 +28,8 @@ export async function setEmailAlias(userId: string, email: string): Promise<void
       })
     );
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : String(err);
     // Non-fatal: the migration can be re-run on the next session refresh.
-    logger.warn(`[DB] Alias write failed: ${message}`);
+    logger.warn('db.aliases', 'Alias write failed', { userId, err });
   }
 }
 
@@ -45,8 +44,7 @@ export async function getEmailAlias(userId: string): Promise<string | null> {
     );
     return typeof Item?.email === 'string' ? Item.email : null;
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : String(err);
-    logger.warn(`[DB] Alias read failed: ${message}`);
+    logger.warn('db.aliases', 'Alias read failed', { userId, err });
     return null;
   }
 }

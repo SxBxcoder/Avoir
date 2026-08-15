@@ -18,6 +18,7 @@ python-dotenv>=1.0.1
 python-multipart>=0.0.12
 requests>=2.31.0
 
+
 # Additional dependencies (installed automatically with above packages)
 # - httpx (for API calls)
 # - anyio (async support)

@@ -6,6 +6,7 @@
  */
 
 import { loadStripe, Stripe as StripeJS } from '@stripe/stripe-js';
+import { logger } from '@/lib/logger';
 
 // ============================================================================
 // PLAN CONSTANTS — The Single Source of Truth
@@ -84,7 +85,7 @@ export const getStripe = () => {
   if (!stripePromise) {
     const key = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
     if (!key) {
-      console.error('[Stripe] NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY is not set');
+      logger.error('stripe', 'NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY is not set');
     }
     stripePromise = loadStripe(key!);
   }

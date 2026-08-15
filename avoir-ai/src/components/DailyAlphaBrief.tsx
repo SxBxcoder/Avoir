@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import { Sparkles, Zap, Loader2, ArrowRight } from 'lucide-react';
 import { MOCK_ALPHA_BRIEF } from '@/lib/mockShield';
 import type { AlphaBrief } from '@/lib/alphaBrief';
+import { clientLog } from '@/lib/logClient';
 
 // Single source of truth for the fallback brief (also used by demo mode).
 const FALLBACK_BRIEF: AlphaBrief = MOCK_ALPHA_BRIEF;
@@ -25,7 +26,7 @@ export default function DailyAlphaBrief() {
         const brief = await res.json();
         setData(brief);
       } catch (err) {
-        console.warn('[DailyAlphaBrief] API unavailable, using local fallback:', err);
+        clientLog.warn('[DailyAlphaBrief] API unavailable, using local fallback:', err);
         setData(FALLBACK_BRIEF);
       } finally {
         setIsLoading(false);

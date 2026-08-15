@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Target, MessageSquare, Briefcase, Zap, Shield, Link as LinkIcon, ArrowRight, Loader2, Check } from 'lucide-react';
 import { useAuth } from '@/lib/auth/provider';
 import { RequireAuth } from '@/components/auth/guards';
+import { clientLog } from '@/lib/logClient';
 
 const QUESTIONS = [
   { id: 'brandName', title: "What's the name of your brand?", icon: Zap, placeholder: "e.g., Nexus Athletics" },
@@ -86,7 +87,7 @@ export default function OnboardingPage() {
       // Redirect to dashboard
       router.push('/');
     } catch (err) {
-      console.error(err);
+      clientLog.error(err);
       setSubmitError(err instanceof Error ? err.message : 'Failed to save your brand profile. Please try again.');
       setIsSubmitting(false);
     }

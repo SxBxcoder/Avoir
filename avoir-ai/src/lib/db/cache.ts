@@ -12,7 +12,7 @@
  */
 
 import { Redis } from '@upstash/redis';
-import { errorMessage, isAlphaBrief, type AlphaBrief } from '@/lib/alphaBrief';
+import { isAlphaBrief, type AlphaBrief } from '@/lib/alphaBrief';
 import { logger } from '@/lib/logger';
 
 // ============================================================================
@@ -28,7 +28,7 @@ function getRedis(): Redis | null {
   const token = process.env.UPSTASH_REDIS_REST_TOKEN;
 
   if (!url || !token) {
-    logger.warn('[Cache] UPSTASH_REDIS_REST_URL or UPSTASH_REDIS_REST_TOKEN not set. Cache disabled.');
+    logger.warn('db.cache', 'Redis env not set, cache disabled');
     return null;
   }
 
@@ -51,7 +51,7 @@ export async function getCachedQuota(userId: string): Promise<{ used: number; li
     const data = await redis.get<{ used: number; limit: number }>(`${QUOTA_PREFIX}${userId}`);
     return data || null;
   } catch (err: unknown) {
-    logger.warn(`[Cache] Redis read failed: ${errorMessage(err)}`);
+    logger.warn('db.cache', 'Redis read failed', { err });
     return null;
   }
 }
@@ -63,7 +63,7 @@ export async function setCachedQuota(userId: string, used: number, limit: number
   try {
     await redis.set(`${QUOTA_PREFIX}${userId}`, { used, limit }, { ex: QUOTA_TTL });
   } catch (err: unknown) {
-    logger.warn(`[Cache] Redis write failed: ${errorMessage(err)}`);
+    logger.warn('db.cache', 'Redis write failed', { err });
   }
 }
 
@@ -82,7 +82,7 @@ export async function incrementCachedQuota(userId: string): Promise<number | nul
     }
     return null;
   } catch (err: unknown) {
-    logger.warn(`[Cache] Redis increment failed: ${errorMessage(err)}`);
+    logger.warn('db.cache', 'Redis increment failed', { err });
     return null;
   }
 }
@@ -122,7 +122,7 @@ export async function checkRateLimit(
     // Fail closed: when the limiter is configured but unreachable, deny rather
     // than disabling the cap (an attacker should not be able to turn off rate
     // limiting by saturating Redis).
-    logger.warn(`[Cache] Rate limit check failed: ${errorMessage(err)}`);
+    logger.warn('db.cache', 'Rate limit check failed', { err });
     return { allowed: false, remaining: 0, resetIn: windowSeconds };
   }
 }
@@ -141,7 +141,7 @@ export async function getCachedCampaign(goalHash: string): Promise<any | null> {
   try {
     return await redis.get(`${CAMPAIGN_CACHE_PREFIX}${goalHash}`);
   } catch (err: unknown) {
-    logger.warn(`[Cache] Campaign cache read failed: ${errorMessage(err)}`);
+    logger.warn('db.cache', 'Campaign cache read failed', { err });
     return null;
   }
 }
@@ -153,7 +153,7 @@ export async function setCachedCampaign(goalHash: string, data: any): Promise<vo
   try {
     await redis.set(`${CAMPAIGN_CACHE_PREFIX}${goalHash}`, data, { ex: CAMPAIGN_CACHE_TTL });
   } catch (err: unknown) {
-    logger.warn(`[Cache] Campaign cache write failed: ${errorMessage(err)}`);
+    logger.warn('db.cache', 'Campaign cache write failed', { err });
   }
 }
 
@@ -183,7 +183,7 @@ export async function getCachedAlphaBrief(): Promise<AlphaBrief | null> {
     const data = await redis.get<unknown>(`${ALPHA_BRIEF_PREFIX}${today}`);
     return isAlphaBrief(data) ? data : null;
   } catch (err: unknown) {
-    logger.warn(`[Cache] Alpha brief read failed: ${errorMessage(err)}`);
+    logger.warn('db.cache', 'Alpha brief read failed', { err });
     return null;
   }
 }
@@ -196,6 +196,6 @@ export async function setCachedAlphaBrief(data: AlphaBrief): Promise<void> {
     const today = new Date().toISOString().slice(0, 10);
     await redis.set(`${ALPHA_BRIEF_PREFIX}${today}`, data, { ex: secondsUntilUtcMidnight() });
   } catch (err: unknown) {
-    logger.warn(`[Cache] Alpha brief write failed: ${errorMessage(err)}`);
+    logger.warn('db.cache', 'Alpha brief write failed', { err });
   }
 }

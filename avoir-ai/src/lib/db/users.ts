@@ -20,10 +20,6 @@ import { getDynamoClient, TABLES } from './dynamodb';
 import { DEFAULT_SUBSCRIPTION, type UserSubscription, type PlanTier } from '@/lib/stripe';
 import { logger } from '@/lib/logger';
 
-function errorMessage(err: unknown): string {
-  return err instanceof Error ? err.message : String(err);
-}
-
 function isConditionalCheckFailed(err: unknown): boolean {
   return err instanceof Error && err.name === 'ConditionalCheckFailedException';
 }
@@ -49,7 +45,7 @@ export async function getSubscription(userId: string): Promise<UserSubscription>
     }
   } catch (err: unknown) {
     // If DynamoDB is unreachable (local dev without AWS), fall through to default
-    logger.warn(`[DB] DynamoDB read failed: ${errorMessage(err)}. Using in-memory fallback.`);
+    logger.warn('db.users', 'DynamoDB read failed, using default subscription', { userId, err });
   }
 
   // New user — create default free tier entry
@@ -73,7 +69,7 @@ export async function getSubscription(userId: string): Promise<UserSubscription>
   } catch (err: unknown) {
     // ConditionalCheckFailedException is fine — means user already exists
     if (!isConditionalCheckFailed(err)) {
-      logger.warn(`[DB] DynamoDB write failed: ${errorMessage(err)}`);
+      logger.warn('db.users', 'DynamoDB write failed', { userId, err });
     }
   }
 
@@ -128,7 +124,7 @@ export async function upsertSubscription(
 
     return result.Attributes as UserSubscription;
   } catch (err: unknown) {
-    logger.error(`[DB] DynamoDB upsert failed: ${errorMessage(err)}`);
+    logger.error('db.users', 'DynamoDB upsert failed', { userId, err });
     // Fallback: return current state
     return getSubscription(userId);
   }
@@ -162,8 +158,9 @@ export async function addCredits(userId: string, amount: number): Promise<UserSu
     );
 
     return result.Attributes as UserSubscription;
-  } catch {
+  } catch (err: unknown) {
     // Non-fatal: the caller falls back to the current balance on failure.
+    logger.error('db.users', 'Credit refund failed', { userId, err });
     return getSubscription(userId);
   }
 }
@@ -230,7 +227,7 @@ async function deductCreditsOnce(
       }
       return { success: false, subscription };
     }
-    logger.error(`[DB] DynamoDB deduct failed: ${errorMessage(err)}`);
+    logger.error('db.users', 'DynamoDB deduct failed', { userId, err });
     // Fail closed: when we cannot prove the deduction, do not grant the spend.
     return { success: false, subscription: await getSubscription(userId) };
   }

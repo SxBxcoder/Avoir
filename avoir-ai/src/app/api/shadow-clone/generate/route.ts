@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getSubscription, deductCredits, addCredits } from '@/lib/services/subscription';
 import { isDemoMode, createMockShadowCloneStream } from '@/lib/mockShield';
 import { requireUser, authErrorResponse } from '@/lib/auth/requireUser';
+import { logger } from '@/lib/logger';
 
 /**
  * Proxy for Shadow Clone SSE stream
@@ -27,6 +28,7 @@ export async function POST(req: Request) {
     // 1. Check Credits (fast UX gate — the authoritative reservation is below)
     const sub = await getSubscription(userId);
     if (sub.credits < 50) {
+      logger.warn('shadow-clone', 'Blocked: insufficient credits', { credits: sub.credits });
       return NextResponse.json(
         { 
           error: 'Insufficient Credits',
@@ -85,7 +87,7 @@ export async function POST(req: Request) {
   } catch (error: unknown) {
     const authErr = authErrorResponse(error);
     if (authErr) return authErr;
-    console.error('Shadow Clone Proxy Error:', error);
+    logger.error('shadow-clone', 'Proxy failed', { err: error });
     const message = error instanceof Error ? error.message : 'Stream failed';
     return new Response(
       JSON.stringify({ error: message }),
