@@ -1,60 +1,231 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Target, Activity, TrendingUp, DollarSign, Users, Briefcase, Zap, Shield, ArrowRight, Server, ChevronRight, Share2, Copy, BarChart2, CheckCircle2 } from 'lucide-react';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
+import { Server, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { RequireAuth } from '@/components/auth/guards';
 import InteractivePlasmaCanvas from '@/components/InteractivePlasmaCanvas';
+import TickerTape from '@/components/TickerTape';
+import OrderBook from '@/components/OrderBook';
+import ExecutionLog from '@/components/ExecutionLog';
+import type { ExecutionLogHandle, ExternalLogEntry } from '@/components/ExecutionLog';
+import TerminalCLI from '@/components/TerminalCLI';
+import TerminalChart from '@/components/TerminalChart';
 import DailyAlphaBrief from '@/components/DailyAlphaBrief';
 import { CapitalDeploymentSimulator } from '@/components/CapitalDeploymentSimulator';
 
-// Spring physics
-const springConfig = { type: 'spring' as const, stiffness: 300, damping: 30 };
-const staggerContainer = {
-  hidden: { opacity: 0 },
-  show: { opacity: 1, transition: { staggerChildren: 0.1 } },
-};
-const staggerItem = {
-  hidden: { opacity: 0, y: 20 },
-  show: { opacity: 1, y: 0, transition: springConfig },
-};
+const AGENCY_CLIENTS = [
+  { name: 'Nexus Brands', spend: '$42K/mo', roas: 3.2, status: 'ACTIVE' },
+  { name: 'Vortex Media', spend: '$18K/mo', roas: 4.1, status: 'ACTIVE' },
+  { name: 'Axiom D2C', spend: '$7K/mo', roas: 2.8, status: 'ONBOARDING' },
+];
 
 export default function OmniDeckPage() {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<'positions' | 'intelligence' | 'b2b'>('positions');
-  const activeTabRef = useRef(activeTab);
-
-  useEffect(() => {
-    activeTabRef.current = activeTab;
-  }, [activeTab]);
-  const [engagements, setEngagements] = useState<any[]>([]);
-  const [copiedLink, setCopiedLink] = useState(false);
+  const logRef = useRef<ExecutionLogHandle>(null);
   const [selectedCampaignForSim, setSelectedCampaignForSim] = useState<any | null>(null);
+  const [externalLogs, setExternalLogs] = useState<ExternalLogEntry[]>([]);
+  const [clearLogs, setClearLogs] = useState(false);
+  const [showAlphaBrief, setShowAlphaBrief] = useState(false);
+  const [agencyMode, setAgencyMode] = useState(false);
 
-  // Active Positions (Live Campaigns) - Now stateful for real-time decay alerts
   const [activePositions, setActivePositions] = useState([
     { id: 'pos-1', asset: 'Corporate Villain Era Hook', platform: 'TikTok', roas: 4.2, spend: 1250, momentum: '+15', status: 'SCALING', isDecaying: false },
     { id: 'pos-2', asset: 'Anti-Hustle Culture Ad', platform: 'Instagram', roas: 3.8, spend: 850, momentum: '+8', status: 'OPTIMIZING', isDecaying: false },
     { id: 'pos-3', asset: 'Lo-Fi Skincare Demo', platform: 'YouTube Shorts', roas: 1.2, spend: 400, momentum: '-5', status: 'LIQUIDATING', isDecaying: false },
   ]);
 
-  // Mock B2B Clients
-  const clients = [
-    { id: 'c-1', name: 'Stark Industries', aum: '$50,000/mo', performance: '+24%' },
-    { id: 'c-2', name: 'Wayne Enterprises', aum: '$120,000/mo', performance: '+18%' },
-  ];
+  const totalAum = activePositions.reduce((sum, p) => sum + p.spend, 0);
+
+  const now = useCallback(() => {
+    const d = new Date();
+    return `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}:${d.getSeconds().toString().padStart(2, '0')}.${d.getMilliseconds().toString().padStart(3, '0')}`;
+  }, []);
+
+  const addExternalLog = useCallback((level: ExternalLogEntry['level'], message: string) => {
+    const ts = now();
+    setExternalLogs(prev => [...prev, { timestamp: ts, level, message }]);
+    logRef.current?.addEntry(level, message);
+  }, [now]);
+
+  const handleCommand = useCallback((cmd: string, emitOutput: (output: string, isError?: boolean) => void) => {
+    const trimmed = cmd.trim();
+    const command = trimmed.startsWith('/') ? trimmed.slice(1).split(' ')[0].toLowerCase() : trimmed.toLowerCase();
+    const fullArgs = trimmed.slice(command.length + 1).trim();
+
+    switch (command) {
+      case 'help':
+        emitOutput(`AVAILABLE COMMANDS:
+  ├── /help                  Show this help
+  ├── /status                System status overview
+  ├── /positions             List all active positions
+  ├── /portfolio             Portfolio summary with risk metrics
+  ├── /risk                  Risk analysis breakdown
+  ├── /allocate $<amt> <id>  Reallocate capital to position
+  ├── /liquidate <id>        Liquidate a position (updates Order Book)
+  ├── /scan                  Run market signal scan
+  ├── /brief                 Regenerate alpha brief
+  ├── /alpha                 Toggle Daily Alpha Brief panel
+  ├── /agency                Toggle B2B Agency Bridge panel
+  ├── /alert <msg>           Set custom alert condition
+  ├── /history               Show command history
+  ├── /export                Export data to clipboard
+  ├── /theme                 Change terminal theme
+  └── /clear                 Clear terminal + execution log`);
+        addExternalLog('INFO', 'Help menu displayed');
+        break;
+
+      case 'status':
+        emitOutput(`SYSTEM STATUS:
+  ├── Engine:       ● ONLINE
+  ├── Connections:  4/4 EXCHANGES CONNECTED
+  ├── Latency:      8ms avg (12ms p99)
+  ├── Uptime:       99.97% (14d 7h 23m)
+  ├── Active Pos:   ${activePositions.length}
+  ├── Total AUM:    $${totalAum.toLocaleString()}
+  └── Last Scan:    ${now()}`);
+        addExternalLog('ALGO', 'System status check completed');
+        break;
+
+      case 'positions':
+        emitOutput(`ACTIVE POSITIONS:\n${activePositions.map(p =>
+          `  ├── ${p.id}  ${p.asset.padEnd(30)} ${p.platform.padEnd(12)} $${String(p.spend).padEnd(6)} ${p.roas}x   ${p.momentum}%   ${p.status}`
+        ).join('\n')}`);
+        addExternalLog('INFO', 'Position list displayed');
+        break;
+
+      case 'portfolio':
+        emitOutput(`PORTFOLIO SUMMARY:
+  ├── Total AUM:          $${totalAum.toLocaleString()}
+  ├── Weighted ROAS:      ${(activePositions.reduce((s, p) => s + p.roas, 0) / activePositions.length).toFixed(1)}x
+  ├── Daily P&L:          +$${(totalAum * 0.057).toFixed(2)} (+5.7%)
+  ├── Win Rate:           ${activePositions.filter(p => p.roas >= 2).length}/${activePositions.length} (${((activePositions.filter(p => p.roas >= 2).length / activePositions.length) * 100).toFixed(1)}%)
+  ├── Avg Hold Time:      4.2 days
+  └── Sharpe Ratio:       2.14`);
+        addExternalLog('ALGO', 'Portfolio summary generated');
+        break;
+
+      case 'risk':
+        emitOutput(`RISK ANALYSIS:
+  ├── Portfolio Beta:     0.82
+  ├── Max Drawdown:       -8.3%
+  ├── VaR (95%):          -$${(totalAum * 0.035).toFixed(2)}
+  ├── Concentration Risk: MODERATE (pos-1 = ${((activePositions[0]?.spend / totalAum) * 100).toFixed(0)}% of AUM)
+  ├── Decay Exposure:     ${activePositions.filter(p => p.isDecaying).length} position(s)
+  └── Recommendation:    Reduce decay exposure or hedge`);
+        addExternalLog('WARN', 'Risk analysis: decay exposure detected');
+        break;
+
+      case 'scan':
+        emitOutput(`SCANNING MARKET SIGNALS...
+  ├── TikTok:      3 trending audio anomalies detected
+  ├── Instagram:   Engagement rate shifting +12% in niche
+  ├── LinkedIn:    Anti-corporate content surging
+  ├── YouTube:     Short-form algorithm favoring UGC-style
+  └── RESULT:      pos-1 momentum confirmed. pos-3 decay accelerating.`);
+        addExternalLog('SIGNAL', 'Market scan complete: 3 anomalies detected');
+        break;
+
+      case 'brief':
+        emitOutput(`REGENERATING ALPHA BRIEF...
+  ├── Fetching market data.......... DONE
+  ├── Running trend analysis........ DONE
+  ├── Generating playbook........... DONE
+  └── Alpha brief updated. Anomaly confidence: 91.2%`);
+        addExternalLog('ALGO', 'Alpha brief regenerated — confidence 91.2%');
+        break;
+
+      case 'alpha':
+        setShowAlphaBrief(prev => !prev);
+        emitOutput(showAlphaBrief ? 'DAILY ALPHA BRIEF: CLOSED' : 'DAILY ALPHA BRIEF: OPENED');
+        addExternalLog('EXEC', showAlphaBrief ? 'Alpha brief panel closed' : 'Alpha brief panel opened');
+        break;
+
+      case 'agency':
+        setAgencyMode(prev => !prev);
+        emitOutput(agencyMode ? 'AGENCY MODE: DEACTIVATED' : 'AGENCY MODE: ACTIVATED — B2B Client Bridge Online');
+        addExternalLog('EXEC', agencyMode ? 'Agency mode deactivated' : 'Agency mode activated — B2B bridge online');
+        break;
+
+      case 'liquidate': {
+        const posId = fullArgs || 'pos-3';
+        emitOutput(`LIQUIDATING ${posId.toUpperCase()}...
+  ├── Selling all allocated capital at market price...
+  ├── Execution complete. Funds returned to pool.
+  └── Position ${posId} marked as LIQUIDATED.`);
+        setActivePositions(prev => prev.map(p =>
+          p.id === posId ? { ...p, status: 'LIQUIDATED', isDecaying: true } : p
+        ));
+        addExternalLog('EXEC', `LIQUIDATION EXECUTED: ${posId} — all capital returned to pool`);
+        break;
+      }
+
+      case 'allocate': {
+        const match = fullArgs.match(/\$(\d+)\s+(\S+)/);
+        if (match) {
+          emitOutput(`ALLOCATING $${match[1]} → ${match[2].toUpperCase()}...
+  ├── Bid placed. Waiting for fill...
+  ├── FILLED at $${match[1]}
+  └── Position ${match[2]} updated. New AUM confirmed.`);
+          addExternalLog('EXEC', `Capital allocated: $${match[1]} → ${match[2]}`);
+        } else {
+          emitOutput('USAGE: /allocate $<amount> <pos-id>', true);
+        }
+        break;
+      }
+
+      case 'alert':
+        emitOutput(`ALERT SET: "${fullArgs || 'No message'}"
+  └── Notification will trigger when conditions are met.`);
+        addExternalLog('SIGNAL', `Custom alert armed: "${fullArgs || 'No message'}"`);
+        break;
+
+      case 'history':
+        emitOutput(`RECENT COMMANDS:
+  ├── /status
+  ├── /positions
+  ├── /scan
+  └── /brief`);
+        break;
+
+      case 'export':
+        emitOutput(`EXPORTING PORTFOLIO DATA...
+  ├── Format: JSON
+  ├── Positions: ${activePositions.length}
+  ├── Timestamp: ${new Date().toISOString()}
+  └── ✓ Copied to clipboard`);
+        addExternalLog('INFO', 'Portfolio data exported to clipboard');
+        break;
+
+      case 'theme':
+        emitOutput(`AVAILABLE THEMES:
+  ├── matrix    (green on black)
+  ├── amber     (amber on black) [CURRENT]
+  ├── cyan      (cyan on black)
+  └── red       (red on black)
+  Usage: /theme <name>`);
+        break;
+
+      case 'clear':
+        setClearLogs(true);
+        setTimeout(() => setClearLogs(false), 100);
+        break;
+
+      default:
+        emitOutput(`UNKNOWN COMMAND: "${trimmed}"
+  └── Type /help for available commands`, true);
+        break;
+    }
+  }, [activePositions, totalAum, now, showAlphaBrief, agencyMode, addExternalLog]);
 
   useEffect(() => {
-    // Real-time Decay Monitor and Intelligence Stream
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
     const eventSource = new EventSource(`${apiUrl}/api/engagement/stream`);
-    
+
     eventSource.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
-        
-        // Handle Decay Alerts
         if (data.id && data.momentum !== undefined) {
           setActivePositions(prev => prev.map(pos => {
             if (pos.id === data.id) {
@@ -68,295 +239,146 @@ export default function OmniDeckPage() {
             }
             return pos;
           }));
-        } 
-        // Handle Intelligence Feed (if it has type/action)
-        else if (data.action) {
-          if (activeTabRef.current === 'intelligence') {
-            setEngagements(prev => [data, ...prev].slice(0, 15));
-          }
         }
       } catch (err) {}
     };
-    
-    return () => eventSource.close();
-  }, []); // Only establish connection once
 
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
-    setCopiedLink(true);
-    setTimeout(() => setCopiedLink(false), 2000);
-  };
+    return () => eventSource.close();
+  }, []);
 
   return (
     <RequireAuth>
-    <div className="min-h-screen bg-black text-white font-sans overflow-x-hidden selection:bg-indigo-500/30">
-      {/* Background */}
+    <div className="h-screen bg-black text-white font-mono overflow-hidden selection:bg-neon-amber/30 terminal-scrollbar flex flex-col crt-scanline noise-overlay vignette">
+
+      {/* Background Grid */}
       <div className="fixed inset-0 z-0 pointer-events-none">
         <InteractivePlasmaCanvas />
-        <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 mix-blend-overlay" />
-        <div className="absolute top-0 left-0 w-full h-[500px] bg-gradient-to-b from-indigo-900/20 to-transparent blur-3xl" />
       </div>
 
-      {/* Header */}
-      <header className="relative z-10 border-b border-white/10 bg-black/50 backdrop-blur-xl">
-        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <button onClick={() => router.push('/')} className="text-zinc-400 hover:text-white transition-colors">
-              <ArrowRight className="w-5 h-5 rotate-180" />
+      {/* ── HEADER ── */}
+      <header className="relative z-10 border-b border-terminal-border bg-black flex-shrink-0">
+        <div className="h-10 flex items-center justify-between px-4">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <button onClick={() => router.push('/')} className="text-zinc-400 hover:text-neon-amber transition-colors text-[10px] flex-shrink-0">
+              [ESC]
             </button>
-            <div className="h-4 w-px bg-white/20" />
-            <div className="flex items-center gap-2 text-indigo-400">
-              <Server className="w-5 h-5" />
-              <span className="font-tactical font-bold tracking-widest">OMNI-DECK // PORTFOLIO MANAGER</span>
-            </div>
+            <div className="h-4 w-px bg-terminal-border flex-shrink-0" />
+            <Server className="w-3.5 h-3.5 text-neon-cyan flex-shrink-0" />
+            <span className="text-[11px] font-bold tracking-[0.2em] text-neon-cyan truncate">OMNI-DECK</span>
+            <span className="text-[10px] text-zinc-500 hidden sm:inline">{'// PORTFOLIO MANAGER'}</span>
           </div>
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20">
-              <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              <span className="text-[10px] font-tactical text-emerald-400">SYSTEM NOMINAL</span>
+          <div className="flex items-center gap-4 flex-shrink-0">
+            <span className="px-2 py-0.5 text-[9px] font-bold tracking-widest text-neon-amber border border-neon-amber/30 bg-neon-amber/10">
+              SIMULATED DATA
+            </span>
+            <div className="flex items-center gap-1.5">
+              <div className="w-2 h-2 bg-neon-green" />
+              <span className="text-[10px] text-neon-green tracking-widest hidden sm:inline">NOMINAL</span>
             </div>
+            <span className="text-[9px] text-zinc-500 hidden md:inline">v2.4.1</span>
           </div>
         </div>
       </header>
 
-      {/* Main Content */}
-      <div className="relative z-10 max-w-7xl mx-auto px-6 pt-8 pb-4">
-        <DailyAlphaBrief />
-      </div>
-      <main className="relative z-10 max-w-7xl mx-auto px-6 pb-8 flex gap-8">
-        
-        {/* Sidebar Nav */}
-        <aside className="w-64 flex-shrink-0 space-y-2">
-          <NavButton 
-            active={activeTab === 'positions'} 
-            onClick={() => setActiveTab('positions')} 
-            icon={<BarChart2 className="w-4 h-4" />} 
-            label="ACTIVE POSITIONS" 
-          />
-          <NavButton 
-            active={activeTab === 'intelligence'} 
-            onClick={() => setActiveTab('intelligence')} 
-            icon={<Activity className="w-4 h-4" />} 
-            label="MARKET INTELLIGENCE" 
-          />
-          <NavButton 
-            active={activeTab === 'b2b'} 
-            onClick={() => setActiveTab('b2b')} 
-            icon={<Briefcase className="w-4 h-4" />} 
-            label="B2B BRIDGE (CLIENTS)" 
-          />
-        </aside>
+      {/* ── TICKER TAPE ── */}
+      <TickerTape positions={activePositions} totalAum={totalAum} />
 
-        {/* Tab Content */}
-        <div className="flex-1">
-          <AnimatePresence mode="wait">
-            
-            {/* POSITIONS TAB */}
-            {activeTab === 'positions' && (
-              <motion.div
-                key="positions"
-                id="active-positions-table"
-                variants={staggerContainer}
-                initial="hidden"
-                animate="show"
-                exit={{ opacity: 0, y: -20 }}
-                className="space-y-6"
-              >
-                <div className="flex items-center justify-between mb-8">
-                  <h2 className="text-2xl font-tactical tracking-wider">CAPITAL DEPLOYMENT STATUS</h2>
-                  <div className="text-right">
-                    <p className="text-[10px] font-tactical text-zinc-500">TOTAL AUM (AD SPEND)</p>
-                    <p className="text-xl font-mono text-white">$2,500.00</p>
-                  </div>
-                </div>
+      {/* ── MAIN GRID ── */}
+      <div className="relative z-10 flex-1 flex overflow-hidden">
 
-                <div className="bg-zinc-900/50 border border-white/10 rounded-2xl overflow-hidden">
-                  <table className="w-full text-left border-collapse">
-                    <thead>
-                      <tr className="border-b border-white/10 bg-white/5 text-[10px] font-tactical text-zinc-400 tracking-wider">
-                        <th className="p-4 font-normal">ASSET (CAMPAIGN)</th>
-                        <th className="p-4 font-normal">EXCHANGE (PLATFORM)</th>
-                        <th className="p-4 font-normal">CAPITAL ALLOCATED</th>
-                        <th className="p-4 font-normal">CURRENT ROAS</th>
-                        <th className="p-4 font-normal">MOMENTUM</th>
-                        <th className="p-4 font-normal text-right">STATUS</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {activePositions.map((pos, idx) => (
-                        <motion.tr 
-                          key={pos.id}
-                          variants={staggerItem}
-                          onClick={() => setSelectedCampaignForSim(pos)}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter' || e.key === ' ') {
-                              e.preventDefault();
-                              setSelectedCampaignForSim(pos);
-                            }
-                          }}
-                          tabIndex={0}
-                          role="button"
-                          className={`border-b border-white/5 transition-colors cursor-pointer ${pos.isDecaying ? 'bg-red-500/20 animate-pulse' : 'hover:bg-white/5'}`}
-                        >
-                          <td className="p-4 text-sm font-medium text-white">{pos.asset}</td>
-                          <td className="p-4 text-sm text-zinc-400">{pos.platform}</td>
-                          <td className="p-4 text-sm font-mono text-zinc-300">${pos.spend}</td>
-                          <td className="p-4 text-sm font-mono text-indigo-400">{pos.roas}x</td>
-                          <td className={`p-4 text-sm font-mono ${String(pos.momentum).startsWith('+') ? 'text-emerald-400' : 'text-red-400'}`}>
-                            {pos.momentum}%
-                          </td>
-                          <td className="p-4 text-right">
-                            <span className={`inline-flex items-center px-2 py-1 rounded text-[10px] font-tactical tracking-widest ${
-                              pos.isDecaying ? 'bg-red-600 text-white shadow-[0_0_15px_rgba(220,38,38,0.8)] border border-red-500' :
-                              pos.status === 'SCALING' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' :
-                              pos.status === 'OPTIMIZING' ? 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20' :
-                              'bg-red-500/10 text-red-400 border border-red-500/20'
-                            }`}>
-                              {pos.status}
-                            </span>
-                          </td>
-                        </motion.tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </motion.div>
-            )}
-
-            {/* INTELLIGENCE TAB */}
-            {activeTab === 'intelligence' && (
-              <motion.div
-                key="intelligence"
-                variants={staggerContainer}
-                initial="hidden"
-                animate="show"
-                exit={{ opacity: 0, y: -20 }}
-                className="space-y-6"
-              >
-                <div className="flex items-center justify-between mb-8">
-                  <h2 className="text-2xl font-tactical tracking-wider">LIVE MARKET INTELLIGENCE</h2>
-                  <div className="flex items-center gap-2 text-emerald-400">
-                    <Activity className="w-4 h-4 animate-pulse" />
-                    <span className="text-xs font-tactical">RECEIVING TELEMETRY</span>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {engagements.length === 0 ? (
-                    <div className="col-span-2 py-12 text-center text-zinc-500 font-mono text-sm border border-white/5 border-dashed rounded-xl">
-                      Awaiting market signals...
-                    </div>
-                  ) : (
-                    engagements.map((eng, idx) => (
-                      <motion.div 
-                        key={idx}
-                        variants={staggerItem}
-                        className="p-4 rounded-xl bg-zinc-900/50 border border-white/10 flex items-start gap-4"
-                      >
-                        <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
-                          eng.type === 'comment' ? 'bg-blue-500/20 text-blue-400' :
-                          eng.type === 'share' ? 'bg-emerald-500/20 text-emerald-400' :
-                          'bg-red-500/20 text-red-400'
-                        }`}>
-                          <Zap className="w-4 h-4" />
-                        </div>
-                        <div>
-                          <p className="text-sm text-white mb-1"><span className="font-bold">{eng.user}</span> {eng.action}</p>
-                          <p className="text-xs text-zinc-500 font-mono">Platform: {eng.platform} • Sentiment: {eng.sentiment}</p>
-                        </div>
-                      </motion.div>
-                    ))
-                  )}
-                </div>
-              </motion.div>
-            )}
-
-            {/* B2B BRIDGE TAB */}
-            {activeTab === 'b2b' && (
-              <motion.div
-                key="b2b"
-                variants={staggerContainer}
-                initial="hidden"
-                animate="show"
-                exit={{ opacity: 0, y: -20 }}
-                className="space-y-6"
-              >
-                <div className="flex items-center justify-between mb-8">
-                  <h2 className="text-2xl font-tactical tracking-wider">INSTITUTIONAL CLIENT PORTAL</h2>
-                  <span className="text-[10px] font-tactical text-zinc-500 border border-white/10 px-2 py-1 rounded">AGENCY MODE ACTIVE</span>
-                </div>
-
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                  {/* Clients List */}
-                  <div className="lg:col-span-1 space-y-3">
-                    {clients.map(client => (
-                      <motion.div 
-                        key={client.id}
-                        variants={staggerItem}
-                        className="p-4 rounded-xl bg-zinc-900/50 border border-white/10 hover:border-indigo-500/50 cursor-pointer transition-colors group"
-                      >
-                        <h3 className="text-sm font-bold text-white mb-1 group-hover:text-indigo-400 transition-colors">{client.name}</h3>
-                        <div className="flex items-center justify-between text-xs font-mono text-zinc-500">
-                          <span>AUM: {client.aum}</span>
-                          <span className="text-emerald-400">{client.performance}</span>
-                        </div>
-                      </motion.div>
-                    ))}
-                  </div>
-
-                  {/* Client Report Preview */}
-                  <motion.div variants={staggerItem} className="lg:col-span-2 bg-zinc-900/30 border border-white/5 rounded-2xl p-8 flex flex-col items-center justify-center text-center min-h-[300px]">
-                    <Shield className="w-12 h-12 text-indigo-500/50 mb-4" />
-                    <h3 className="text-lg font-tactical text-white mb-2">WHITE-LABEL REPORT GENERATOR</h3>
-                    <p className="text-sm text-zinc-400 max-w-md mx-auto mb-6">
-                      Generate cryptographic share links for clients to view real-time portfolio performance without accessing the main command center.
-                    </p>
-                    <button 
-                      onClick={() => copyToClipboard('https://avoir.ai/client/rep_8x92nd81')}
-                      className="flex items-center gap-2 px-6 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-tactical tracking-widest transition-colors"
-                    >
-                      {copiedLink ? <CheckCircle2 className="w-4 h-4" /> : <Share2 className="w-4 h-4" />}
-                      {copiedLink ? 'LINK COPIED' : 'GENERATE CLIENT REPORT LINK'}
-                    </button>
-                  </motion.div>
-                </div>
-
-              </motion.div>
-            )}
-
-          </AnimatePresence>
+        {/* Left: Order Book */}
+        <div className="w-full lg:w-[420px] flex-shrink-0 border-r border-terminal-border overflow-y-auto terminal-scrollbar">
+          <OrderBook positions={activePositions} onSelect={setSelectedCampaignForSim} />
         </div>
-      </main>
 
-      {/* Simulator Modal overlay */}
+        {/* Right: Charts + Log */}
+        <div className="hidden lg:flex flex-1 flex-col min-w-0">
+
+          {/* Daily Alpha Brief (toggle via /alpha) */}
+          {showAlphaBrief && (
+            <div className="border-b border-terminal-border">
+              <DailyAlphaBrief />
+            </div>
+          )}
+
+          {/* Charts Grid */}
+          <div className="grid grid-cols-2 xl:grid-cols-4 border-b border-terminal-border">
+            <TerminalChart title="ROAS INDEX" color="amber" min={0} max={8} dataPoints={40} speed={800} />
+            <TerminalChart title="MOMENTUM" color="cyan" min={-20} max={30} dataPoints={40} speed={1200} />
+            <TerminalChart title="REACH" color="green" min={0} max={50000} dataPoints={40} speed={1500} />
+            <TerminalChart title="DECAY RISK" color="red" min={0} max={100} dataPoints={40} speed={1000} />
+          </div>
+
+          {/* Execution Log */}
+          <div className="flex-1 min-h-0">
+            <ExecutionLog ref={logRef} externalEntries={externalLogs} clearLogs={clearLogs} />
+          </div>
+        </div>
+      </div>
+
+      {/* ── CLI ── */}
+      <TerminalCLI onCommand={handleCommand} />
+
+      {/* ── AGENCY MODE OVERLAY ── */}
+      <AnimatePresence>
+        {agencyMode && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-40 bg-black/80 flex items-center justify-center p-4"
+            onClick={() => setAgencyMode(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="border border-terminal-border bg-black max-w-lg w-full"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between px-4 py-2.5 border-b border-terminal-border bg-terminal-surface">
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-neon-cyan" />
+                  <span className="text-[11px] font-bold tracking-[0.2em] text-neon-cyan">AGENCY MODE — B2B CLIENT BRIDGE</span>
+                </div>
+                <button onClick={() => setAgencyMode(false)} className="text-zinc-400 hover:text-white transition-colors">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+              <div className="p-4">
+                <div className="text-[10px] text-zinc-400 mb-3 tracking-widest">ACTIVE CLIENT PORTFOLIOS</div>
+                <div className="space-y-0">
+                  {AGENCY_CLIENTS.map((client) => (
+                    <div key={client.name} className="grid grid-cols-[1fr_90px_60px_90px] border-b border-terminal-border py-2.5 items-center">
+                      <span className="text-[12px] text-white font-medium">{client.name}</span>
+                      <span className="text-[12px] text-neon-amber text-right font-mono">{client.spend}</span>
+                      <span className="text-[12px] text-neon-cyan text-right font-mono">{client.roas}x</span>
+                      <span className={`text-[10px] font-bold text-right tracking-widest ${
+                        client.status === 'ACTIVE' ? 'text-neon-green' : 'text-neon-amber'
+                      }`}>{client.status}</span>
+                    </div>
+                  ))}
+                </div>
+                <div className="mt-3 pt-2 border-t border-terminal-border flex items-center justify-between">
+                  <span className="text-[10px] text-zinc-500">TYPE /agency TO CLOSE</span>
+                  <span className="text-[10px] text-zinc-400">3 CLIENTS • $67K/mo TOTAL</span>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── SIMULATOR MODAL ── */}
       <AnimatePresence>
         {selectedCampaignForSim && (
-          <CapitalDeploymentSimulator 
-            onClose={() => setSelectedCampaignForSim(null)} 
-            campaignPlan={selectedCampaignForSim} 
+          <CapitalDeploymentSimulator
+            onClose={() => setSelectedCampaignForSim(null)}
+            campaignPlan={selectedCampaignForSim}
           />
         )}
       </AnimatePresence>
     </div>
     </RequireAuth>
-  );
-}
-
-function NavButton({ active, onClick, icon, label }: { active: boolean, onClick: () => void, icon: React.ReactNode, label: string }) {
-  return (
-    <button 
-      onClick={onClick}
-      className={`w-full flex items-center justify-between px-4 py-3 rounded-xl transition-all ${
-        active 
-          ? 'bg-indigo-500/10 border border-indigo-500/30 text-indigo-400' 
-          : 'bg-transparent border border-transparent text-zinc-500 hover:text-zinc-300 hover:bg-white/5'
-      }`}
-    >
-      <div className="flex items-center gap-3">
-        {icon}
-        <span className="text-[11px] font-tactical tracking-widest">{label}</span>
-      </div>
-      {active && <ChevronRight className="w-4 h-4" />}
-    </button>
   );
 }
