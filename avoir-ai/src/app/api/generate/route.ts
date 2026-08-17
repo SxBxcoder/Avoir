@@ -29,11 +29,12 @@ export async function POST(req: Request) {
 
   try {
     const body = await req.json();
-    const { business, topic, goal, messages } = body;
+    const { business, topic, goal, messages, language } = body;
 
     // Support both old format (business + topic) and new format (goal + messages)
     const campaignGoal = goal || `Create a campaign for a ${business} focusing on ${topic}`;
     const conversationMessages = messages || [];
+    const campaignLanguage = language || 'en';
 
     // Extract the JWT token sent from your frontend page.tsx
     const authHeader = req.headers.get('Authorization');
@@ -107,6 +108,7 @@ export async function POST(req: Request) {
         goal: campaignGoal,
         messages: conversationMessages,
         user_id: userId,
+        language: campaignLanguage,
       }),
     });
 
@@ -132,6 +134,7 @@ export async function POST(req: Request) {
     // ========================================================================
     const campaign = await createCampaign(userId, {
       goal: campaignGoal,
+      language: campaignLanguage,
       plan: {
         hook: parsedData.plan?.hook || parsedData.hook || '',
         offer: parsedData.plan?.offer || parsedData.offer || '',
@@ -159,6 +162,7 @@ export async function POST(req: Request) {
       imageUrl: parsedData.image_url || parsedData.imageUrl || "",
       messages: parsedData.messages || conversationMessages,
       campaignId: campaign.campaignId,
+      language: campaignLanguage,
       status: parsedData.status || 'completed',
     });
 

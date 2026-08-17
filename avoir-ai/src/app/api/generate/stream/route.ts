@@ -179,9 +179,10 @@ export async function POST(req: Request) {
       });
     }
 
-    const { business, topic, goal, messages, genome_mode, pastWinningContext } = body;
+    const { business, topic, goal, messages, genome_mode, pastWinningContext, language } = body;
     const campaignGoal = goal || `Create a campaign for a ${business} focusing on ${topic}`;
     const conversationMessages = messages || [];
+    const campaignLanguage = language || 'en';
     const authHeader = req.headers.get('Authorization');
     const userId = body.userId || body.user_id || 'anonymous';
     const isGenomeMode = genome_mode === true;
@@ -269,6 +270,7 @@ export async function POST(req: Request) {
           messages: conversationMessages,
           user_id: userId,
           brand_context: brandContext,
+          language: campaignLanguage,
         }),
       });
       if (!res.ok) throw new Error(`Lambda Error: ${res.status}`);
