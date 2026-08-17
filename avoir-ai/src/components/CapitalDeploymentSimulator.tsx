@@ -58,13 +58,13 @@ export function CapitalDeploymentSimulator({ onClose, campaignPlan }: CapitalDep
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 p-4">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 p-2 sm:p-4">
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         transition={{ duration: 0.1 }}
-        className="w-full max-w-2xl border border-terminal-border bg-black"
+        className="w-full max-w-2xl border border-terminal-border bg-black max-h-[90vh] overflow-y-auto terminal-scrollbar"
       >
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-2.5 border-b border-terminal-border bg-terminal-surface">
@@ -78,7 +78,7 @@ export function CapitalDeploymentSimulator({ onClose, campaignPlan }: CapitalDep
         </div>
 
         {/* Content */}
-        <div className="p-5">
+        <div className="p-3 sm:p-5">
           <AnimatePresence mode="wait">
             {stage === 0 ? (
               <motion.div
@@ -97,8 +97,8 @@ export function CapitalDeploymentSimulator({ onClose, campaignPlan }: CapitalDep
                 </div>
 
                 {/* Inputs */}
-                <div className="grid grid-cols-2 gap-0 border border-terminal-border">
-                  <div className="p-3 border-b md:border-b-0 md:border-r border-terminal-border">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-0 border border-terminal-border">
+                  <div className="p-3 border-b sm:border-b-0 sm:border-r border-terminal-border">
                     <label className="text-[9px] text-zinc-600 tracking-widest mb-1.5 block">INITIAL CAPITAL ($)</label>
                     <div className="relative">
                       <DollarSign className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-zinc-600" />
@@ -189,22 +189,22 @@ export function CapitalDeploymentSimulator({ onClose, campaignPlan }: CapitalDep
                     </div>
 
                     {simulationResult && (
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-0 border border-terminal-border mb-4">
-                        <div className="p-3 border-b md:border-b-0 md:border-r border-terminal-border text-center">
-                          <p className="text-[9px] text-zinc-600 tracking-widest mb-1">PROJECTED REACH</p>
-                          <p className="text-[14px] font-bold text-white">{simulationResult.projected_reach.toLocaleString()}</p>
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-0 border border-terminal-border mb-4">
+                        <div className="p-3 border-b sm:border-b-0 sm:border-r border-terminal-border text-center">
+                          <p className="text-[8px] sm:text-[9px] text-zinc-600 tracking-widest mb-1">PROJECTED REACH</p>
+                          <p className="text-[12px] sm:text-[14px] font-bold text-white">{simulationResult.projected_reach.toLocaleString()}</p>
                         </div>
-                        <div className="p-3 border-b md:border-b-0 md:border-r border-terminal-border text-center">
-                          <p className="text-[9px] text-zinc-600 tracking-widest mb-1">EXPECTED CTR</p>
-                          <p className="text-[14px] font-bold text-neon-cyan">{simulationResult.expected_ctr.toFixed(2)}%</p>
+                        <div className="p-3 border-b sm:border-b-0 sm:border-r border-terminal-border text-center">
+                          <p className="text-[8px] sm:text-[9px] text-zinc-600 tracking-widest mb-1">EXPECTED CTR</p>
+                          <p className="text-[12px] sm:text-[14px] font-bold text-neon-cyan">{simulationResult.expected_ctr.toFixed(2)}%</p>
                         </div>
-                        <div className="p-3 border-b md:border-b-0 md:border-r border-terminal-border text-center">
-                          <p className="text-[9px] text-zinc-600 tracking-widest mb-1">ESTIMATED CPC</p>
-                          <p className="text-[14px] font-bold text-neon-green">${simulationResult.estimated_cpc.toFixed(2)}</p>
+                        <div className="p-3 border-b sm:border-b-0 sm:border-r border-terminal-border text-center">
+                          <p className="text-[8px] sm:text-[9px] text-zinc-600 tracking-widest mb-1">ESTIMATED CPC</p>
+                          <p className="text-[12px] sm:text-[14px] font-bold text-neon-green">${simulationResult.estimated_cpc.toFixed(2)}</p>
                         </div>
                         <div className="p-3 text-center">
-                          <p className="text-[9px] text-zinc-600 tracking-widest mb-1">CONFIDENCE</p>
-                          <p className="text-[14px] font-bold text-neon-amber">{simulationResult.confidence.toFixed(1)}%</p>
+                          <p className="text-[8px] sm:text-[9px] text-zinc-600 tracking-widest mb-1">CONFIDENCE</p>
+                          <p className="text-[12px] sm:text-[14px] font-bold text-neon-amber">{simulationResult.confidence.toFixed(1)}%</p>
                         </div>
                       </div>
                     )}
