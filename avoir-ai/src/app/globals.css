@@ -18,12 +18,64 @@
    ============================================================================ */
 
 :root {
-  /* Core palette */
+  /* LIGHT MODE (High Contrast Bloomberg Terminal Style) */
+  --bg-primary: #f8f9fa;
+  --bg-secondary: #e5e7eb;
+  --bg-card: #ffffff;
+  --bg-elevated: #f3f4f6;
+  --text-primary: #111827;
+  
+  --terminal-bg: #ffffff;
+  --terminal-surface: #f9fafb;
+  --terminal-border: #000000;
+  --terminal-border-bright: #333333;
+
+  /* Accent gradients (Adjusted for light mode contrast) */
+  --accent-cyan: #0891b2;
+  --accent-indigo: #4f46e5;
+  --accent-purple: #9333ea;
+  --accent-pink: #db2777;
+  --accent-green: #16a34a;
+  --accent-amber: #d97706;
+  
+  /* Glow intensities */
+  --glow-sm: 0 0 10px;
+  --glow-md: 0 0 20px;
+  --glow-lg: 0 0 40px;
+  --glow-xl: 0 0 80px;
+
+  /* Semantic UI Colors */
+  --muted: #f3f4f6;
+  --muted-foreground: #6b7280;
+  --border: #e5e7eb;
+  --card: #ffffff;
+  --card-foreground: #111827;
+
+  /* Glassmorphism Colors */
+  --glass-bg: rgba(255, 255, 255, 0.7);
+  --glass-bg-hover: rgba(255, 255, 255, 0.9);
+}
+
+.dark {
+  /* DARK MODE (Original Hacker Terminal Style) */
   --bg-primary: #000000;
   --bg-secondary: #0a0a0f;
   --bg-card: #111118;
   --bg-elevated: #161622;
+  --text-primary: #e4e4e7;
   
+  --terminal-bg: #000000;
+  --terminal-surface: #0D0D0D;
+  --terminal-border: #2A2A2A;
+  --terminal-border-bright: #3A3A3A;
+
+  /* Semantic UI Colors */
+  --muted: #27272a;
+  --muted-foreground: #a1a1aa;
+  --border: #27272a;
+  --card: #09090b;
+  --card-foreground: #fafafa;
+
   /* Accent gradients */
   --accent-cyan: #06b6d4;
   --accent-indigo: #6366f1;
@@ -31,13 +83,13 @@
   --accent-pink: #ec4899;
   --accent-green: #22c55e;
   --accent-amber: #f59e0b;
-  
-  /* Glow intensities */
-  --glow-sm: 0 0 10px;
-  --glow-md: 0 0 20px;
-  --glow-lg: 0 0 40px;
-  --glow-xl: 0 0 80px;
-  
+
+  /* Glassmorphism Colors */
+  --glass-bg: rgba(17, 17, 24, 0.6);
+  --glass-bg-hover: rgba(17, 17, 24, 0.8);
+}
+
+:root {
   /* Fluid type scale (clamp for responsive) */
   --text-xs: clamp(0.625rem, 0.5rem + 0.25vw, 0.75rem);
   --text-sm: clamp(0.75rem, 0.625rem + 0.35vw, 0.875rem);
@@ -81,7 +133,7 @@ html {
 body {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   background: var(--bg-primary);
-  color: #e4e4e7;
+  color: var(--text-primary);
   overflow-x: hidden;
   line-height: 1.6;
 }
@@ -144,7 +196,7 @@ body {
    ============================================================================ */
 
 .glass-card {
-  background: rgba(17, 17, 24, 0.6);
+  background: var(--glass-bg);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border: 1px solid rgba(99, 102, 241, 0.1);
@@ -154,7 +206,7 @@ body {
 
 .glass-card:hover {
   border-color: rgba(99, 102, 241, 0.3);
-  background: rgba(17, 17, 24, 0.8);
+  background: var(--glass-bg-hover);
   box-shadow: 
     0 0 0 1px rgba(99, 102, 241, 0.2),
     0 8px 32px rgba(99, 102, 241, 0.08),

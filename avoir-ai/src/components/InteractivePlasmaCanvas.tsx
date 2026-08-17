@@ -57,8 +57,7 @@ export default function InteractivePlasmaCanvas() {
       time += 0.01;
 
       // Clear
-      ctx.fillStyle = '#000000';
-      ctx.fillRect(0, 0, width, height);
+      ctx.clearRect(0, 0, width, height);
 
       // Smooth mouse interpolation
       mouseX += (targetMouseX - mouseX) * 0.08;

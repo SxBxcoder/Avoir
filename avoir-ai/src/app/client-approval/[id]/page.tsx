@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { CheckCircle2, XCircle, Loader2, Send, Bot, User } from 'lucide-react';
 import { useParams } from 'next/navigation';
 import { clientLog } from '@/lib/logClient';
+import { ThemeToggle } from '@/components/ThemeToggle';
 
 export default function ClientApprovalPage() {
   const params = useParams();
@@ -91,23 +92,26 @@ export default function ClientApprovalPage() {
 
   if (error || !campaign) {
     return (
-      <div className="min-h-screen bg-zinc-950 flex items-center justify-center text-white">
+      <div className="min-h-screen bg-background flex items-center justify-center text-foreground">
         <p className="text-red-400">{error}</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-white selection:bg-indigo-500/30 flex flex-col lg:flex-row">
+    <div className="min-h-screen bg-background text-foreground selection:bg-indigo-500/30 flex flex-col lg:flex-row">
       
       {/* Left Panel: The Campaign */}
       <div className="flex-1 p-6 md:p-12 overflow-y-auto">
-        <header className="flex items-center justify-between mb-8 border-b border-white/10 pb-6">
-          <h1 className="text-2xl font-light tracking-wide text-gray-200">
-            Campaign Proposal <span className="font-bold text-white">Review</span>
+        <header className="flex items-center justify-between mb-8 border-b border-white/10 dark:border-white/10 border-black/10 pb-6">
+          <h1 className="text-2xl font-light tracking-wide text-zinc-500 dark:text-gray-200">
+            Campaign Proposal <span className="font-bold text-foreground">Review</span>
           </h1>
-          <div className="px-4 py-1.5 rounded-full bg-white/5 border border-white/10 text-sm text-gray-400">
-            ID: {id}
+          <div className="flex items-center gap-4">
+            <div className="px-4 py-1.5 rounded-full bg-white/5 border border-white/10 dark:border-white/10 border-black/10 text-sm text-zinc-500 dark:text-gray-400">
+              ID: {id}
+            </div>
+            <ThemeToggle />
           </div>
         </header>
 

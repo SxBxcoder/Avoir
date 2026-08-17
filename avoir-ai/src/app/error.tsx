@@ -16,7 +16,7 @@ export default function GlobalError({
   }, [error]);
 
   return (
-    <div className="min-h-screen bg-black flex items-center justify-center p-4">
+    <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="max-w-2xl w-full bg-zinc-950 border border-red-500/30 rounded-lg p-6 shadow-[0_0_50px_rgba(255,0,0,0.1)] font-mono">
         <div className="flex items-center gap-3 mb-6 border-b border-red-500/20 pb-4">
           <div className="p-2 bg-red-500/10 rounded-md">
@@ -28,7 +28,7 @@ export default function GlobalError({
           </div>
         </div>
 
-        <div className="bg-black border border-zinc-800 rounded p-4 mb-6 overflow-x-auto terminal-scrollbar">
+        <div className="bg-background border border-zinc-800 rounded p-4 mb-6 overflow-x-auto terminal-scrollbar">
           <div className="flex items-center gap-2 mb-2">
             <Terminal className="w-4 h-4 text-zinc-500" />
             <span className="text-xs text-zinc-500 uppercase">Stack Trace</span>

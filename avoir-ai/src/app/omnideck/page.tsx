@@ -14,6 +14,7 @@ import TerminalCLI from '@/components/TerminalCLI';
 import TerminalChart from '@/components/TerminalChart';
 import DailyAlphaBrief from '@/components/DailyAlphaBrief';
 import { CapitalDeploymentSimulator } from '@/components/CapitalDeploymentSimulator';
+import { ThemeToggle } from '@/components/ThemeToggle';
 
 const AGENCY_CLIENTS = [
   { name: 'Nexus Brands', spend: '$42K/mo', roas: 3.2, status: 'ACTIVE' },
@@ -248,7 +249,7 @@ export default function OmniDeckPage() {
 
   return (
     <RequireAuth>
-    <div className="h-screen bg-black text-white font-mono overflow-hidden selection:bg-neon-amber/30 terminal-scrollbar flex flex-col crt-scanline noise-overlay vignette">
+    <div className="h-screen bg-background text-foreground font-mono overflow-hidden selection:bg-neon-amber/30 terminal-scrollbar flex flex-col crt-scanline noise-overlay vignette">
 
       {/* Background Grid */}
       <div className="fixed inset-0 z-0 pointer-events-none">
@@ -256,7 +257,7 @@ export default function OmniDeckPage() {
       </div>
 
       {/* ── HEADER ── */}
-      <header className="relative z-10 border-b border-terminal-border bg-black flex-shrink-0">
+      <header className="relative z-10 border-b border-terminal-border bg-background flex-shrink-0">
         <div className="h-10 flex items-center justify-between px-4">
           <div className="flex items-center gap-2.5 min-w-0">
             <button onClick={() => router.push('/')} className="text-zinc-400 hover:text-neon-amber transition-colors text-[10px] flex-shrink-0">
@@ -276,6 +277,7 @@ export default function OmniDeckPage() {
               <span className="text-[10px] text-neon-green tracking-widest hidden sm:inline">NOMINAL</span>
             </div>
             <span className="text-[9px] text-zinc-500 hidden md:inline">v2.4.1</span>
+            <ThemeToggle />
           </div>
         </div>
       </header>
@@ -333,7 +335,7 @@ export default function OmniDeckPage() {
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
-              className="border border-terminal-border bg-black max-w-lg w-full"
+              className="border border-terminal-border bg-background max-w-lg w-full"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-center justify-between px-4 py-2.5 border-b border-terminal-border bg-terminal-surface">

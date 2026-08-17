@@ -3,7 +3,7 @@ import withPWAInit from 'next-pwa';
 
 const withPWA = withPWAInit({
   dest: 'public',
-  disable: process.env.NODE_ENV === 'development',
+  disable: true, // Temporarily disabled due to Windows path mismatch (Prachar.ai vs Avoir) causing clean-webpack-plugin to crash
   register: true,
   skipWaiting: true,
 });
@@ -37,6 +37,13 @@ const nextConfig = {
   },
   typescript: {
     ignoreBuildErrors: true,
+  },
+  webpack: (config) => {
+    // Remove CleanWebpackPlugin to prevent next-pwa from crashing on Windows
+    config.plugins = config.plugins.filter(
+      (plugin) => plugin.constructor.name !== 'CleanWebpackPlugin'
+    );
+    return config;
   },
 };
 
