@@ -56,7 +56,7 @@ function Sparkline({ data, color }: { data: number[]; color: string }) {
     // Line
     ctx.beginPath();
     data.forEach((val, i) => {
-      const x = (i / (i === 0 ? 1 : i)) * (i / (data.length - 1)) * 40;
+      const x = (i / (data.length - 1)) * 40;
       const y = 16 - ((val - min) / range) * 14;
       if (i === 0) ctx.moveTo(x, y);
       else ctx.lineTo(x, y);
@@ -81,7 +81,7 @@ export default function OrderBook({ positions, onSelect }: OrderBookProps) {
   const [sortAsc, setSortAsc] = useState(false);
   const [flashMap, setFlashMap] = useState<Record<string, 'green' | 'red'>>({});
   const prevMomentum = useRef<Record<string, string>>({});
-  const [sparkData, setSparkData] = useState<Record<string number[]>>({});
+  const [sparkData, setSparkData] = useState<Record<string, number[]>>({});
 
   // Track momentum changes for flash + sparkline
   useEffect(() => {
