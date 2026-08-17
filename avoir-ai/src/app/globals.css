@@ -718,3 +718,103 @@ body {
 .text-glow-red {
   text-shadow: 0 0 8px rgba(239, 68, 68, 0.5);
 }
+
+/* ============================================================================
+   BRUTALIST TERMINAL — POLISH PASS
+   ============================================================================ */
+
+/* CRT scanline sweep animation */
+@keyframes scanline-sweep {
+  0% { transform: translateY(-100%); }
+  100% { transform: translateY(100vh); }
+}
+
+.crt-scanline::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: linear-gradient(
+    to bottom,
+    transparent 0%,
+    rgba(245, 158, 11, 0.015) 48%,
+    rgba(245, 158, 11, 0.03) 50%,
+    rgba(245, 158, 11, 0.015) 52%,
+    transparent 100%
+  );
+  height: 80px;
+  pointer-events: none;
+  z-index: 100;
+  animation: scanline-sweep 8s linear infinite;
+}
+
+/* Blinking cursor for terminal input */
+@keyframes cursor-blink {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+
+.terminal-cursor {
+  animation: cursor-blink 1s step-end infinite;
+}
+
+/* Row flash animations */
+@keyframes flash-green {
+  0% { background-color: rgba(34, 197, 94, 0.2); }
+  100% { background-color: transparent; }
+}
+
+@keyframes flash-red {
+  0% { background-color: rgba(239, 68, 68, 0.2); }
+  100% { background-color: transparent; }
+}
+
+.flash-green {
+  animation: flash-green 0.6s ease-out;
+}
+
+.flash-red {
+  animation: flash-red 0.6s ease-out;
+}
+
+/* Glow border pulse for active panels */
+@keyframes border-glow-pulse {
+  0%, 100% { border-color: #222; }
+  50% { border-color: #333; }
+}
+
+.border-glow {
+  animation: border-glow-pulse 3s ease-in-out infinite;
+}
+
+/* Selection styling */
+::selection {
+  background: rgba(245, 158, 11, 0.3);
+  color: white;
+}
+
+/* Better scrollbar for Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #333 #0A0A0A;
+}
+
+/* Noise texture overlay */
+.noise-overlay::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 99;
+  opacity: 0.5;
+}
+
+/* Subtle vignette */
+.vignette::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(ellipse at center, transparent 50%, rgba(0,0,0,0.4) 100%);
+  pointer-events: none;
+  z-index: 98;
+}

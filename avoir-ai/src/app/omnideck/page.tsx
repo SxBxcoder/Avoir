@@ -54,7 +54,7 @@ export default function OmniDeckPage() {
 
   return (
     <RequireAuth>
-    <div className="h-screen bg-black text-white font-mono overflow-hidden selection:bg-neon-amber/30 terminal-scrollbar flex flex-col">
+    <div className="h-screen bg-black text-white font-mono overflow-hidden selection:bg-neon-amber/30 terminal-scrollbar flex flex-col crt-scanline noise-overlay vignette">
 
       {/* Background Grid */}
       <div className="fixed inset-0 z-0 pointer-events-none">

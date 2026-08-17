@@ -1,29 +1,19 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useMemo } from 'react';
 
 interface LogEntry {
   timestamp: string;
   level: 'INFO' | 'EXEC' | 'WARN' | 'SIGNAL' | 'ALGO';
   message: string;
+  id: number;
 }
 
 interface ExecutionLogProps {
   streamUrl?: string;
 }
 
-const MOCK_LOGS: LogEntry[] = [
-  { timestamp: '14:32:01.004', level: 'ALGO', message: 'Scanning TikTok creative API for emerging audio patterns...' },
-  { timestamp: '14:32:01.892', level: 'SIGNAL', message: 'Anomaly detected: "corporate villain" audio spike +340% in 2h window' },
-  { timestamp: '14:32:02.101', level: 'EXEC', message: 'Reallocating $200 from pos-3 (decay) → pos-1 (momentum surge)' },
-  { timestamp: '14:32:03.445', level: 'INFO', message: 'Synthetic focus group: 4/5 personas approved hook variant B' },
-  { timestamp: '14:32:04.200', level: 'ALGO', message: 'Running Monte Carlo simulation on bid adjustments (1000 iterations)...' },
-  { timestamp: '14:32:05.001', level: 'EXEC', message: 'pos-2 CTR decay detected. Initiating creative refresh pipeline.' },
-  { timestamp: '14:32:06.330', level: 'WARN', message: 'Instagram API rate limit approaching (87% consumed). Throttling requests.' },
-  { timestamp: '14:32:07.100', level: 'SIGNAL', message: 'Cross-platform sentiment shift: anti-hustle content trending +180% on LinkedIn' },
-  { timestamp: '14:32:08.550', level: 'ALGO', message: 'Backtest complete: pos-1 projected ROAS 4.8x within 6h window' },
-  { timestamp: '14:32:09.001', level: 'EXEC', message: 'Deploying variant C creative to YouTube Shorts test slot' },
-];
+type FilterLevel = 'ALL' | 'INFO' | 'EXEC' | 'WARN' | 'SIGNAL' | 'ALGO';
 
 const LEVEL_COLORS: Record<string, string> = {
   INFO: 'text-zinc-500',
@@ -33,70 +23,160 @@ const LEVEL_COLORS: Record<string, string> = {
   ALGO: 'text-neon-green',
 };
 
+const LEVEL_BORDER_COLORS: Record<string, string> = {
+  INFO: 'border-l-zinc-700',
+  EXEC: 'border-l-neon-amber',
+  WARN: 'border-l-neon-red',
+  SIGNAL: 'border-l-neon-cyan',
+  ALGO: 'border-l-neon-green',
+};
+
+const MOCK_MESSAGES: { level: LogEntry['level']; msg: string }[] = [
+  { level: 'ALGO', msg: 'Scanning TikTok creative API for emerging audio patterns...' },
+  { level: 'SIGNAL', msg: 'Anomaly detected: "corporate villain" audio spike +340% in 2h window' },
+  { level: 'EXEC', msg: 'Reallocating $200 from pos-3 (decay) → pos-1 (momentum surge)' },
+  { level: 'INFO', msg: 'Synthetic focus group: 4/5 personas approved hook variant B' },
+  { level: 'ALGO', msg: 'Running Monte Carlo simulation on bid adjustments (1000 iterations)...' },
+  { level: 'EXEC', msg: 'pos-2 CTR decay detected. Initiating creative refresh pipeline.' },
+  { level: 'WARN', msg: 'Instagram API rate limit approaching (87% consumed). Throttling requests.' },
+  { level: 'SIGNAL', msg: 'Cross-platform sentiment shift: anti-hustle content trending +180% on LinkedIn' },
+  { level: 'ALGO', msg: 'Backtest complete: pos-1 projected ROAS 4.8x within 6h window' },
+  { level: 'EXEC', msg: 'Deploying variant C creative to YouTube Shorts test slot' },
+  { level: 'ALGO', msg: 'Neural network recalibration complete. Confidence interval: 92.4%' },
+  { level: 'SIGNAL', msg: 'Competitor detected scaling same hook archetype. Counter-strategy initiated.' },
+  { level: 'WARN', msg: 'pos-3 ROAS dropped below 1.0x threshold. Auto-liquidation armed.' },
+  { level: 'EXEC', msg: 'Creative variant D deployed to TikTok. A/B split: 50/50.' },
+  { level: 'INFO', msg: 'Portfolio Sharpe ratio: 2.14 (above benchmark of 1.5)' },
+  { level: 'ALGO', msg: 'Correlation matrix updated. pos-1 and pos-2 divergence: 0.23' },
+  { level: 'SIGNAL', msg: 'YouTube Shorts algorithm update detected. Adjusting posting cadence model.' },
+  { level: 'EXEC', msg: 'Auto-scaling bid ceiling for pos-1: $12 → $18 based on ROAS trajectory' },
+  { level: 'ALGO', msg: 'Running competitor spend analysis across 3 rival campaigns...' },
+  { level: 'WARN', msg: 'pos-3 momentum below threshold. Decay alert escalated to PRIORITY.' },
+  { level: 'EXEC', msg: 'Creative A/B swap triggered for pos-2: variant B outperforming by 23%' },
+  { level: 'INFO', msg: 'Latency check: all exchange connections nominal (<12ms)' },
+  { level: 'ALGO', msg: 'Portfolio rebalance recommendation: shift 15% from LIQUIDATING → SCALING' },
+  { level: 'SIGNAL', msg: 'New engagement spike detected on pos-1 (TikTok +47 interactions/min)' },
+  { level: 'EXEC', msg: 'Budget reallocation confirmed: $50 moved from pos-3 reserve to pos-1 scaling pool' },
+  { level: 'INFO', msg: 'Daily alpha brief regenerated. Anomaly confidence: 91.2%' },
+  { level: 'ALGO', msg: 'Entropy analysis on creative variants: 3 high-novelty candidates identified' },
+  { level: 'WARN', msg: 'LinkedIn API response time elevated (340ms). Monitoring degradation.' },
+  { level: 'SIGNAL', msg: 'Instagram Reels engagement rate spike +28% in last 15 minutes' },
+  { level: 'EXEC', msg: 'Position hedging activated: $100 counter-allocation on pos-3 decay hedge' },
+];
+
 export default function ExecutionLog({ streamUrl }: ExecutionLogProps) {
-  const [logs, setLogs] = useState<LogEntry[]>(MOCK_LOGS);
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const [logs, setLogs] = useState<LogEntry[]>([]);
+  const [filter, setFilter] = useState<FilterLevel>('ALL');
+  const [newIds, setNewIds] = useState<Set<number>>(new Set());
   const containerRef = useRef<HTMLDivElement>(null);
+  const idCounter = useRef(0);
 
-  // Simulate live log entries
+  // Initialize with some logs
   useEffect(() => {
-    const messages = [
-      { level: 'ALGO' as const, msg: 'Recalculating momentum vectors for all active positions...' },
-      { level: 'SIGNAL' as const, msg: 'New engagement spike detected on pos-1 (TikTok +47 interactions/min)' },
-      { level: 'EXEC' as const, msg: 'Auto-scaling bid ceiling for pos-1: $12 → $18 based on ROAS trajectory' },
-      { level: 'INFO' as const, msg: 'Latency check: all exchange connections nominal (<12ms)' },
-      { level: 'ALGO' as const, msg: 'Running competitor spend analysis across 3 rival campaigns...' },
-      { level: 'WARN' as const, msg: 'pos-3 momentum below threshold. Decay alert escalated to PRIORITY.' },
-      { level: 'EXEC' as const, msg: 'Creative A/B swap triggered for pos-2: variant B outperforming by 23%' },
-      { level: 'SIGNAL' as const, msg: 'TikTok algorithm update detected. Adjusting posting cadence model.' },
-      { level: 'ALGO' as const, msg: 'Portfolio rebalance recommendation: shift 15% from LIQUIDATING → SCALING' },
-      { level: 'INFO' as const, msg: 'Daily alpha brief regenerated. Anomaly confidence: 91.2%' },
-    ];
+    const initial = MOCK_MESSAGES.slice(0, 8).map(m => ({
+      ...m,
+      timestamp: makeTs(),
+      id: idCounter.current++,
+    }));
+    setLogs(initial);
+  }, []);
 
+  // Simulate live entries
+  useEffect(() => {
     const interval = setInterval(() => {
-      const now = new Date();
-      const ts = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}.${now.getMilliseconds().toString().padStart(3, '0')}`;
-      const pick = messages[Math.floor(Math.random() * messages.length)];
+      const pick = MOCK_MESSAGES[Math.floor(Math.random() * MOCK_MESSAGES.length)];
+      const newId = idCounter.current++;
+      const entry: LogEntry = {
+        level: pick.level,
+        message: pick.msg,
+        timestamp: makeTs(),
+        id: newId,
+      };
 
-      setLogs(prev => [...prev.slice(-100), { timestamp: ts, level: pick.level, message: pick.msg }]);
-    }, 2000 + Math.random() * 3000);
+      setLogs(prev => [...prev.slice(-200), entry]);
+      setNewIds(prev => new Set([...prev, newId]));
+      setTimeout(() => setNewIds(prev => { const n = new Set(prev); n.delete(newId); return n; }), 800);
+    }, 1500 + Math.random() * 2500);
 
     return () => clearInterval(interval);
   }, []);
 
-  // Auto-scroll to bottom
+  // Auto-scroll
   useEffect(() => {
     if (containerRef.current) {
       containerRef.current.scrollTop = containerRef.current.scrollHeight;
     }
   }, [logs]);
 
+  const filtered = useMemo(() =>
+    filter === 'ALL' ? logs : logs.filter(l => l.level === filter),
+    [logs, filter]
+  );
+
+  const counts = useMemo(() => {
+    const c: Record<string, number> = { ALL: logs.length, INFO: 0, EXEC: 0, WARN: 0, SIGNAL: 0, ALGO: 0 };
+    logs.forEach(l => c[l.level]++);
+    return c;
+  }, [logs]);
+
+  const filters: FilterLevel[] = ['ALL', 'ALGO', 'EXEC', 'SIGNAL', 'WARN', 'INFO'];
+
   return (
     <div className="border border-terminal-border flex flex-col h-full">
       {/* Header */}
       <div className="flex items-center justify-between px-3 py-1.5 border-b border-terminal-border bg-terminal-surface flex-shrink-0">
         <div className="flex items-center gap-2">
-          <span className="text-[9px] font-bold text-zinc-500 tracking-[0.2em]">EXECUTION LOG</span>
           <div className="w-1.5 h-1.5 bg-neon-green animate-pulse" />
+          <span className="text-[9px] font-bold text-zinc-500 tracking-[0.2em]">EXECUTION LOG</span>
         </div>
         <span className="text-[8px] text-zinc-600">{logs.length} ENTRIES</span>
+      </div>
+
+      {/* Filter pills */}
+      <div className="flex items-center gap-1 px-3 py-1 border-b border-terminal-border bg-terminal-surface/30 flex-shrink-0 overflow-x-auto">
+        {filters.map(f => (
+          <button
+            key={f}
+            onClick={() => setFilter(f)}
+            className={`px-1.5 py-0.5 text-[8px] font-bold tracking-widest transition-colors ${
+              filter === f
+                ? 'bg-neon-amber/20 text-neon-amber border border-neon-amber/30'
+                : 'text-zinc-600 hover:text-zinc-400 border border-transparent'
+            }`}
+          >
+            {f} <span className="text-zinc-700">{counts[f]}</span>
+          </button>
+        ))}
       </div>
 
       {/* Log feed */}
       <div
         ref={containerRef}
-        className="flex-1 overflow-y-auto terminal-scrollbar bg-black p-2 space-y-0.5"
+        className="flex-1 overflow-y-auto terminal-scrollbar bg-black p-1 space-y-px"
       >
-        {logs.map((log, idx) => (
-          <div key={idx} className="flex items-start gap-2 font-mono leading-tight">
-            <span className="text-[8px] text-zinc-700 flex-shrink-0 w-[85px]">{log.timestamp}</span>
-            <span className={`text-[8px] font-bold flex-shrink-0 w-[36px] ${LEVEL_COLORS[log.level]}`}>
-              [{log.level}]
+        {filtered.map((log, idx) => (
+          <div
+            key={log.id}
+            className={`flex items-start gap-0 font-mono leading-tight border-l-2 ${LEVEL_BORDER_COLORS[log.level]} pl-1 transition-colors duration-500 ${
+              newIds.has(log.id) ? 'bg-neon-amber/5' : ''
+            }`}
+          >
+            <span className="text-[7px] text-zinc-800 flex-shrink-0 w-[28px] text-right pr-1.5 pt-[1px]">
+              {String(idx + 1).padStart(3, '0')}
             </span>
-            <span className="text-[9px] text-zinc-400">{log.message}</span>
+            <span className="text-[7px] text-zinc-700 flex-shrink-0 w-[78px] pt-[1px]">{log.timestamp}</span>
+            <span className={`text-[8px] font-bold flex-shrink-0 w-[40px] pt-[1px] ${LEVEL_COLORS[log.level]}`}>
+              {log.level}
+            </span>
+            <span className="text-[9px] text-zinc-400 min-w-0">{log.message}</span>
           </div>
         ))}
       </div>
     </div>
   );
+}
+
+function makeTs(): string {
+  const d = new Date();
+  return `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}:${d.getSeconds().toString().padStart(2, '0')}.${d.getMilliseconds().toString().padStart(3, '0')}`;
 }
