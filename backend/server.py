@@ -209,19 +209,22 @@ async def get_campaigns(user_id: str):
     }
 
 
-# Sprint 3: Trend Sniper Endpoint
+# Sprint 3: Trend Sniper Endpoint (SerpAPI → YouTube → Gemini → Mock)
 @app.get("/api/trends")
-async def get_trends():
+async def get_trends(industry: str = "general"):
     """
-    Scrapes the internet for current viral trends using the TrendSniper module.
+    Returns real-time IndustryTrends for any arbitrary industry string.
+    Cascade: SerpAPI Google Trends → YouTube → Gemini AI → Mock fallback.
+    Response shape matches the frontend IndustryTrends interface:
+    { industry, topTrends: [...], viralHooks: [...], lastUpdated }
     """
     try:
-        trends = sniper.get_current_trends()
-        return {"status": "success", "trends": trends}
+        result = sniper.get_trends_for_industry(industry)
+        return {"status": "success", "trends": result}
     except Exception as e:
         raise HTTPException(
             status_code=500,
-            detail=f"Failed to snipe trends: {str(e)}"
+            detail=f"Failed to snipe trends for '{industry}': {str(e)}"
         )
 
 

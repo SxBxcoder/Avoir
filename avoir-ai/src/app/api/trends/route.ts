@@ -1,27 +1,19 @@
 /**
  * Avoir — Real-Time Trends API
- * 
+ *
  * GET /api/trends?industry=fashion
- * 
- * Identity comes from the verified Cognito JWT. The endpoint is
- * authenticated because it triggers paid external LLM/data fetches per call —
- * leaving it open would let anyone run up cost.
+ *
+ * Proxies to the Python backend (SerpAPI → YouTube → Gemini → empty).
+ * No mock data — returns whatever the backend returns, including empty.
  */
 
 import { NextResponse } from 'next/server';
 import { fetchIndustryTrends } from '@/lib/trends';
-import { isDemoMode, MOCK_TRENDS } from '@/lib/mockShield';
 import { requireUser, authErrorResponse } from '@/lib/auth/requireUser';
 import { logger } from '@/lib/logger';
 
 export async function GET(req: Request) {
-  // Demo Mock Shield
-  if (isDemoMode()) {
-    return NextResponse.json({ trends: MOCK_TRENDS });
-  }
-
   try {
-    // Identity comes from the verified Cognito JWT — never trust client input.
     await requireUser(req);
 
     const { searchParams } = new URL(req.url);
@@ -36,8 +28,11 @@ export async function GET(req: Request) {
 
     const trends = await fetchIndustryTrends(industry);
 
-    if (!trends) {
-      return NextResponse.json({ trends: null, message: 'No trends found for this industry.' });
+    if (!trends || !trends.topTrends.length) {
+      return NextResponse.json({
+        trends: null,
+        message: 'No trends available. Configure SERPAPI_KEY in backend/.env for real data.',
+      });
     }
 
     return NextResponse.json({ trends });

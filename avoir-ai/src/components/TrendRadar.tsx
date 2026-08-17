@@ -105,6 +105,14 @@ export default function TrendRadar({ industry, onInjectTrend }: TrendRadarProps)
             <Loader2 className="w-6 h-6 text-rose-400 animate-spin" />
             <p className="text-xs text-zinc-500 font-tactical tracking-wider">SCANNING THE ZEITGEIST...</p>
           </div>
+        ) : trends.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-10 space-y-3">
+            <Radar className="w-8 h-8 text-zinc-700" />
+            <p className="text-xs text-zinc-500 text-center leading-relaxed">
+              No trend data available.<br />
+              Configure <span className="text-rose-400 font-mono">SERPAPI_KEY</span> in the backend for real-time Google Trends.
+            </p>
+          </div>
         ) : (
           <>
             {/* Top Trends */}
