@@ -67,6 +67,14 @@ export function LiveArbitrageFeed({ onDeploy }: { onDeploy: (directive: string) 
           <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
           <span className="text-[10px] font-tactical text-red-400 tracking-widest">LIVE MARKET DATA</span>
         </motion.div>
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.5, delay: 0.1 }}
+          className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-zinc-800/80 border border-zinc-700 mb-4 ml-3"
+        >
+          <span className="text-[10px] font-mono text-zinc-400 tracking-widest">SIMULATED DATA</span>
+        </motion.div>
         <h1 className="text-4xl lg:text-5xl font-bold font-tactical tracking-wider text-white mb-4">
           CULTURAL <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-cyan-400">ARBITRAGE</span>
         </h1>

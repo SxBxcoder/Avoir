@@ -59,7 +59,8 @@ export async function POST(req: Request) {
     }
 
     // Call Python backend running on port 8000
-    const response = await fetch('http://localhost:8000/api/shadow-clone/generate', {
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+    const response = await fetch(`${apiUrl}/api/shadow-clone/generate`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
