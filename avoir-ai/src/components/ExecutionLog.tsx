@@ -1,17 +1,30 @@
 'use client';
 
-import { useEffect, useRef, useState, useMemo } from 'react';
+import { useEffect, useRef, useState, useMemo, forwardRef, useImperativeHandle } from 'react';
+
+export interface ExternalLogEntry {
+  timestamp: string;
+  level: 'INFO' | 'EXEC' | 'WARN' | 'SIGNAL' | 'ALGO';
+  message: string;
+}
 
 interface LogEntry {
   timestamp: string;
   level: 'INFO' | 'EXEC' | 'WARN' | 'SIGNAL' | 'ALGO';
   message: string;
   id: number;
+  isExternal?: boolean;
 }
 
 interface ExecutionLogProps {
   streamUrl?: string;
+  externalEntries?: ExternalLogEntry[];
+  clearLogs?: boolean;
 }
+
+export type ExecutionLogHandle = {
+  addEntry: (level: LogEntry['level'], message: string) => void;
+};
 
 type FilterLevel = 'ALL' | 'INFO' | 'EXEC' | 'WARN' | 'SIGNAL' | 'ALGO';
 
@@ -64,22 +77,63 @@ const MOCK_MESSAGES: { level: LogEntry['level']; msg: string }[] = [
   { level: 'EXEC', msg: 'Position hedging activated: $100 counter-allocation on pos-3 decay hedge' },
 ];
 
-export default function ExecutionLog({ streamUrl }: ExecutionLogProps) {
+export default forwardRef<ExecutionLogHandle, ExecutionLogProps>(function ExecutionLog({ externalEntries, clearLogs }, ref) {
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [filter, setFilter] = useState<FilterLevel>('ALL');
   const [newIds, setNewIds] = useState<Set<number>>(new Set());
   const containerRef = useRef<HTMLDivElement>(null);
   const idCounter = useRef(0);
 
+  useImperativeHandle(ref, () => ({
+    addEntry(level: LogEntry['level'], message: string) {
+      const newId = idCounter.current++;
+      const entry: LogEntry = {
+        level,
+        message,
+        timestamp: makeTs(),
+        id: newId,
+        isExternal: true,
+      };
+      setLogs(prev => [...prev.slice(-200), entry]);
+      setNewIds(prev => { const n = new Set(Array.from(prev)); n.add(newId); return n; });
+      setTimeout(() => setNewIds(prev => { const n = new Set(Array.from(prev)); n.delete(newId); return n; }), 800);
+    },
+  }));
+
   // Initialize with some logs
   useEffect(() => {
     const initial = MOCK_MESSAGES.slice(0, 8).map(m => ({
-      ...m,
+      level: m.level,
+      message: m.msg,
       timestamp: makeTs(),
       id: idCounter.current++,
     }));
     setLogs(initial);
   }, []);
+
+  // Merge external entries
+  useEffect(() => {
+    if (externalEntries && externalEntries.length > 0) {
+      setLogs(prev => {
+        const existing = new Set(prev.map(l => `${l.timestamp}-${l.message}`));
+        const newEntries = externalEntries
+          .filter(e => !existing.has(`${e.timestamp}-${e.message}`))
+          .map(e => ({
+            ...e,
+            id: idCounter.current++,
+            isExternal: true,
+          }));
+        return newEntries.length > 0 ? [...prev.slice(-200), ...newEntries] : prev;
+      });
+    }
+  }, [externalEntries]);
+
+  // Clear logs when requested
+  useEffect(() => {
+    if (clearLogs) {
+      setLogs([]);
+    }
+  }, [clearLogs]);
 
   // Simulate live entries
   useEffect(() => {
@@ -94,8 +148,8 @@ export default function ExecutionLog({ streamUrl }: ExecutionLogProps) {
       };
 
       setLogs(prev => [...prev.slice(-200), entry]);
-      setNewIds(prev => new Set([...prev, newId]));
-      setTimeout(() => setNewIds(prev => { const n = new Set(prev); n.delete(newId); return n; }), 800);
+      setNewIds(prev => { const n = new Set(Array.from(prev)); n.add(newId); return n; });
+      setTimeout(() => setNewIds(prev => { const n = new Set(Array.from(prev)); n.delete(newId); return n; }), 800);
     }, 1500 + Math.random() * 2500);
 
     return () => clearInterval(interval);
@@ -174,7 +228,7 @@ export default function ExecutionLog({ streamUrl }: ExecutionLogProps) {
       </div>
     </div>
   );
-}
+});
 
 function makeTs(): string {
   const d = new Date();

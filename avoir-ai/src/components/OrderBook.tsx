@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 interface Position {
   id: string;
@@ -144,7 +144,7 @@ export default function OrderBook({ positions, onSelect }: OrderBookProps) {
       </div>
 
       {/* Column headers — sortable */}
-      <div className="grid grid-cols-[24px_1fr_60px_50px_60px_55px_70px] border-b border-terminal-border bg-terminal-surface/50 flex-shrink-0">
+      <div className="grid grid-cols-[24px_220px_60px_50px_60px_55px_70px] border-b border-terminal-border bg-terminal-surface/50 flex-shrink-0">
         <span className="px-1 py-1 text-[7px] text-zinc-700 tracking-widest">#</span>
         <button onClick={() => handleSort('asset')} className="px-2 py-1 text-[7px] text-zinc-600 tracking-widest text-left hover:text-zinc-400">
           ASSET<SortIndicator field="asset" />
@@ -170,7 +170,7 @@ export default function OrderBook({ positions, onSelect }: OrderBookProps) {
           <button
             key={pos.id}
             onClick={() => onSelect(pos)}
-            className={`w-full grid grid-cols-[24px_1fr_60px_50px_60px_55px_70px] border-b border-terminal-border text-left transition-all duration-300 ${
+            className={`w-full grid grid-cols-[24px_220px_60px_50px_60px_55px_70px] border-b border-terminal-border text-left transition-all duration-300 ${
               flashMap[pos.id] === 'green'
                 ? 'bg-neon-green/15'
                 : flashMap[pos.id] === 'red'

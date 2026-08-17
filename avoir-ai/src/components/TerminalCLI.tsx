@@ -10,95 +10,14 @@ interface CLIEntry {
 }
 
 interface TerminalCLIProps {
-  onCommand?: (cmd: string) => void;
+  onCommand?: (cmd: string, emitOutput: (output: string) => void) => void;
 }
 
 const COMMAND_LIST = [
   '/help', '/status', '/positions', '/portfolio', '/risk',
   '/allocate', '/liquidate', '/scan', '/brief', '/alert',
-  '/history', '/export', '/theme', '/clear',
+  '/history', '/export', '/theme', '/clear', '/alpha', '/agency',
 ];
-
-const COMMANDS: Record<string, (args: string) => string> = {
-  help: () => `AVAILABLE COMMANDS:
-  ├── /help                  Show this help
-  ├── /status                System status overview
-  ├── /positions             List all active positions
-  ├── /portfolio             Portfolio summary with risk metrics
-  ├── /risk                  Risk analysis breakdown
-  ├── /allocate $<amt> <id>  Reallocate capital to position
-  ├── /liquidate <id>        Liquidate a position
-  ├── /scan                  Run market signal scan
-  ├── /brief                 Regenerate alpha brief
-  ├── /alert <msg>           Set custom alert condition
-  ├── /history               Show command history
-  ├── /export                Export data to clipboard
-  └── /clear                 Clear terminal`,
-
-  status: () => `SYSTEM STATUS:
-  ├── Engine:       ● ONLINE
-  ├── Connections:  4/4 EXCHANGES CONNECTED
-  ├── Latency:      8ms avg (12ms p99)
-  ├── Uptime:       99.97% (14d 7h 23m)
-  ├── Active Pos:   3
-  ├── Total AUM:    $2,500
-  └── Last Scan:    ${new Date().toLocaleTimeString('en-US', { hour12: false })}`,
-
-  positions: () => `ACTIVE POSITIONS:
-  ├── pos-1  Corporate Villain Era Hook   TikTok      $1,250   4.2x   +15%   SCALING
-  ├── pos-2  Anti-Hustle Culture Ad       Instagram   $850     3.8x   +8%    OPTIMIZING
-  └── pos-3  Lo-Fi Skincare Demo          YT Shorts   $400     1.2x   -5%    LIQUIDATING`,
-
-  portfolio: () => `PORTFOLIO SUMMARY:
-  ├── Total AUM:          $2,500
-  ├── Weighted ROAS:      3.7x
-  ├── Daily P&L:          +$142.50 (+5.7%)
-  ├── Win Rate:           2/3 (66.7%)
-  ├── Avg Hold Time:      4.2 days
-  └── Sharpe Ratio:       2.14`,
-
-  risk: () => `RISK ANALYSIS:
-  ├── Portfolio Beta:     0.82
-  ├── Max Drawdown:       -8.3%
-  ├── VaR (95%):          -$87.50
-  ├── Concentration Risk: MODERATE (pos-1 = 50% of AUM)
-  ├── Decay Exposure:     1 position (pos-3)
-  └── Recommendation:    Reduce pos-3 exposure or hedge`,
-
-  scan: () => `SCANNING MARKET SIGNALS...
-  ├── TikTok:      3 trending audio anomalies detected
-  ├── Instagram:   Engagement rate shifting +12% in niche
-  ├── LinkedIn:    Anti-corporate content surging
-  ├── YouTube:     Short-form algorithm favoring UGC-style
-  └── RESULT:      pos-1 momentum confirmed. pos-3 decay accelerating.`,
-
-  brief: () => `REGENERATING ALPHA BRIEF...
-  ├── Fetching market data.......... DONE
-  ├── Running trend analysis........ DONE
-  ├── Generating playbook........... DONE
-  └── Alpha brief updated. Anomaly confidence: 91.2%`,
-
-  history: () => `RECENT COMMANDS:
-  ├── /status
-  ├── /positions
-  ├── /scan
-  └── /brief`,
-
-  export: () => `EXPORTING PORTFOLIO DATA...
-  ├── Format: JSON
-  ├── Positions: 3
-  ├── Timestamp: ${new Date().toISOString()}
-  └── ✓ Copied to clipboard`,
-
-  theme: () => `AVAILABLE THEMES:
-  ├── matrix    (green on black)
-  ├── amber     (amber on black) [CURRENT]
-  ├── cyan      (cyan on black)
-  └── red       (red on black)
-  Usage: /theme <name>`,
-
-  clear: () => '__CLEAR__',
-};
 
 const STARTUP_SEQUENCE = [
   { type: 'system' as const, msg: 'AVOIR TERMINAL v2.4.1' },
@@ -151,56 +70,28 @@ export default function TerminalCLI({ onCommand }: TerminalCLIProps) {
 
     const ts = now();
     const cmd = trimmed.startsWith('/') ? trimmed.slice(1).split(' ')[0].toLowerCase() : trimmed.toLowerCase();
-    const args = trimmed.slice(cmd.length + (trimmed.startsWith('/') ? 1 : 0) + cmd.length).trim();
-    const fullArgs = trimmed.slice(cmd.length + 1).trim();
 
-    let output = '';
-    let isError = false;
+    const emitOutput = (output: string, isError = false) => {
+      setHistory(prev => [
+        ...prev,
+        { input: trimmed, output: '', timestamp: ts, type: 'command' },
+        { input: '', output, timestamp: ts, type: isError ? 'error' : 'response' },
+      ]);
+    };
 
     if (cmd === 'clear') {
       setHistory([]);
       setInput('');
+      onCommand?.(trimmed, emitOutput);
       return;
     }
 
-    if (COMMANDS[cmd]) {
-      output = COMMANDS[cmd](fullArgs);
-    } else if (trimmed.startsWith('/liquidate')) {
-      const posId = fullArgs || 'pos-3';
-      output = `LIQUIDATING ${posId.toUpperCase()}...
-  ├── Selling all allocated capital at market price...
-  ├── Execution complete. Funds returned to pool.
-  └── Position ${posId} marked as CLOSED.`;
-    } else if (trimmed.startsWith('/allocate')) {
-      const match = fullArgs.match(/\$(\d+)\s+(\S+)/);
-      if (match) {
-        output = `ALLOCATING $${match[1]} → ${match[2].toUpperCase()}...
-  ├── Bid placed. Waiting for fill...
-  ├── FILLED at $${match[1]}
-  └── Position ${match[2]} updated. New AUM confirmed.`;
-      } else {
-        output = 'USAGE: /allocate $<amount> <pos-id>';
-        isError = true;
-      }
-    } else if (trimmed.startsWith('/alert')) {
-      output = `ALERT SET: "${fullArgs || 'No message'}"
-  └── Notification will trigger when conditions are met.`;
-    } else {
-      output = `UNKNOWN COMMAND: "${trimmed}"
-  └── Type /help for available commands`;
-      isError = true;
-    }
+    onCommand?.(trimmed, emitOutput);
 
-    setHistory(prev => [
-      ...prev,
-      { input: trimmed, output: '', timestamp: ts, type: 'command' },
-      { input: '', output, timestamp: ts, type: isError ? 'error' : 'response' },
-    ]);
     setCmdHistory(prev => [trimmed, ...prev].slice(0, 50));
     setHistIdx(-1);
     setInput('');
     setShowSuggestions(false);
-    onCommand?.(trimmed);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
