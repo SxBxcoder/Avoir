@@ -85,6 +85,7 @@ class TrendSniper:
             "q": industry,
             "geo": "US",
             "hl": "en",
+            "data_type": "RELATED_QUERIES",
             "api_key": self.serpapi_key,
         }
 
@@ -93,32 +94,34 @@ class TrendSniper:
         data = resp.json()
 
         top_trends = []
-        for item in data.get("rising_queries", [])[:5]:
-            value = item.get("value", 0)
+        related = data.get("related_queries", {})
+
+        for item in related.get("rising", [])[:5]:
+            value_str = str(item.get("value", "Breakout"))
             top_trends.append({
                 "keyword": item.get("query", ""),
-                "momentum": "rising" if value >= 5000 else "peaking",
-                "searchVolume": f"+{value:,}%",
+                "momentum": "rising",
+                "searchVolume": value_str,
                 "sentiment": "neutral",
                 "context": f"Rising Google search in {industry}",
             })
 
-        for item in data.get("top_queries", [])[:3]:
+        for item in related.get("top", [])[:3]:
             if len(top_trends) >= 6:
                 break
             top_trends.append({
                 "keyword": item.get("query", ""),
                 "momentum": "peaking",
-                "searchVolume": f"{item.get('value', 0):,}",
+                "searchVolume": str(item.get("value", "0")),
                 "sentiment": "neutral",
                 "context": f"Top Google search related to {industry}",
             })
 
         viral_hooks = []
-        for item in data.get("related_topics", [])[:3]:
-            title = item.get("title", "")
-            if title:
-                viral_hooks.append(f"Why everyone is searching for '{title}'...")
+        for trend in top_trends[:3]:
+            keyword = trend["keyword"]
+            if keyword:
+                viral_hooks.append(f"Why everyone is searching for '{keyword}'...")
 
         return {
             "industry": industry,
