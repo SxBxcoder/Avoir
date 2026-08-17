@@ -429,22 +429,3 @@ export function createMockShadowCloneStream(): ReadableStream {
     },
   });
 }
-
-// ============================================================================
-// MOCK TRENDS (already exists in trends.ts, but this ensures the API route works)
-// ============================================================================
-
-export const MOCK_TRENDS = {
-  industry: 'general',
-  lastUpdated: new Date().toISOString(),
-  topTrends: [
-    { keyword: 'AI-native brands', momentum: 'rising', searchVolume: '+340%', sentiment: 'positive', context: 'Brands built entirely with AI tools are outperforming traditional competitors on CAC.' },
-    { keyword: 'anti-corporate aesthetic', momentum: 'peaking', searchVolume: '4.2M', sentiment: 'positive', context: 'Gen-Z prefers raw, unpolished content from brands that feel human.' },
-    { keyword: 'creator-led commerce', momentum: 'rising', searchVolume: '+180%', sentiment: 'positive', context: 'Shift from brand-push to creator-pull marketing models.' },
-  ],
-  viralHooks: [
-    'Nobody is talking about this...',
-    'I tested every AI tool so you don\'t have to...',
-    'POV: You just discovered the cheat code...',
-  ],
-};
