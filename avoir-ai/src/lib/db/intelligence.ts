@@ -11,6 +11,7 @@
 
 import { PutCommand, GetCommand } from '@aws-sdk/lib-dynamodb';
 import { getDynamoClient, TABLES } from './dynamodb';
+import { logger } from '@/lib/logger';
 
 // ============================================================================
 // TYPES
@@ -43,7 +44,7 @@ export async function getIntelligenceBrief(userId: string): Promise<Intelligence
 
     return (result.Item as IntelligenceBrief) || null;
   } catch (err: any) {
-    console.error(`[DB] Fetch intelligence brief failed: ${err.message}`);
+    logger.error('db.intelligence', 'Fetch brief failed', { err });
     return null;
   }
 }
@@ -84,7 +85,7 @@ export async function updateIntelligenceBrief(
       })
     );
   } catch (err: any) {
-    console.error(`[DB] Update intelligence brief failed: ${err.message}`);
+    logger.error('db.intelligence', 'Update brief failed', { err });
   }
 
   return brief;

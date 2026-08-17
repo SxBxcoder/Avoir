@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { resetPassword, confirmResetPassword } from 'aws-amplify/auth';
-import { configureAuth } from '@/lib/auth';
+import { resetPassword, confirmResetPassword } from '@/lib/authBridge';
+import { GuestOnly } from '@/components/auth/guards';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, ArrowRight, Mail, Lock, ShieldCheck, KeyRound, Eye, EyeOff, CheckCircle2 } from 'lucide-react';
 import Link from 'next/link';
@@ -25,8 +25,6 @@ export default function ForgotPasswordPage() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
-  useEffect(() => { configureAuth(); }, []);
-
   // Step 1: Send verification code
   const handleSendCode = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -35,10 +33,6 @@ export default function ForgotPasswordPage() {
     setSuccess('');
 
     try {
-      if (!process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID) {
-        throw new Error('Deployment Error: Cognito User Pool ID is missing.');
-      }
-
       await resetPassword({ username: email });
       setSuccess('Verification code sent! Check your email inbox (and spam folder).');
       setStep('code');
@@ -111,6 +105,7 @@ export default function ForgotPasswordPage() {
   const strengthColors = ['', '#ef4444', '#f97316', '#eab308', '#22c55e', '#06b6d4'];
 
   return (
+    <GuestOnly>
     <div className="min-h-screen bg-black text-white flex" style={{ fontFamily: "'Inter', sans-serif" }}>
       {/* Left Panel — Branding */}
       <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden">
@@ -451,5 +446,6 @@ export default function ForgotPasswordPage() {
         </motion.div>
       </div>
     </div>
+    </GuestOnly>
   );
 }

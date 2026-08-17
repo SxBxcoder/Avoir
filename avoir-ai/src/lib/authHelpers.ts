@@ -1,7 +1,8 @@
 // Helper functions for authentication
 // These are like your JWT middleware functions in MERN
 
-import { getCurrentUser, fetchAuthSession, signOut } from 'aws-amplify/auth';
+import { getCurrentUser, fetchAuthSession, signOut } from '@/lib/authBridge';
+import { clientLog } from '@/lib/logClient';
 
 // Check if user is logged in (like verifyToken middleware in MERN)
 export async function isAuthenticated(): Promise<boolean> {
@@ -38,6 +39,6 @@ export async function logout() {
   try {
     await signOut();
   } catch (error) {
-    console.error('Logout error:', error);
+    clientLog.error('Logout error:', error);
   }
 }

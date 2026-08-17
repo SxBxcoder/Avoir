@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Shield, Eye, Flame, AlertTriangle, Target, Activity, Loader2, X } from 'lucide-react';
+import { useAuth } from '@/lib/auth/provider';
+import { clientLog } from '@/lib/logClient';
 
 interface CompetitorAd {
   id: string;
@@ -27,6 +29,7 @@ interface CompetitorIntelPanelProps {
 }
 
 export default function CompetitorIntelPanel({ industry, onClose, onInjectGap }: CompetitorIntelPanelProps) {
+  const { accessToken } = useAuth();
   const [intel, setIntel] = useState<CompetitorIntel | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -35,7 +38,9 @@ export default function CompetitorIntelPanel({ industry, onClose, onInjectGap }:
     const fetchIntel = async () => {
       setIsLoading(true);
       try {
-        const res = await fetch(`/api/competitors?industry=${encodeURIComponent(industry)}`);
+        const res = await fetch(`/api/competitors?industry=${encodeURIComponent(industry)}`, {
+          headers: accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {},
+        });
         if (res.ok) {
           const data = await res.json();
           if (data.intel && mounted) {
@@ -43,7 +48,7 @@ export default function CompetitorIntelPanel({ industry, onClose, onInjectGap }:
           }
         }
       } catch (err) {
-        console.error('Failed to fetch competitor intel:', err);
+        clientLog.error('Failed to fetch competitor intel:', err);
       } finally {
         if (mounted) setIsLoading(false);
       }
@@ -51,7 +56,7 @@ export default function CompetitorIntelPanel({ industry, onClose, onInjectGap }:
 
     fetchIntel();
     return () => { mounted = false; };
-  }, [industry]);
+  }, [industry, accessToken]);
 
   return (
     <motion.div
@@ -73,7 +78,10 @@ export default function CompetitorIntelPanel({ industry, onClose, onInjectGap }:
               <Eye className="w-6 h-6 text-orange-400" />
             </div>
             <div>
-              <h2 className="text-xl font-bold text-white font-tactical tracking-wider">COMPETITOR INTEL</h2>
+              <div className="flex items-center gap-3">
+                <h2 className="text-xl font-bold text-white font-tactical tracking-wider">COMPETITOR INTEL</h2>
+                <span className="text-[10px] px-2 py-0.5 rounded bg-zinc-800/80 text-zinc-400 font-mono tracking-widest border border-zinc-700">SIMULATED DATA</span>
+              </div>
               <p className="text-sm text-zinc-400 flex items-center gap-2">
                 <Target className="w-4 h-4 text-orange-500/70" />
                 Live Analysis: <span className="text-orange-400 font-mono">{industry.toUpperCase()}</span>

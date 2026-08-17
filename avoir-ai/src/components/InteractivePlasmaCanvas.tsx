@@ -33,29 +33,10 @@ export default function InteractivePlasmaCanvas() {
     window.addEventListener('resize', resize);
     resize();
 
-    // Plasma configuration
-    const numPoints = 80;
-    const points: { x: number; y: number; vx: number; vy: number; radius: number; color: string; phase: number }[] = [];
-
-    // Extremely subtle, muted colors to act purely as an atmospheric background
-    const colors = [
-      'rgba(99, 102, 241, 0.015)',  // Indigo 500
-      'rgba(67, 56, 202, 0.02)',    // Indigo 700
-      'rgba(45, 212, 191, 0.01)',   // Teal 400
-      'rgba(168, 85, 247, 0.01)'    // Purple 500
-    ];
-
-    for (let i = 0; i < numPoints; i++) {
-      points.push({
-        x: Math.random() * width,
-        y: Math.random() * height,
-        vx: (Math.random() - 0.5) * 0.3,
-        vy: (Math.random() - 0.5) * 0.3,
-        radius: Math.random() * 250 + 100, // Large, soft orbs
-        color: colors[Math.floor(Math.random() * colors.length)],
-        phase: Math.random() * Math.PI * 2
-      });
-    }
+    // Grid configuration
+    const gridSize = 40;
+    const gridColor = 'rgba(34, 34, 34, 0.3)';
+    const pulseColor = 'rgba(245, 158, 11, 0.04)';
 
     let mouseX = width / 2;
     let mouseY = height / 2;
@@ -73,53 +54,52 @@ export default function InteractivePlasmaCanvas() {
     let time = 0;
 
     const render = () => {
-      time += 0.005; // Very slow, luxurious movement
-      
-      // Clear with dark transparent background to create long, smooth trails
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.2)'; 
+      time += 0.01;
+
+      // Clear
+      ctx.fillStyle = '#000000';
       ctx.fillRect(0, 0, width, height);
 
       // Smooth mouse interpolation
-      mouseX += (targetMouseX - mouseX) * 0.05;
-      mouseY += (targetMouseY - mouseY) * 0.05;
+      mouseX += (targetMouseX - mouseX) * 0.08;
+      mouseY += (targetMouseY - mouseY) * 0.08;
 
-      // REMOVED 'screen' blending to prevent it from getting overly bright when clustered
+      // Draw grid lines
+      ctx.strokeStyle = gridColor;
+      ctx.lineWidth = 0.5;
 
-      for (let i = 0; i < numPoints; i++) {
-        const p = points[i];
-
-        // Organic, wave-like movement
-        p.x += p.vx + Math.sin(time + p.phase) * 0.6;
-        p.y += p.vy + Math.cos(time + p.phase) * 0.6;
-
-        // Wrap around screen seamlessly
-        if (p.x < -p.radius) p.x = width + p.radius;
-        if (p.x > width + p.radius) p.x = -p.radius;
-        if (p.y < -p.radius) p.y = height + p.radius;
-        if (p.y > height + p.radius) p.y = -p.radius;
-
-        // Extremely subtle mouse interaction (just a gentle nudge)
-        const dx = mouseX - p.x;
-        const dy = mouseY - p.y;
-        const dist = Math.sqrt(dx * dx + dy * dy);
-        
-        // Small interaction radius (250px) and very weak force
-        if (dist < 250) {
-          const force = (250 - dist) / 250;
-          p.x += (dx / dist) * force * 0.3; // Barely noticeable pull
-          p.y += (dy / dist) * force * 0.3;
-        }
-
-        // Draw soft flowing gradient
-        const gradient = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.radius);
-        gradient.addColorStop(0, p.color);
-        gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
-
+      // Vertical lines
+      for (let x = 0; x <= width; x += gridSize) {
         ctx.beginPath();
-        ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
-        ctx.fillStyle = gradient;
-        ctx.fill();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, height);
+        ctx.stroke();
       }
+
+      // Horizontal lines
+      for (let y = 0; y <= height; y += gridSize) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(width, y);
+        ctx.stroke();
+      }
+
+      // Mouse proximity glow — subtle amber pulse near cursor
+      const glowRadius = 200;
+      const gradient = ctx.createRadialGradient(mouseX, mouseY, 0, mouseX, mouseY, glowRadius);
+      gradient.addColorStop(0, pulseColor);
+      gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, width, height);
+
+      // Occasional flicker line (horizontal scan)
+      const scanY = (time * 80) % height;
+      ctx.strokeStyle = 'rgba(245, 158, 11, 0.03)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(0, scanY);
+      ctx.lineTo(width, scanY);
+      ctx.stroke();
 
       animationFrameId = requestAnimationFrame(render);
     };
@@ -139,8 +119,6 @@ export default function InteractivePlasmaCanvas() {
         ref={canvasRef}
         className="absolute inset-0 w-full h-full object-cover"
       />
-      {/* Subtle edge vignette for text contrast */}
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_20%,rgba(0,0,0,0.6)_100%)] pointer-events-none" />
     </div>
   );
 }

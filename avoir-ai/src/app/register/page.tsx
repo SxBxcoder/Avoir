@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { signUp, confirmSignUp, signIn, signInWithRedirect } from 'aws-amplify/auth';
-import { configureAuth } from '@/lib/auth';
+import { signUp, confirmSignUp, signInWithRedirect, useMockAuth } from '@/lib/authBridge';
+import { useAuth } from '@/lib/auth/provider';
+import { GuestOnly } from '@/components/auth/guards';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, ArrowRight, Eye, EyeOff, Mail, Lock, Building2, Shield, CheckCircle2 } from 'lucide-react';
 import Link from 'next/link';
@@ -14,6 +15,7 @@ const springBouncy = { type: 'spring' as const, stiffness: 400, damping: 25 };
 
 export default function RegisterPage() {
   const router = useRouter();
+  const { login } = useAuth();
   const [step, setStep] = useState<'signup' | 'verify'>('signup');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -22,8 +24,6 @@ export default function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-
-  useEffect(() => { configureAuth(); }, []);
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -60,7 +60,20 @@ export default function RegisterPage() {
 
     try {
       await confirmSignUp({ username: email, confirmationCode: verificationCode });
-      await signIn({ username: email, password });
+
+      // Sign in after verification. If the user was auto-signed-in during sign-up,
+      // treat "already signed in" as success instead of showing an error.
+      try {
+        await login(email, password);
+      } catch (signInErr: any) {
+        if (
+          signInErr.name !== 'UserAlreadyAuthenticatedException' &&
+          !signInErr.message?.includes('already a signed in user')
+        ) {
+          throw signInErr;
+        }
+      }
+
       window.location.href = '/onboarding';
     } catch (err: any) {
       setError(err.message || 'Verification failed');
@@ -77,6 +90,7 @@ export default function RegisterPage() {
   ];
 
   return (
+    <GuestOnly>
     <div className="min-h-screen bg-black text-white flex" style={{ fontFamily: "'Inter', sans-serif" }}>
       {/* Left Panel — Branding */}
       <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden">
@@ -237,6 +251,11 @@ export default function RegisterPage() {
                   </motion.div>
                   <h2 className="text-3xl font-bold tracking-tight mb-2">Verify Email</h2>
                   <p className="text-zinc-500">We sent a 6-digit code to <span className="text-white font-medium">{email}</span></p>
+                  {useMockAuth && (
+                    <p className="mt-2 text-xs text-indigo-300 bg-indigo-500/10 border border-indigo-500/20 rounded-lg p-2.5">
+                      Local Demo Mode — no email sent. Use any 6-digit code (e.g. <span className="font-mono font-semibold">123456</span>).
+                    </p>
+                  )}
                 </div>
 
                 {error && (
@@ -275,5 +294,6 @@ export default function RegisterPage() {
         </motion.div>
       </div>
     </div>
+    </GuestOnly>
   );
 }

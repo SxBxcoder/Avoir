@@ -268,7 +268,7 @@ def generate_campaign_with_cascade(goal: str, messages: List[Dict[str, str]] = N
         if not gemini_api_key:
             raise Exception("GEMINI_API_KEY not configured")
         
-        gemini_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key={gemini_api_key}"
+        gemini_url = GEMINI_ENDPOINT
         
         # Pure stateless prompt for Gemini
         gemini_contents = [{
@@ -290,7 +290,7 @@ def generate_campaign_with_cascade(goal: str, messages: List[Dict[str, str]] = N
         gemini_request = Request(
             gemini_url,
             data=json.dumps(gemini_payload).encode('utf-8'),
-            headers={'Content-Type': 'application/json'},
+            headers={'Content-Type': 'application/json', 'x-goog-api-key': gemini_api_key},
             method='POST'
         )
         
@@ -333,7 +333,7 @@ def generate_campaign_with_cascade(goal: str, messages: List[Dict[str, str]] = N
         if not gemini_api_key_2:
             raise Exception("GEMINI_API_KEY_2 not configured")
         
-        gemini_url_2 = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key={gemini_api_key_2}"
+        gemini_url_2 = GEMINI_ENDPOINT
         
         # Pure stateless prompt for Gemini (Key 2)
         gemini_contents_2 = [{
@@ -355,7 +355,7 @@ def generate_campaign_with_cascade(goal: str, messages: List[Dict[str, str]] = N
         gemini_request_2 = Request(
             gemini_url_2,
             data=json.dumps(gemini_payload_2).encode('utf-8'),
-            headers={'Content-Type': 'application/json'},
+            headers={'Content-Type': 'application/json', 'x-goog-api-key': gemini_api_key_2},
             method='POST'
         )
         

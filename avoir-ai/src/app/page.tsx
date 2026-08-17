@@ -4,17 +4,11 @@ import { useState, useEffect, useRef } from 'react';
 import { motion, useScroll, useTransform, useSpring, useInView, AnimatePresence } from 'framer-motion';
 import { Sparkles, Layers, Zap, ArrowRight, Play, ChevronDown, Globe, BarChart3, Palette, MessageSquare, Shield, Star, Users, CheckCircle2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { configureAuth } from '@/lib/auth';
-import { isAuthenticated, getUser, logout, getAccessToken } from '@/lib/authHelpers';
-import { Hub } from 'aws-amplify/utils';
-import { fetchUserAttributes, fetchAuthSession } from 'aws-amplify/auth';
+import { useAuth } from '@/lib/auth/provider';
 import Link from 'next/link';
 import Image from 'next/image';
 import CampaignDashboard from '@/components/CampaignDashboard';
 import TechGeometryCanvas from '@/components/TechGeometryCanvas';
-
-// Call this synchronously outside the component so Amplify's internal OAuth listener works reliably
-configureAuth();
 
 // ============================================================================
 // SPRING CONFIGS
@@ -158,10 +152,10 @@ function Navbar() {
 export default function Home() {
   const router = useRouter();
 
-  // Auth States
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [userEmail, setUserEmail] = useState('');
-  const [accessToken, setAccessToken] = useState('');
+  // Auth state is centralized in the AuthProvider. In demo mode the provider
+  // bootstraps a real mock session for ?demo=true, so no page-level bypass is
+  // needed here.
+  const { isAuthenticated, email, accessToken: authToken, logout, isLoading, refresh } = useAuth();
 
   // Scroll-based parallax (global scroll, no ref — avoids hydration errors with conditional rendering)
   const { scrollY } = useScroll();
@@ -169,81 +163,50 @@ export default function Home() {
   const heroOpacity = useTransform(scrollY, [0, 400], [1, 0]);
   const heroScale = useTransform(scrollY, [0, 400], [1, 0.95]);
 
+  // Returning from OAuth: the token exchange happens asynchronously inside
+  // aws-amplify, so poll the provider session a few times, then clean the URL.
   useEffect(() => {
-    // Helper to check auth and update state
-    const verifyAuth = async () => {
-      // Demo Mock Shield Bypass
-      if (typeof window !== 'undefined' && window.location.search.includes('demo=true')) {
-        setIsLoggedIn(true);
-        setUserEmail('commander@avoir.ai');
-        setAccessToken('mock-token');
-        return true;
-      }
-
-      const authenticated = await isAuthenticated();
-      if (authenticated) {
-        setIsLoggedIn(true);
-        
-        // The most foolproof way to get the email (especially for OAuth users)
-        // is to read the claims directly from the ID token.
-        try {
-          const session = await fetchAuthSession();
-          const email = session.tokens?.idToken?.payload?.email as string;
-          
-          if (email) {
-            setUserEmail(email);
-          } else {
-            // Fallback to fetchUserAttributes or basic username if ID token doesn't have email claim
-            const attributes = await fetchUserAttributes();
-            if (attributes.email) {
-              setUserEmail(attributes.email);
-            } else {
-              const user = await getUser();
-              setUserEmail(user?.signInDetails?.loginId || user?.username || 'Commander');
-            }
-          }
-        } catch {
-          const user = await getUser();
-          setUserEmail(user?.signInDetails?.loginId || user?.username || 'Commander');
-        }
-        
-        const token = await getAccessToken();
-        setAccessToken(token || '');
-        return true;
-      }
-      return false;
-    };
-
-    // Initial check
-    verifyAuth();
-
-    // If we are returning from OAuth, the token exchange happens asynchronously.
-    // Instead of a brittle Hub listener, we just poll a few times.
     if (typeof window !== 'undefined' && window.location.search.includes('code=')) {
       let attempts = 0;
       const interval = setInterval(async () => {
         attempts++;
-        const success = await verifyAuth();
-        if (success || attempts >= 10) { // stop polling after 10 attempts (5 seconds)
+        const success = await refresh();
+        if (success || attempts >= 10) {
           clearInterval(interval);
-          // Clean the URL to remove the code= parameter for a cleaner experience
           if (success) window.history.replaceState({}, document.title, window.location.pathname);
         }
       }, 500);
       return () => clearInterval(interval);
     }
-  }, []);
+  }, [refresh]);
+
+  const isLoggedIn = isAuthenticated;
+  const userEmail = email;
+  const resolvedAccessToken = authToken;
 
   const handleLogout = async () => {
     await logout();
-    setIsLoggedIn(false);
-    setUserEmail('');
-    setAccessToken('');
   };
+
+  // While the initial session restore is in flight, show a loader instead of
+  // flashing the landing page at authenticated users.
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <div className="w-10 h-10 border-2 border-white/20 border-t-indigo-500 rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   // Authenticated: Show Dashboard
   if (isLoggedIn) {
-    return <CampaignDashboard accessToken={accessToken} userEmail={userEmail} onLogout={handleLogout} />;
+    return (
+      <CampaignDashboard
+        accessToken={resolvedAccessToken || ''}
+        userEmail={userEmail || ''}
+        onLogout={handleLogout}
+      />
+    );
   }
 
   // ========================================================================

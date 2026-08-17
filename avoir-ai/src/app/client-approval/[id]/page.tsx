@@ -4,6 +4,7 @@ import { useEffect, useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CheckCircle2, XCircle, Loader2, Send, Bot, User } from 'lucide-react';
 import { useParams } from 'next/navigation';
+import { clientLog } from '@/lib/logClient';
 
 export default function ClientApprovalPage() {
   const params = useParams();
@@ -18,7 +19,8 @@ export default function ClientApprovalPage() {
   const chatEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    fetch(`http://localhost:8000/api/public/campaign/${id}`)
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+    fetch(`${apiUrl}/api/public/campaign/${id}`)
       .then(res => res.json())
       .then(data => {
         if (data.campaign) {
@@ -55,7 +57,8 @@ export default function ClientApprovalPage() {
     setStatus('REVISING');
 
     try {
-      const res = await fetch('http://localhost:8000/api/campaigns/revise', {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+      const res = await fetch(`${apiUrl}/api/campaigns/revise`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -71,7 +74,7 @@ export default function ClientApprovalPage() {
         }
       }
     } catch (err) {
-      console.error('Failed to revise', err);
+      clientLog.error('Failed to revise', err);
     } finally {
       setStatus('PENDING');
     }

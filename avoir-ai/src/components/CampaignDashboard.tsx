@@ -13,6 +13,7 @@ import PerformanceReportPanel from './PerformanceReportPanel';
 import { PlatformExportPanel } from './PlatformExportPanel';
 import CompetitorIntelPanel from './CompetitorIntelPanel';
 import TrendRadar from './TrendRadar';
+import { clientLog } from '@/lib/logClient';
 import { LiveArbitrageFeed } from './LiveArbitrageFeed';
 import { CapitalDeploymentSimulator } from './CapitalDeploymentSimulator';
 import { type UserSubscription, canGenerateCampaign, getRemainingCampaigns, PLANS, DEFAULT_SUBSCRIPTION } from '@/lib/stripe';
@@ -483,9 +484,10 @@ export default function CampaignDashboard({ accessToken, userEmail, onLogout }: 
 
   // P4: Fetch campaign list
   const refreshCampaignList = useCallback(async () => {
-    const userId = userEmail || 'anonymous';
     try {
-      const res = await fetch(`/api/campaigns?userId=${encodeURIComponent(userId)}&limit=30`);
+      const res = await fetch(`/api/campaigns?limit=30`, {
+        headers: accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {},
+      });
       if (res.ok) {
         const data = await res.json();
         setCampaignHistory(prev => {
@@ -502,9 +504,9 @@ export default function CampaignDashboard({ accessToken, userEmail, onLogout }: 
         });
       }
     } catch (err) {
-      console.error('Failed to load campaign history:', err);
+      clientLog.error('Failed to load campaign history:', err);
     }
-  }, [userEmail]);
+  }, [accessToken]);
 
   // P4: Load a past campaign into the active canvas
   const loadCampaign = useCallback((campaign: CampaignHistoryItem) => {
@@ -539,9 +541,11 @@ export default function CampaignDashboard({ accessToken, userEmail, onLogout }: 
 
   // P4: Delete a campaign
   const deleteCampaign = useCallback(async (campaignId: string) => {
-    const userId = userEmail || 'anonymous';
     try {
-      await fetch(`/api/campaigns?userId=${encodeURIComponent(userId)}&campaignId=${encodeURIComponent(campaignId)}`, { method: 'DELETE' });
+      await fetch(`/api/campaigns?campaignId=${encodeURIComponent(campaignId)}`, {
+        method: 'DELETE',
+        headers: accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {},
+      });
       setCampaignHistory(prev => prev.filter(c => c.campaignId !== campaignId));
       if (activeCampaignId === campaignId) {
         setActiveCampaignId(null);
@@ -549,18 +553,21 @@ export default function CampaignDashboard({ accessToken, userEmail, onLogout }: 
         setCurrentCampaign(null);
       }
     } catch (err) {
-      console.error('Failed to delete campaign:', err);
+      clientLog.error('Failed to delete campaign:', err);
     }
-  }, [userEmail, activeCampaignId]);
+  }, [activeCampaignId, accessToken]);
 
   // Fetch subscription, intelligence state, and campaign history on mount
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const userId = userEmail || 'anonymous';
         const [subRes, intelRes] = await Promise.all([
-          fetch(`/api/stripe/subscription?userId=${encodeURIComponent(userId)}`),
-          fetch(`/api/intelligence?userId=${encodeURIComponent(userId)}`)
+          fetch(`/api/stripe/subscription`, {
+            headers: accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {},
+          }),
+          fetch(`/api/intelligence`, {
+            headers: accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {},
+          })
         ]);
 
         if (subRes.ok) {
@@ -575,13 +582,13 @@ export default function CampaignDashboard({ accessToken, userEmail, onLogout }: 
           }
         }
       } catch (err) {
-        console.error('Failed to fetch data:', err);
-        setSubscription({ ...DEFAULT_SUBSCRIPTION, userId: userEmail || 'anonymous' });
+        clientLog.error('Failed to fetch data:', err);
+        setSubscription({ ...DEFAULT_SUBSCRIPTION, userId: '' });
       }
     };
     fetchData();
     refreshCampaignList();
-  }, [userEmail, refreshCampaignList]);
+  }, [accessToken, refreshCampaignList]);
 
   // Auto-scroll chat
   useEffect(() => {
@@ -624,15 +631,17 @@ export default function CampaignDashboard({ accessToken, userEmail, onLogout }: 
     try {
       await fetch('/api/campaigns/score', {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {}),
+        },
         body: JSON.stringify({
-          userId: userEmail || 'anonymous',
           campaignId: activeCampaignId,
           isWinner: true
         })
       });
     } catch (err) {
-      console.warn("Could not save winner status to DB (local dev).");
+      clientLog.warn("Could not save winner status to DB (local dev).");
     }
   };
 
@@ -640,7 +649,8 @@ export default function CampaignDashboard({ accessToken, userEmail, onLogout }: 
     if (!currentCampaign) return;
     setIsSharing(true);
     try {
-      const res = await fetch('http://localhost:8000/api/agency/share-link', {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+      const res = await fetch(`${apiUrl}/api/agency/share-link`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -661,7 +671,7 @@ export default function CampaignDashboard({ accessToken, userEmail, onLogout }: 
       setCopied('share-link');
       setTimeout(() => setCopied(null), 2000);
     } catch (err) {
-      console.error("Failed to share:", err);
+      clientLog.error("Failed to share:", err);
     } finally {
       setIsSharing(false);
     }
@@ -729,7 +739,6 @@ export default function CampaignDashboard({ accessToken, userEmail, onLogout }: 
         body: JSON.stringify({
           goal: finalGoal,
           messages: messages.concat(userMessage),
-          userId: userEmail || 'anonymous',
           genome_mode: genomeMode,
           pastWinningContext,
         }),
@@ -768,7 +777,7 @@ export default function CampaignDashboard({ accessToken, userEmail, onLogout }: 
               if (nextLine?.startsWith('data: ')) {
                 try {
                   const data = JSON.parse(nextLine.slice(6));
-                  console.log(`[SSE] Received event: ${eventType}`, data);
+                  clientLog.debug(`[SSE] Received event: ${eventType}`, data);
                   
                   switch (eventType) {
                     case 'status':
@@ -855,7 +864,7 @@ export default function CampaignDashboard({ accessToken, userEmail, onLogout }: 
         handleNonStreamingResponse(data, userMessage);
       }
     } catch (error: any) {
-      console.error('Generation failed:', error);
+      clientLog.error('Generation failed:', error);
       
       try {
         const fallbackResponse = await fetch('/api/generate', {
@@ -867,7 +876,6 @@ export default function CampaignDashboard({ accessToken, userEmail, onLogout }: 
           body: JSON.stringify({
             goal: goal || messages[messages.length - 1]?.content,
             messages: messages,
-            userId: userEmail || 'anonymous',
           }),
         });
 
@@ -905,7 +913,10 @@ export default function CampaignDashboard({ accessToken, userEmail, onLogout }: 
     try {
       const response = await fetch('/api/shadow-clone/generate', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {}),
+        },
         body: JSON.stringify({
           script: currentCampaign.captions[0] || currentCampaign.plan.hook,
           image_url: currentCampaign.image_url || ""
@@ -942,14 +953,14 @@ export default function CampaignDashboard({ accessToken, userEmail, onLogout }: 
                   setShadowCloneStatus(null);
                 }
               } catch (e) {
-                console.error(e);
+                clientLog.error(e);
               }
             }
           }
         }
       }
     } catch (err) {
-      console.error(err);
+      clientLog.error(err);
       setShadowCloneStatus({ step: 0, message: "ERROR: NEURAL CLONE SYNTHESIS FAILED" });
     }
   };
@@ -1342,15 +1353,19 @@ export default function CampaignDashboard({ accessToken, userEmail, onLogout }: 
                 onClick={async () => {
                   if (subscription?.stripeCustomerId) {
                     try {
+                      // The customer is derived server-side from the verified
+                      // JWT — never send a customerId from the client.
                       const res = await fetch('/api/stripe/portal', {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ customerId: subscription.stripeCustomerId }),
+                        headers: {
+                          'Content-Type': 'application/json',
+                          ...(accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {}),
+                        },
                       });
                       const data = await res.json();
                       if (data.url) window.location.href = data.url;
                     } catch (err) {
-                      console.error('Portal error:', err);
+                      clientLog.error('Portal error:', err);
                     }
                   }
                 }}
@@ -1955,7 +1970,7 @@ export default function CampaignDashboard({ accessToken, userEmail, onLogout }: 
                     offer: currentCampaign.plan.offer,
                     cta: currentCampaign.plan.cta,
                   }}
-                  userId={userEmail || 'anonymous'}
+                  accessToken={accessToken}
                   onClose={() => setShowPerformanceReport(false)}
                   onReported={() => setShowPerformanceReport(false)}
                 />
