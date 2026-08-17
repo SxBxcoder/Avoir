@@ -599,3 +599,122 @@ body {
 .driver-dark-theme .driver-popover-progress-text {
   color: #a1a1aa !important;
 }
+
+/* ============================================================================
+   BRUTALIST TERMINAL — Hedge Fund Trading Terminal Design System
+   Bloomberg/Eikon-inspired. Data-dense, zero softness.
+   ============================================================================ */
+
+/* Blocky scrollbar — no border-radius, sharp edges */
+.terminal-scrollbar::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+.terminal-scrollbar::-webkit-scrollbar-track {
+  background: #0A0A0A;
+}
+
+.terminal-scrollbar::-webkit-scrollbar-thumb {
+  background: #333;
+  border-radius: 0;
+}
+
+.terminal-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+/* CRT scanline overlay */
+.scanlines::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    to bottom,
+    transparent 0px,
+    transparent 2px,
+    rgba(0, 0, 0, 0.08) 2px,
+    rgba(0, 0, 0, 0.08) 4px
+  );
+  pointer-events: none;
+  z-index: 50;
+}
+
+/* Terminal panel — flat, no radius, sharp borders */
+.terminal-panel {
+  background: #0A0A0A;
+  border: 1px solid #222;
+  border-radius: 0;
+}
+
+/* Terminal input — flat, monospace, no radius */
+.terminal-input {
+  background: #000;
+  border: 1px solid #333;
+  border-radius: 0;
+  font-family: 'JetBrains Mono', monospace;
+  color: #F59E0B;
+  padding: 6px 10px;
+  font-size: 13px;
+  outline: none;
+}
+
+.terminal-input:focus {
+  border-color: #F59E0B;
+}
+
+/* Terminal button — flat, no radius, uppercase mono */
+.terminal-btn {
+  background: #F59E0B;
+  color: #000;
+  border: none;
+  border-radius: 0;
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 8px 16px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.terminal-btn:hover {
+  background: #FBBF24;
+}
+
+.terminal-btn-outline {
+  background: transparent;
+  color: #F59E0B;
+  border: 1px solid #F59E0B;
+  border-radius: 0;
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 8px 16px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.terminal-btn-outline:hover {
+  background: rgba(245, 158, 11, 0.1);
+}
+
+/* Neon glow text utilities */
+.text-glow-amber {
+  text-shadow: 0 0 8px rgba(245, 158, 11, 0.5);
+}
+
+.text-glow-cyan {
+  text-shadow: 0 0 8px rgba(6, 182, 212, 0.5);
+}
+
+.text-glow-green {
+  text-shadow: 0 0 8px rgba(34, 197, 94, 0.5);
+}
+
+.text-glow-red {
+  text-shadow: 0 0 8px rgba(239, 68, 68, 0.5);
+}
