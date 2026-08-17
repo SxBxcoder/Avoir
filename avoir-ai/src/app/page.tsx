@@ -142,6 +142,7 @@ function Navbar() {
           >
             Start
           </Link>
+          <ThemeToggle />
         </div>
       </div>
     </motion.nav>
