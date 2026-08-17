@@ -30,18 +30,51 @@ import { fetchCompetitorIntel, formatCompetitorContext } from '@/lib/db/competit
 import { fetchIndustryTrends, synthesizeTrendContext } from '@/lib/trends';
 
 // Status messages that stream to the UI for the "AI is Cooking" experience
-const COOKING_MESSAGES = [
-  { delay: 0, text: '🔥 Initializing Diamond Cascade Engine...' },
-  { delay: 800, text: '⚡ Scanning global Gen-Z trend database...' },
-  { delay: 1600, text: '🎯 Calibrating Authority Engine for maximum impact...' },
-  { delay: 2400, text: '🧠 Tier 1: Gemini Flash — Generating raw strategy...' },
-  { delay: 3200, text: '✍️ Crafting high-converting viral hooks...' },
-  { delay: 4000, text: '🎨 Composing visual assets with AI Director...' },
-  { delay: 5000, text: '⚔️ Running final quality cascade checks...' },
-];
+const COOKING_MESSAGES: Record<string, { delay: number; text: string }[]> = {
+  en: [
+    { delay: 0, text: '🔥 Initializing Diamond Cascade Engine...' },
+    { delay: 800, text: '⚡ Scanning global Gen-Z trend database...' },
+    { delay: 1600, text: '🎯 Calibrating Authority Engine for maximum impact...' },
+    { delay: 2400, text: '🧠 Tier 1: Gemini Flash — Generating raw strategy...' },
+    { delay: 3200, text: '✍️ Crafting high-converting viral hooks...' },
+    { delay: 4000, text: '🎨 Composing visual assets with AI Director...' },
+    { delay: 5000, text: '⚔️ Running final quality cascade checks...' },
+  ],
+  hi: [
+    { delay: 0, text: '🔥 डायमंड कैस्केड इंजन शुरू हो रहा है...' },
+    { delay: 800, text: '⚡ ग्लोबल ट्रेंड डेटाबेस स्कैन हो रहा है...' },
+    { delay: 1600, text: '🎯 अधिकतम इम्पैक्ट के लिए कैलिब्रेट हो रहा है...' },
+    { delay: 2400, text: '🧠 Tier 1: Gemini Flash — रणनीति बन रही है...' },
+    { delay: 3200, text: '✍️ वायरल हुक क्राफ्ट हो रहे हैं...' },
+    { delay: 4000, text: '🎨 विज़ुअल एसेट्स बन रहे हैं...' },
+    { delay: 5000, text: '⚔️ फाइनल क्वालिटी चेक चल रहा है...' },
+  ],
+  hi-en: [
+    { delay: 0, text: '🔥 Diamond Cascade Engine start ho raha hai...' },
+    { delay: 800, text: '⚡ Global trend database scan ho raha hai...' },
+    { delay: 1600, text: '🎯 Maximum impact ke liye calibrate ho raha hai...' },
+    { delay: 2400, text: '🧠 Tier 1: Gemini Flash — Strategy ban rahi hai...' },
+    { delay: 3200, text: '✍️ Viral hooks craft ho rahe hain...' },
+    { delay: 4000, text: '🎨 Visual assets ban rahe hain...' },
+    { delay: 5000, text: '⚔️ Final quality check chal raha hai...' },
+  ],
+  es: [
+    { delay: 0, text: '🔥 Inicializando Diamond Cascade Engine...' },
+    { delay: 800, text: '⚡ Escaneando base de datos de tendencias...' },
+    { delay: 1600, text: '🎯 Calibrando para máximo impacto...' },
+    { delay: 2400, text: '🧠 Tier 1: Gemini Flash — Generando estrategia...' },
+    { delay: 3200, text: '✍️ Creando hooks virales...' },
+    { delay: 4000, text: '🎨 Componiendo assets visuales...' },
+    { delay: 5000, text: '⚔️ Verificación final de calidad...' },
+  ],
+};
+
+function getCookingMessages(language: string) {
+  return COOKING_MESSAGES[language] || COOKING_MESSAGES['en'];
+}
 
 function createSSEStream(
-  statusMessages: typeof COOKING_MESSAGES,
+  statusMessages: { delay: number; text: string }[],
   runner: (send: (event: string, data: any) => void) => Promise<any>,
   userId: string,
   campaignGoal: string,
@@ -311,7 +344,7 @@ export async function POST(req: Request) {
     console.log(`[Stream] 🚀 SSE stream started for ${userId} (${sub.tier}), GenomeMode: ${isGenomeMode}`);
 
     // Create the SSE stream
-    const stream = createSSEStream(COOKING_MESSAGES, runner, userId, campaignGoal, isGenomeMode);
+    const stream = createSSEStream(getCookingMessages(campaignLanguage), runner, userId, campaignGoal, isGenomeMode);
 
     return new Response(stream, {
       headers: {
