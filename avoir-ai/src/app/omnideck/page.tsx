@@ -5,6 +5,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { Activity, Briefcase, BarChart2, ChevronRight, Server, Share2, CheckCircle2, Zap, Shield } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { RequireAuth } from '@/components/auth/guards';
+import InteractivePlasmaCanvas from '@/components/InteractivePlasmaCanvas';
 import DailyAlphaBrief from '@/components/DailyAlphaBrief';
 import { CapitalDeploymentSimulator } from '@/components/CapitalDeploymentSimulator';
 
@@ -79,6 +80,10 @@ export default function OmniDeckPage() {
   return (
     <RequireAuth>
     <div className="min-h-screen bg-black text-white font-mono overflow-x-hidden selection:bg-neon-amber/30 terminal-scrollbar">
+      {/* Background Grid */}
+      <div className="fixed inset-0 z-0 pointer-events-none">
+        <InteractivePlasmaCanvas />
+      </div>
 
       {/* Header */}
       <header className="relative z-10 border-b border-terminal-border bg-black">
