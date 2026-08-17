@@ -3,7 +3,7 @@
 
 # Web Framework
 fastapi>=0.115.0
-uvicorn[standard]>=0.32.0
+uvicorn[standard]>=0.52.1
 pydantic>=2.10.0
 
 # AWS SDK
