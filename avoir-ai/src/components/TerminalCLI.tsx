@@ -124,7 +124,8 @@ export default function TerminalCLI({ onCommand }: TerminalCLIProps) {
     let i = 0;
     const interval = setInterval(() => {
       if (i < STARTUP_SEQUENCE.length) {
-        setHistory(prev => [...prev, { input: '', output: STARTUP_SEQUENCE[i].msg, timestamp: now(), type: STARTUP_SEQUENCE[i].type }]);
+        const entry = STARTUP_SEQUENCE[i];
+        setHistory(prev => [...prev, { input: '', output: entry.msg, timestamp: now(), type: entry.type }]);
         i++;
       } else {
         setBooted(true);
