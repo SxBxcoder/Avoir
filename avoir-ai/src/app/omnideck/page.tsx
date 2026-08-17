@@ -269,7 +269,7 @@ export default function OmniDeckPage() {
             <span className="text-[10px] text-zinc-500 hidden sm:inline">{'// PORTFOLIO MANAGER'}</span>
           </div>
           <div className="flex items-center gap-4 flex-shrink-0">
-            <span className="px-2 py-0.5 text-[9px] font-bold tracking-widest text-neon-amber border border-neon-amber/30 bg-neon-amber/10">
+            <span className="px-2 py-0.5 text-[9px] font-bold tracking-widest text-neon-amber border border-neon-amber/30 bg-neon-amber/10 hidden sm:inline-block">
               SIMULATED DATA
             </span>
             <div className="flex items-center gap-1.5">
