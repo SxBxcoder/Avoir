@@ -238,6 +238,15 @@ async def publish_campaign(request: PublishRequest):
     }
 
 
+# Multi-Language Campaign Support
+from language_config import get_all_languages, is_supported
+
+@app.get("/api/languages")
+async def get_languages():
+    """Returns all supported languages for campaign generation."""
+    return {"languages": get_all_languages()}
+
+
 # Sprint 4: Shadow Clone Engine
 class ShadowCloneRequest(BaseModel):
     """Request model for generating a shadow clone video stream."""

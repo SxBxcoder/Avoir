@@ -212,26 +212,13 @@ MOCK_CAMPAIGNS = {
 }
 
 
-def get_mock_campaign(goal: str) -> Dict[str, Any]:
+def get_mock_campaign(goal: str, language: str = DEFAULT_LANGUAGE) -> Dict[str, Any]:
     """
-    Get high-quality mock campaign based on goal keywords.
-    
-    Args:
-        goal: User's campaign goal
-    
-    Returns:
-        Mock campaign with hook, offer, cta, captions, and image_prompt
+    Get high-quality mock campaign based on goal keywords and language.
+    Uses localized_mocks for non-English languages.
     """
-    goal_lower = goal.lower()
-    
-    if any(word in goal_lower for word in ['tech', 'hackathon', 'coding', 'ai', 'ml']):
-        return MOCK_CAMPAIGNS['tech']
-    elif any(word in goal_lower for word in ['fest', 'festival', 'celebration', 'party', 'event']):
-        return MOCK_CAMPAIGNS['fest']
-    elif any(word in goal_lower for word in ['workshop', 'training', 'course', 'learn', 'skill']):
-        return MOCK_CAMPAIGNS['workshop']
-    else:
-        return MOCK_CAMPAIGNS['default']
+    from localized_mocks import get_localized_mock
+    return get_localized_mock(goal, language)
 
 
 # ============================================================================
@@ -599,7 +586,7 @@ def generate_campaign_with_cascade(goal: str, messages: List[Dict[str, str]] = N
     logger.info("🛡️ TIER 6: TITANIUM SHIELD MOCK DATA ACTIVATED")
     
     # Get intelligent mock data based on goal keywords
-    mock_response = get_mock_campaign(goal)
+    mock_response = get_mock_campaign(goal, language)
     
     # Pass messages through without mutation
     mock_response['messages'] = messages if messages else []
@@ -783,7 +770,7 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             logger.warning(f"⚠️ Cascade execution failed: {str(cascade_error)}")
             logger.info("📡 [SAFETY NET] Returning high-quality mock campaign")
             
-            mock_campaign = get_mock_campaign(goal)
+            mock_campaign = get_mock_campaign(goal, language)
             hook = mock_campaign.get('hook', '')
             offer = mock_campaign.get('offer', '')
             cta = mock_campaign.get('cta', '')
@@ -872,7 +859,7 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             user_id = 'anonymous'
         
         # Get high-quality mock campaign
-        mock_data = get_mock_campaign(goal)
+        mock_data = get_mock_campaign(goal, language)
         
         # Create complete campaign record with mock data
         campaign_id = str(uuid.uuid4())
