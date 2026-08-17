@@ -4,4 +4,4 @@
 # strands-sdk is only used by dev/test tooling (check_env.py, test_*.py),
 # not by runtime code — do not bundle.
 
-requests>=2.31.0
+requests>=2.34.2
