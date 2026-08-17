@@ -86,7 +86,10 @@ export default function TrendRadar({ industry, onInjectTrend }: TrendRadarProps)
             <div className="absolute inset-0 bg-rose-500/20 blur-md rounded-full" />
           </div>
           <div>
-            <h3 className="text-xs font-bold font-tactical tracking-widest text-rose-400">TREND RADAR</h3>
+            <div className="flex items-center gap-2">
+              <h3 className="text-xs font-bold font-tactical tracking-widest text-rose-400">TREND RADAR</h3>
+              <span className="text-[8px] px-1 py-0.5 rounded bg-zinc-800/80 text-zinc-400 font-mono tracking-widest border border-zinc-700">SIMULATED DATA</span>
+            </div>
             <p className="text-[10px] text-zinc-500 uppercase">Live: {industry}</p>
           </div>
         </div>
