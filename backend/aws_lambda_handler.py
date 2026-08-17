@@ -39,6 +39,9 @@ from urllib.error import URLError, HTTPError
 import boto3
 from botocore.exceptions import ClientError
 
+from language_config import is_supported, detect_language_from_text, DEFAULT_LANGUAGE
+from prompts import build_system_prompt, build_trend_prompt
+
 
 # ============================================================================
 # LOGGING CONFIGURATION
@@ -235,27 +238,23 @@ def get_mock_campaign(goal: str) -> Dict[str, Any]:
 # 6-TIER DIAMOND RESILIENCE CASCADE - Pure Stateless with Live AI Images
 # ============================================================================
 
-def generate_campaign_with_cascade(goal: str, messages: List[Dict[str, str]] = None, brand_context: str = "") -> Dict[str, Any]:
+def generate_campaign_with_cascade(goal: str, messages: List[Dict[str, str]] = None, brand_context: str = "", language: str = DEFAULT_LANGUAGE) -> Dict[str, Any]:
     """
-    4-Tier Diamond Resilience Cascade for Campaign Generation with Stateful Memory.
+    6-Tier Diamond Resilience Cascade for Campaign Generation with language support.
     
     Uses ONLY Python standard library (urllib) to call external APIs.
-    
-    Tier 1: Google Gemini 3 Flash Preview (Primary - Advanced Reasoning)
-    Tier 2: Groq GPT-OSS 120B (Secondary - Powerhouse)
-    Tier 3: OpenRouter Arcee Trinity Large (Tertiary - 400B Creative King)
-    Tier 4: OpenRouter Llama 3.3 70B (The Shield - Ultra Reliable)
     
     Args:
         goal: User's campaign goal
         messages: Optional conversation history for stateful interactions
         brand_context: Optional brand guidelines
+        language: Language code (en, hi, hi-en, es, pt, fr, ta, bn)
     
     Returns:
-        Dict with keys: hook, offer, cta, captions (list of 3 strings), messages (conversation history)
+        Dict with keys: hook, offer, cta, captions (list of 3 strings), messages, language
     """
     logger.info("🔷 DIAMOND CASCADE INITIATED - PURE STATELESS MODE")
-    logger.info(f"Goal: {goal}")
+    logger.info(f"Goal: {goal} | Language: {language}")
     
     # ========================================================================
     # PURE STATELESS GENERATION - No Message History Processing
@@ -265,10 +264,10 @@ def generate_campaign_with_cascade(goal: str, messages: List[Dict[str, str]] = N
     
     logger.info("Using pure stateless generation with live AI image generation")
 
-    active_system_prompt = SYSTEM_PROMPT
+    active_system_prompt = build_system_prompt(language)
     if "[TREND SNIPE]" in goal:
         logger.info("🎯 TREND SNIPE DETECTED. Engaging Trend Sniper Persona.")
-        active_system_prompt = TREND_SNIPER_PROMPT
+        active_system_prompt = build_trend_prompt(language)
 
     # ========================================================================
     # TIER 1: GOOGLE GEMINI 3 FLASH PREVIEW (Primary Key 1)
@@ -716,6 +715,18 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         brand_context = payload.get('brand_context', '')
         messages = payload.get('messages', [])  # Extract conversation history
         
+        # Extract language (optional, defaults to English)
+        language = payload.get('language', DEFAULT_LANGUAGE)
+        if not is_supported(language):
+            logger.warning(f"Unsupported language '{language}', falling back to English")
+            language = DEFAULT_LANGUAGE
+        # Auto-detect language from goal if not explicitly set
+        if language == DEFAULT_LANGUAGE and payload.get('language') is None:
+            detected = detect_language_from_text(goal)
+            if detected != DEFAULT_LANGUAGE:
+                language = detected
+                logger.info(f"Auto-detected language: {language}")
+        
         # Extract user context from Cognito if available
         user_context = get_user_context(event)
         if user_context and user_context.get('user_id'):
@@ -737,7 +748,7 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             logger.info(f"Conversation history: {len(messages)} messages")
             
             # Get campaign data from cascade
-            campaign_data = generate_campaign_with_cascade(goal, messages, brand_context)
+            campaign_data = generate_campaign_with_cascade(goal, messages, brand_context, language)
             
             logger.info("Campaign data generated successfully")
             
@@ -796,6 +807,7 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             'campaignId': campaign_id,
             'userId': user_id,
             'goal': goal,
+            'language': language,
             'plan': {
                 'hook': hook,
                 'offer': offer,
