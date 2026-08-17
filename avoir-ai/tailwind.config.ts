@@ -1,6 +1,7 @@
 import type { Config } from "tailwindcss";
 
 const config: Config = {
+  darkMode: "class",
   content: [
     "./src/pages/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/components/**/*.{js,ts,jsx,tsx,mdx}",
@@ -9,12 +10,17 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        background: "var(--background)",
-        foreground: "var(--foreground)",
-        "terminal-bg": "#000000",
-        "terminal-surface": "#0D0D0D",
-        "terminal-border": "#2A2A2A",
-        "terminal-border-bright": "#3A3A3A",
+        background: "var(--bg-primary)",
+        foreground: "var(--text-primary)",
+        muted: "var(--muted)",
+        "muted-foreground": "var(--muted-foreground)",
+        border: "var(--border)",
+        card: "var(--card)",
+        "card-foreground": "var(--card-foreground)",
+        "terminal-bg": "var(--terminal-bg)",
+        "terminal-surface": "var(--terminal-surface)",
+        "terminal-border": "var(--terminal-border)",
+        "terminal-border-bright": "var(--terminal-border-bright)",
         "neon-amber": "#F59E0B",
         "neon-cyan": "#22D3EE",
         "neon-green": "#4ADE80",

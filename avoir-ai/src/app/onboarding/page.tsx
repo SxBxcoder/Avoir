@@ -96,7 +96,7 @@ export default function OnboardingPage() {
   if (!userEmail) {
     return (
       <RequireAuth>
-        <div className="min-h-screen bg-black flex items-center justify-center">
+        <div className="min-h-screen bg-background flex items-center justify-center">
           <Loader2 className="w-8 h-8 text-indigo-500 animate-spin" />
         </div>
       </RequireAuth>
@@ -107,7 +107,7 @@ export default function OnboardingPage() {
 
   return (
     <RequireAuth>
-    <div className="min-h-screen bg-black text-white flex flex-col font-sans selection:bg-indigo-500/30 overflow-hidden relative">
+    <div className="min-h-screen bg-background text-foreground flex flex-col font-sans selection:bg-indigo-500/30 overflow-hidden relative">
       {/* Background Elements */}
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-indigo-900/20 via-black to-black" />
       <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.03] mix-blend-overlay" />
