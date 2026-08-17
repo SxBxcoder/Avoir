@@ -13,6 +13,9 @@ botocore>=1.35.0
 # Agentic AI Framework (Strands Agents)
 strands-agents>=1.26.0
 
+# Trend Data (SerpAPI Google Trends)
+google-search-results>=2.4.0
+
 # Utilities
 python-dotenv>=1.0.1
 python-multipart>=0.0.12
