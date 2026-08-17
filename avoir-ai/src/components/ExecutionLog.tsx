@@ -29,7 +29,7 @@ export type ExecutionLogHandle = {
 type FilterLevel = 'ALL' | 'INFO' | 'EXEC' | 'WARN' | 'SIGNAL' | 'ALGO';
 
 const LEVEL_COLORS: Record<string, string> = {
-  INFO: 'text-zinc-500',
+  INFO: 'text-zinc-400',
   EXEC: 'text-neon-amber',
   WARN: 'text-neon-red',
   SIGNAL: 'text-neon-cyan',
@@ -37,7 +37,7 @@ const LEVEL_COLORS: Record<string, string> = {
 };
 
 const LEVEL_BORDER_COLORS: Record<string, string> = {
-  INFO: 'border-l-zinc-700',
+  INFO: 'border-l-zinc-600',
   EXEC: 'border-l-neon-amber',
   WARN: 'border-l-neon-red',
   SIGNAL: 'border-l-neon-cyan',
@@ -100,7 +100,6 @@ export default forwardRef<ExecutionLogHandle, ExecutionLogProps>(function Execut
     },
   }));
 
-  // Initialize with some logs
   useEffect(() => {
     const initial = MOCK_MESSAGES.slice(0, 8).map(m => ({
       level: m.level,
@@ -111,7 +110,6 @@ export default forwardRef<ExecutionLogHandle, ExecutionLogProps>(function Execut
     setLogs(initial);
   }, []);
 
-  // Merge external entries
   useEffect(() => {
     if (externalEntries && externalEntries.length > 0) {
       setLogs(prev => {
@@ -128,14 +126,12 @@ export default forwardRef<ExecutionLogHandle, ExecutionLogProps>(function Execut
     }
   }, [externalEntries]);
 
-  // Clear logs when requested
   useEffect(() => {
     if (clearLogs) {
       setLogs([]);
     }
   }, [clearLogs]);
 
-  // Simulate live entries
   useEffect(() => {
     const interval = setInterval(() => {
       const pick = MOCK_MESSAGES[Math.floor(Math.random() * MOCK_MESSAGES.length)];
@@ -155,7 +151,6 @@ export default forwardRef<ExecutionLogHandle, ExecutionLogProps>(function Execut
     return () => clearInterval(interval);
   }, []);
 
-  // Auto-scroll
   useEffect(() => {
     if (containerRef.current) {
       containerRef.current.scrollTop = containerRef.current.scrollHeight;
@@ -178,27 +173,27 @@ export default forwardRef<ExecutionLogHandle, ExecutionLogProps>(function Execut
   return (
     <div className="border border-terminal-border flex flex-col h-full">
       {/* Header */}
-      <div className="flex items-center justify-between px-3 py-1.5 border-b border-terminal-border bg-terminal-surface flex-shrink-0">
+      <div className="flex items-center justify-between px-4 py-2 border-b border-terminal-border bg-terminal-surface flex-shrink-0">
         <div className="flex items-center gap-2">
-          <div className="w-1.5 h-1.5 bg-neon-green animate-pulse" />
-          <span className="text-[9px] font-bold text-zinc-500 tracking-[0.2em]">EXECUTION LOG</span>
+          <div className="w-2 h-2 bg-neon-green animate-pulse" />
+          <span className="text-[11px] font-bold text-zinc-300 tracking-[0.2em]">EXECUTION LOG</span>
         </div>
-        <span className="text-[8px] text-zinc-600">{logs.length} ENTRIES</span>
+        <span className="text-[10px] text-zinc-400">{logs.length} ENTRIES</span>
       </div>
 
       {/* Filter pills */}
-      <div className="flex items-center gap-1 px-3 py-1 border-b border-terminal-border bg-terminal-surface/30 flex-shrink-0 overflow-x-auto">
+      <div className="flex items-center gap-1.5 px-4 py-1.5 border-b border-terminal-border bg-terminal-surface/30 flex-shrink-0 overflow-x-auto">
         {filters.map(f => (
           <button
             key={f}
             onClick={() => setFilter(f)}
-            className={`px-1.5 py-0.5 text-[8px] font-bold tracking-widest transition-colors ${
+            className={`px-2 py-0.5 text-[10px] font-bold tracking-widest transition-colors ${
               filter === f
                 ? 'bg-neon-amber/20 text-neon-amber border border-neon-amber/30'
-                : 'text-zinc-600 hover:text-zinc-400 border border-transparent'
+                : 'text-zinc-500 hover:text-zinc-300 border border-transparent'
             }`}
           >
-            {f} <span className="text-zinc-700">{counts[f]}</span>
+            {f} <span className="text-zinc-600">{counts[f]}</span>
           </button>
         ))}
       </div>
@@ -206,23 +201,23 @@ export default forwardRef<ExecutionLogHandle, ExecutionLogProps>(function Execut
       {/* Log feed */}
       <div
         ref={containerRef}
-        className="flex-1 overflow-y-auto terminal-scrollbar bg-black p-1 space-y-px"
+        className="flex-1 overflow-y-auto terminal-scrollbar bg-black p-2 space-y-px"
       >
         {filtered.map((log, idx) => (
           <div
             key={log.id}
-            className={`flex items-start gap-0 font-mono leading-tight border-l-2 ${LEVEL_BORDER_COLORS[log.level]} pl-1 transition-colors duration-500 ${
+            className={`flex items-start gap-0 font-mono leading-tight border-l-2 ${LEVEL_BORDER_COLORS[log.level]} pl-2 transition-colors duration-500 ${
               newIds.has(log.id) ? 'bg-neon-amber/5' : ''
             }`}
           >
-            <span className="text-[7px] text-zinc-800 flex-shrink-0 w-[28px] text-right pr-1.5 pt-[1px]">
+            <span className="text-[9px] text-zinc-600 flex-shrink-0 w-[32px] text-right pr-2 pt-[2px]">
               {String(idx + 1).padStart(3, '0')}
             </span>
-            <span className="text-[7px] text-zinc-700 flex-shrink-0 w-[78px] pt-[1px]">{log.timestamp}</span>
-            <span className={`text-[8px] font-bold flex-shrink-0 w-[40px] pt-[1px] ${LEVEL_COLORS[log.level]}`}>
+            <span className="text-[9px] text-zinc-500 flex-shrink-0 w-[88px] pt-[2px]">{log.timestamp}</span>
+            <span className={`text-[10px] font-bold flex-shrink-0 w-[48px] pt-[1px] ${LEVEL_COLORS[log.level]}`}>
               {log.level}
             </span>
-            <span className="text-[9px] text-zinc-400 min-w-0">{log.message}</span>
+            <span className="text-[11px] text-zinc-300 min-w-0">{log.message}</span>
           </div>
         ))}
       </div>

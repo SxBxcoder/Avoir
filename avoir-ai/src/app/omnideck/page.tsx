@@ -257,25 +257,25 @@ export default function OmniDeckPage() {
 
       {/* ── HEADER ── */}
       <header className="relative z-10 border-b border-terminal-border bg-black flex-shrink-0">
-        <div className="h-9 flex items-center justify-between px-3">
-          <div className="flex items-center gap-2 min-w-0">
-            <button onClick={() => router.push('/')} className="text-zinc-600 hover:text-neon-amber transition-colors text-[9px] flex-shrink-0">
+        <div className="h-10 flex items-center justify-between px-4">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <button onClick={() => router.push('/')} className="text-zinc-400 hover:text-neon-amber transition-colors text-[10px] flex-shrink-0">
               [ESC]
             </button>
-            <div className="h-3 w-px bg-terminal-border flex-shrink-0" />
-            <Server className="w-3 h-3 text-neon-cyan flex-shrink-0" />
-            <span className="text-[9px] font-bold tracking-[0.2em] text-neon-cyan truncate">OMNI-DECK</span>
-            <span className="text-[8px] text-zinc-700 hidden sm:inline">{'// PORTFOLIO MANAGER'}</span>
+            <div className="h-4 w-px bg-terminal-border flex-shrink-0" />
+            <Server className="w-3.5 h-3.5 text-neon-cyan flex-shrink-0" />
+            <span className="text-[11px] font-bold tracking-[0.2em] text-neon-cyan truncate">OMNI-DECK</span>
+            <span className="text-[10px] text-zinc-500 hidden sm:inline">{'// PORTFOLIO MANAGER'}</span>
           </div>
-          <div className="flex items-center gap-3 flex-shrink-0">
-            <span className="px-1.5 py-0.5 text-[7px] font-bold tracking-widest text-neon-amber/70 border border-neon-amber/20 bg-neon-amber/5">
+          <div className="flex items-center gap-4 flex-shrink-0">
+            <span className="px-2 py-0.5 text-[9px] font-bold tracking-widest text-neon-amber border border-neon-amber/30 bg-neon-amber/10">
               SIMULATED DATA
             </span>
             <div className="flex items-center gap-1.5">
-              <div className="w-1.5 h-1.5 bg-neon-green" />
-              <span className="text-[8px] text-neon-green tracking-widest hidden sm:inline">NOMINAL</span>
+              <div className="w-2 h-2 bg-neon-green" />
+              <span className="text-[10px] text-neon-green tracking-widest hidden sm:inline">NOMINAL</span>
             </div>
-            <span className="text-[8px] text-zinc-700 hidden md:inline">v2.4.1</span>
+            <span className="text-[9px] text-zinc-500 hidden md:inline">v2.4.1</span>
           </div>
         </div>
       </header>
@@ -336,32 +336,32 @@ export default function OmniDeckPage() {
               className="border border-terminal-border bg-black max-w-lg w-full"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="flex items-center justify-between px-3 py-2 border-b border-terminal-border bg-terminal-surface">
+              <div className="flex items-center justify-between px-4 py-2.5 border-b border-terminal-border bg-terminal-surface">
                 <div className="flex items-center gap-2">
-                  <div className="w-1.5 h-1.5 bg-neon-cyan" />
-                  <span className="text-[9px] font-bold tracking-[0.2em] text-neon-cyan">AGENCY MODE — B2B CLIENT BRIDGE</span>
+                  <div className="w-2 h-2 bg-neon-cyan" />
+                  <span className="text-[11px] font-bold tracking-[0.2em] text-neon-cyan">AGENCY MODE — B2B CLIENT BRIDGE</span>
                 </div>
-                <button onClick={() => setAgencyMode(false)} className="text-zinc-600 hover:text-white transition-colors">
-                  <X className="w-3 h-3" />
+                <button onClick={() => setAgencyMode(false)} className="text-zinc-400 hover:text-white transition-colors">
+                  <X className="w-4 h-4" />
                 </button>
               </div>
-              <div className="p-3">
-                <div className="text-[9px] text-zinc-600 mb-3 tracking-widest">ACTIVE CLIENT PORTFOLIOS</div>
+              <div className="p-4">
+                <div className="text-[10px] text-zinc-400 mb-3 tracking-widest">ACTIVE CLIENT PORTFOLIOS</div>
                 <div className="space-y-0">
                   {AGENCY_CLIENTS.map((client) => (
-                    <div key={client.name} className="grid grid-cols-[1fr_80px_50px_80px] border-b border-terminal-border py-2 items-center">
-                      <span className="text-[10px] text-white font-medium">{client.name}</span>
-                      <span className="text-[10px] text-neon-amber text-right font-mono">{client.spend}</span>
-                      <span className="text-[10px] text-neon-cyan text-right font-mono">{client.roas}x</span>
-                      <span className={`text-[8px] font-bold text-right tracking-widest ${
+                    <div key={client.name} className="grid grid-cols-[1fr_90px_60px_90px] border-b border-terminal-border py-2.5 items-center">
+                      <span className="text-[12px] text-white font-medium">{client.name}</span>
+                      <span className="text-[12px] text-neon-amber text-right font-mono">{client.spend}</span>
+                      <span className="text-[12px] text-neon-cyan text-right font-mono">{client.roas}x</span>
+                      <span className={`text-[10px] font-bold text-right tracking-widest ${
                         client.status === 'ACTIVE' ? 'text-neon-green' : 'text-neon-amber'
                       }`}>{client.status}</span>
                     </div>
                   ))}
                 </div>
                 <div className="mt-3 pt-2 border-t border-terminal-border flex items-center justify-between">
-                  <span className="text-[8px] text-zinc-700">TYPE /agency TO CLOSE</span>
-                  <span className="text-[8px] text-zinc-600">3 CLIENTS • $67K/mo TOTAL</span>
+                  <span className="text-[10px] text-zinc-500">TYPE /agency TO CLOSE</span>
+                  <span className="text-[10px] text-zinc-400">3 CLIENTS • $67K/mo TOTAL</span>
                 </div>
               </div>
             </motion.div>

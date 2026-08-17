@@ -24,7 +24,7 @@ const STARTUP_SEQUENCE = [
   { type: 'system' as const, msg: 'Initializing portfolio engine...' },
   { type: 'system' as const, msg: 'Connecting to exchange APIs... OK' },
   { type: 'system' as const, msg: 'Type /help for available commands' },
-  { type: 'system' as const, msg: '─'.repeat(48) },
+  { type: 'system' as const, msg: '─'.repeat(52) },
 ];
 
 export default function TerminalCLI({ onCommand }: TerminalCLIProps) {
@@ -38,7 +38,6 @@ export default function TerminalCLI({ onCommand }: TerminalCLIProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // Boot sequence
   useEffect(() => {
     let i = 0;
     const interval = setInterval(() => {
@@ -131,14 +130,12 @@ export default function TerminalCLI({ onCommand }: TerminalCLIProps) {
     }
   };
 
-  // Auto-scroll
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [history]);
 
-  // Show suggestions on input change
   useEffect(() => {
     if (input.startsWith('/') && input.length >= 1 && suggestions.length > 0) {
       setShowSuggestions(true);
@@ -151,7 +148,7 @@ export default function TerminalCLI({ onCommand }: TerminalCLIProps) {
   const renderOutput = (text: string, isError: boolean) => {
     if (!text) return null;
     return (
-      <pre className={`text-[9px] whitespace-pre-wrap pl-[90px] ${isError ? 'text-neon-red' : 'text-zinc-400'}`}>
+      <pre className={`text-[11px] whitespace-pre-wrap pl-[100px] ${isError ? 'text-neon-red' : 'text-zinc-300'}`}>
         {text}
       </pre>
     );
@@ -162,21 +159,21 @@ export default function TerminalCLI({ onCommand }: TerminalCLIProps) {
       {/* Output history */}
       <div
         ref={scrollRef}
-        className="max-h-[140px] overflow-y-auto terminal-scrollbar px-3 py-1.5 space-y-0.5"
+        className="max-h-[160px] overflow-y-auto terminal-scrollbar px-4 py-2 space-y-1"
       >
         {history.map((entry, idx) => (
           <div key={idx}>
             {entry.type === 'command' && (
               <div className="flex items-center gap-2">
-                <span className="text-[8px] text-zinc-700 w-[70px] flex-shrink-0">{entry.timestamp}</span>
-                <span className="text-[9px] text-neon-amber font-bold">$</span>
-                <span className="text-[9px] text-white">{entry.input}</span>
+                <span className="text-[9px] text-zinc-500 w-[80px] flex-shrink-0">{entry.timestamp}</span>
+                <span className="text-[11px] text-neon-amber font-bold">$</span>
+                <span className="text-[11px] text-white">{entry.input}</span>
               </div>
             )}
             {entry.type === 'response' && renderOutput(entry.output, false)}
             {entry.type === 'error' && renderOutput(entry.output, true)}
             {entry.type === 'system' && (
-              <div className="text-[9px] text-neon-cyan/60">{entry.output}</div>
+              <div className="text-[11px] text-neon-cyan/70">{entry.output}</div>
             )}
           </div>
         ))}
@@ -184,12 +181,12 @@ export default function TerminalCLI({ onCommand }: TerminalCLIProps) {
 
       {/* Suggestions dropdown */}
       {showSuggestions && suggestions.length > 0 && (
-        <div className="mx-3 mb-1 border border-terminal-border bg-terminal-surface">
+        <div className="mx-4 mb-1 border border-terminal-border bg-terminal-surface">
           {suggestions.map((s, i) => (
             <div
               key={s}
-              className={`px-3 py-1 text-[9px] font-mono cursor-pointer ${
-                i === suggestionIdx ? 'bg-neon-amber/10 text-neon-amber' : 'text-zinc-500'
+              className={`px-3 py-1.5 text-[11px] font-mono cursor-pointer ${
+                i === suggestionIdx ? 'bg-neon-amber/10 text-neon-amber' : 'text-zinc-400'
               }`}
               onClick={() => { setInput(s); setShowSuggestions(false); inputRef.current?.focus(); }}
             >
@@ -200,8 +197,8 @@ export default function TerminalCLI({ onCommand }: TerminalCLIProps) {
       )}
 
       {/* Input */}
-      <div className="flex items-center px-3 py-2 border-t border-terminal-border bg-terminal-surface">
-        <span className="text-[10px] text-neon-amber font-bold mr-2">$</span>
+      <div className="flex items-center px-4 py-2.5 border-t border-terminal-border bg-terminal-surface">
+        <span className="text-[12px] text-neon-amber font-bold mr-2">$</span>
         <div className="flex-1 relative">
           <input
             ref={inputRef}
@@ -210,16 +207,15 @@ export default function TerminalCLI({ onCommand }: TerminalCLIProps) {
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder={booted ? 'Type /help for commands...' : ''}
-            className="w-full bg-transparent text-[10px] text-white font-mono outline-none placeholder:text-zinc-700 caret-transparent"
+            className="w-full bg-transparent text-[12px] text-white font-mono outline-none placeholder:text-zinc-600 caret-transparent"
             autoFocus
             disabled={!booted}
           />
-          {/* Blinking block cursor overlay */}
-          <span className="absolute top-1/2 -translate-y-1/2 pointer-events-none text-[10px] text-neon-amber font-mono" style={{ left: `${input.length * 6.5 + 2}px` }}>
+          <span className="absolute top-1/2 -translate-y-1/2 pointer-events-none text-[12px] text-neon-amber font-mono" style={{ left: `${input.length * 7.5 + 2}px` }}>
             <span className="animate-pulse">█</span>
           </span>
         </div>
-        <span className="text-[8px] text-zinc-700 ml-2 hidden sm:block">TAB ↹ autocomplete</span>
+        <span className="text-[9px] text-zinc-500 ml-2 hidden sm:block">TAB ↹ autocomplete</span>
       </div>
     </div>
   );

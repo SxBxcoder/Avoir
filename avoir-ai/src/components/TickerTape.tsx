@@ -27,18 +27,10 @@ const COLOR_MAP = {
   red: 'text-neon-red',
 };
 
-const GLOW_MAP = {
-  amber: '',
-  cyan: '',
-  green: '',
-  red: 'text-glow-red',
-};
-
 export default function TickerTape({ positions, totalAum }: TickerTapeProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [offset, setOffset] = useState(0);
   const [paused, setPaused] = useState(false);
-  const [tick, setTick] = useState(0);
 
   const items: TickerItem[] = [
     { label: 'AUM', value: `$${totalAum.toLocaleString()}`, color: 'amber' },
@@ -53,12 +45,6 @@ export default function TickerTape({ positions, totalAum }: TickerTapeProps) {
     { label: 'LATENCY', value: '8ms AVG', color: 'green' },
     { label: 'FEED', value: 'ALL EXCHANGES CONNECTED', color: 'green' },
   ];
-
-  // Tick counter for time display
-  useEffect(() => {
-    const t = setInterval(() => setTick(prev => prev + 1), 1000);
-    return () => clearInterval(t);
-  }, []);
 
   useEffect(() => {
     if (paused) return;
@@ -83,32 +69,30 @@ export default function TickerTape({ positions, totalAum }: TickerTapeProps) {
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
     >
-      <div className="flex items-center h-7">
-        {/* Static label with blinking dot */}
+      <div className="flex items-center h-8">
+        {/* Static label */}
         <div className="flex-shrink-0 px-3 h-full flex items-center gap-2 bg-terminal-surface border-r border-terminal-border">
           <div className="w-1.5 h-1.5 bg-neon-green animate-pulse" />
-          <span className="text-[8px] font-bold text-zinc-600 tracking-[0.2em]">FEED</span>
+          <span className="text-[9px] font-bold text-zinc-400 tracking-[0.2em]">FEED</span>
         </div>
 
         {/* Scrolling content */}
         <div className="flex-1 overflow-hidden relative">
-          {/* Left edge fade */}
           <div className="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-black to-transparent z-10 pointer-events-none" />
-          {/* Right edge fade */}
           <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-black to-transparent z-10 pointer-events-none" />
 
           <div
             ref={scrollRef}
-            className="flex items-center gap-4 whitespace-nowrap"
+            className="flex items-center gap-5 whitespace-nowrap"
             style={{ transform: `translateX(-${offset}px)` }}
           >
             {duplicated.map((item, idx) => (
               <div key={idx} className="flex items-center gap-2 flex-shrink-0">
-                <span className="text-[8px] text-zinc-700 tracking-widest">{item.label}</span>
-                <span className={`text-[9px] font-bold ${COLOR_MAP[item.color]} ${item.alert ? GLOW_MAP[item.color] : ''}`}>
+                <span className="text-[9px] text-zinc-500 tracking-widest">{item.label}</span>
+                <span className={`text-[10px] font-bold ${COLOR_MAP[item.color]}`}>
                   {item.value}
                 </span>
-                <span className="text-zinc-800 text-[8px]">◆</span>
+                <span className="text-zinc-700 text-[9px]">◆</span>
               </div>
             ))}
           </div>
@@ -116,14 +100,14 @@ export default function TickerTape({ positions, totalAum }: TickerTapeProps) {
 
         {/* Timestamp */}
         <div className="flex-shrink-0 px-3 h-full flex items-center bg-terminal-surface border-l border-terminal-border">
-          <span className="text-[8px] text-zinc-700 font-mono">{timeStr}</span>
+          <span className="text-[9px] text-zinc-500 font-mono">{timeStr}</span>
         </div>
       </div>
 
       {/* Pause indicator */}
       {paused && (
-        <div className="absolute top-0 right-12 h-7 flex items-center">
-          <span className="text-[8px] text-neon-amber font-bold tracking-widest">PAUSED</span>
+        <div className="absolute top-0 right-12 h-8 flex items-center">
+          <span className="text-[9px] text-neon-amber font-bold tracking-widest">PAUSED</span>
         </div>
       )}
     </div>
