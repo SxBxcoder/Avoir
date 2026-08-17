@@ -155,7 +155,7 @@ class TrendSniper:
             if views >= 10_000_000:
                 vol = f"{views // 1_000_000}M views"
             elif views >= 1_000_000:
-                vol = f"{views // 1_000_000}M views"
+                vol = f"{views / 1_000_000:.1f}M views"
             else:
                 vol = f"{views // 1_000}K views"
 

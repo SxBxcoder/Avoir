@@ -22,7 +22,7 @@ export interface IndustryTrends {
 }
 
 export async function fetchIndustryTrends(industry: string): Promise<IndustryTrends | null> {
-  const pythonApiUrl = process.env.NEXT_PUBLIC_PYTHON_API_URL || 'http://localhost:8000';
+  const pythonApiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
   try {
     const res = await fetch(
