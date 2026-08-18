@@ -64,7 +64,7 @@ export async function POST(req: Request) {
       );
     }
     const { goal: campaignGoal, messages: conversationMessages } = parsedRequest;
-    const campaignLanguage = (parsed.data as any).language || 'en';
+    const campaignLanguage = parsed.data.language || 'en';
 
     const rateLimit = await checkRateLimit(userId, 10, 60); // 10 requests per minute
     if (!rateLimit.allowed) {

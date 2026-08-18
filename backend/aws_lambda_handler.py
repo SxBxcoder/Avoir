@@ -41,6 +41,7 @@ from botocore.exceptions import ClientError
 
 from language_config import is_supported, detect_language_from_text, DEFAULT_LANGUAGE
 from prompts import build_system_prompt, build_trend_prompt
+from localized_mocks import get_localized_mock
 
 
 # ============================================================================
@@ -83,46 +84,6 @@ OPENROUTER_API_KEY = os.environ.get('OPENROUTER_API_KEY', '')
 
 logger.info(f"Environment configuration loaded: DynamoDB={DYNAMODB_TABLE}, S3={S3_BUCKET}")
 logger.info(f"API Keys configured: Gemini1={'✓' if GEMINI_API_KEY else '✗'}, Gemini2={'✓' if GEMINI_API_KEY_2 else '✗'}, Groq={'✓' if GROQ_API_KEY else '✗'}, OpenRouter={'✓' if OPENROUTER_API_KEY else '✗'}")
-
-
-# ============================================================================
-# SYSTEM PERSONA - THE CREATIVE DIRECTOR
-# ============================================================================
-
-SYSTEM_PROMPT = """You are the Avoir Lead Creative Director. You dominate global digital marketing.
-
-TONE: Aggressive, elite, high-energy. Never be "mid" (mediocre).
-LANGUAGE: Global Viral English (modern, high-converting, punchy).
-POWER WORDS (MUST USE): Viral, Aesthetic, Main Character Energy, Level Up.
-EMOJIS: 🔥, 💯, ✨, 🎉, 🚀
-
-OUTPUT FORMAT: You MUST return valid JSON with this exact structure:
-{
-  "hook": "Attention-grabbing opening (English, 50-80 chars)",
-  "offer": "Value proposition (English, 80-120 chars)",
-  "cta": "Clear action with urgency (English, 30-50 chars)",
-  "captions": ["Caption 1 (150-200 chars)", "Caption 2 (150-200 chars)", "Caption 3 (150-200 chars)"],
-  "image_prompt": "A highly detailed, visual description of a photorealistic image for this campaign (English, 100-150 chars)"
-}
-
-CRITICAL: The image_prompt must be in English, highly detailed, and describe a photorealistic scene that captures the campaign's energy."""
-
-
-TREND_SNIPER_PROMPT = """You are the Avoir God-Tier Trend Sniper. Your job is to hijack a viral internet trend and mutate it into a massive campaign for the user.
-
-TONE: Aggressive, hyper-relevant, algorithm-optimizing.
-LANGUAGE: Global Viral English.
-POWER WORDS (MUST USE): Viral, Algorithm, Attention, Hack.
-
-The user will provide a specific TREND. You must create a campaign that RIDES THIS TREND perfectly.
-OUTPUT FORMAT: You MUST return valid JSON with this exact structure:
-{
-  "hook": "Attention-grabbing opening optimized for this specific trend (50-80 chars)",
-  "offer": "Value proposition disguised as entertainment (80-120 chars)",
-  "cta": "Clear action (30-50 chars)",
-  "captions": ["Caption 1 matching the trend vibe", "Caption 2 for high engagement", "Caption 3 alternative angle"],
-  "image_prompt": "A highly detailed, visual description of a photorealistic image matching the trend's aesthetic"
-}"""
 
 
 # ============================================================================
@@ -217,7 +178,6 @@ def get_mock_campaign(goal: str, language: str = DEFAULT_LANGUAGE) -> Dict[str, 
     Get high-quality mock campaign based on goal keywords and language.
     Uses localized_mocks for non-English languages.
     """
-    from localized_mocks import get_localized_mock
     return get_localized_mock(goal, language)
 
 
@@ -339,7 +299,7 @@ def generate_campaign_with_cascade(goal: str, messages: List[Dict[str, str]] = N
         gemini_contents_2 = [{
             "role": "user",
             "parts": [{
-                "text": SYSTEM_PROMPT + f"\n\nTask: Create a viral global social media campaign for the following goal: {goal}\n\nReturn ONLY valid JSON with keys: hook, offer, cta, captions (array of 3), image_prompt."
+                "text": active_system_prompt + f"\n\nTask: Create a viral global social media campaign for the following goal: {goal}\n\nReturn ONLY valid JSON with keys: hook, offer, cta, captions (array of 3), image_prompt."
             }]
         }]
         

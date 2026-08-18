@@ -279,7 +279,7 @@ export async function POST(req: Request) {
     }
     const { goal: campaignGoal, messages: conversationMessages } = parsedRequest;
     const { genome_mode, pastWinningContext } = parsed.data;
-    const campaignLanguage = (parsed.data as any).language || 'en';
+    const campaignLanguage = parsed.data.language || 'en';
     const authHeader = req.headers.get('Authorization');
     const isGenomeMode = genome_mode === true;
 
