@@ -11,6 +11,7 @@ export default function CampaignsPage() {
       accessToken={accessToken || ''}
       userEmail={email || ''}
       onLogout={async () => { await logout(); }}
+      embedded
     />
   );
 }
