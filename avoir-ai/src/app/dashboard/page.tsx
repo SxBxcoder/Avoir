@@ -8,7 +8,6 @@ import {
   Server,
   CreditCard,
   Settings,
-  Zap,
   TrendingUp,
   Sparkles,
   ArrowRight,

@@ -8,7 +8,6 @@ import {
   Phone,
   Shield,
   Bell,
-  CreditCard,
   Check,
   AlertCircle,
   Loader2,
@@ -19,6 +18,7 @@ import {
   Save,
 } from 'lucide-react';
 import { useAuth } from '@/lib/auth/provider';
+import type { AuthUser } from '@/lib/auth/types';
 
 const springSmooth = { type: 'spring' as const, stiffness: 100, damping: 30 };
 const stagger = {
@@ -40,7 +40,7 @@ const TABS: { id: Tab; label: string; icon: typeof User }[] = [
 ];
 
 export default function SettingsPage() {
-  const { email, user, logout } = useAuth();
+  const { email, user } = useAuth();
   const [activeTab, setActiveTab] = useState<Tab>('profile');
   const [saved, setSaved] = useState(false);
 
@@ -109,7 +109,7 @@ export default function SettingsPage() {
 // ============================================================================
 function ProfileTab({ email, user, initials, onSave, saved }: {
   email: string | null;
-  user: any;
+  user: AuthUser | null;
   initials: string;
   onSave: () => void;
   saved: boolean;
