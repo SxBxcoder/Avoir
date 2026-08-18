@@ -130,7 +130,7 @@ export default function LoginPage() {
                 await signInWithRedirect({ provider: 'Google' });
               } catch (err: any) {
                 if (err.name === 'UserAlreadyAuthenticatedException' || err.message?.includes('already a signed in user')) {
-                  router.push('/');
+                  router.push('/dashboard');
                 } else {
                   setError(err.message || 'SSO Login failed');
                 }

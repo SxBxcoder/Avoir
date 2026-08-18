@@ -26,7 +26,7 @@ function SuccessContent() {
 
   useEffect(() => {
     if (countdown <= 0) {
-      router.push('/');
+      router.push('/dashboard');
       return;
     }
     const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
