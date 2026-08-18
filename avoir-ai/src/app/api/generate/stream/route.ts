@@ -62,7 +62,7 @@ const COOKING_MESSAGES: Record<string, { delay: number; text: string }[]> = {
     { delay: 4000, text: '🎨 विज़ुअल एसेट्स बन रहे हैं...' },
     { delay: 5000, text: '⚔️ फाइनल क्वालिटी चेक चल रहा है...' },
   ],
-  hi-en: [
+  'hi-en': [
     { delay: 0, text: '🔥 Diamond Cascade Engine start ho raha hai...' },
     { delay: 800, text: '⚡ Global trend database scan ho raha hai...' },
     { delay: 1600, text: '🎯 Maximum impact ke liye calibrate ho raha hai...' },
