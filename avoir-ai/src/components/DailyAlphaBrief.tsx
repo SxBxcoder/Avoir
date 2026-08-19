@@ -54,8 +54,8 @@ export default function DailyAlphaBrief() {
               <span className="inline-block px-1.5 py-0.5 bg-neon-red/15 text-neon-red text-[9px] font-bold tracking-widest border border-neon-red/30">
                 ANOMALY DETECTED
               </span>
-              <h3 className="text-[13px] font-bold text-white leading-tight">{data?.trend.title}</h3>
-              <p className="text-[11px] text-zinc-500 leading-relaxed">{data?.trend.description}</p>
+              <h3 className="text-[13px] font-bold text-foreground leading-tight">{data?.trend.title}</h3>
+              <p className="text-[11px] text-muted-foreground leading-relaxed">{data?.trend.description}</p>
             </div>
           )}
         </div>
@@ -64,7 +64,7 @@ export default function DailyAlphaBrief() {
         <div className="w-full md:w-2/3 p-3">
           <div className="flex items-center gap-2 mb-2">
             <Zap className="w-3.5 h-3.5 text-neon-cyan" />
-            <h3 className="text-[10px] font-bold text-zinc-400 tracking-[0.15em]">TACTICAL PLAYBOOK</h3>
+            <h3 className="text-[10px] font-bold text-muted-foreground tracking-[0.15em]">TACTICAL PLAYBOOK</h3>
           </div>
 
           {isLoading ? (
@@ -90,7 +90,7 @@ export default function DailyAlphaBrief() {
             <div className="mt-3 flex items-center justify-between">
               <button
                 onClick={() => setIsDismissed(true)}
-                className="text-[10px] text-zinc-600 hover:text-zinc-400 tracking-widest"
+                className="text-[10px] text-zinc-600 hover:text-muted-foreground tracking-widest"
               >
                 DISMISS
               </button>

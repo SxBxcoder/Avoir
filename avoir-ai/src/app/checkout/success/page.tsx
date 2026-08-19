@@ -12,7 +12,7 @@ const springBouncy = { type: 'spring' as const, stiffness: 400, damping: 25 };
 
 export default function CheckoutSuccessPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-background" />}>
+    <Suspense fallback={<div className="dark min-h-screen bg-black" />}>
       <SuccessContent />
     </Suspense>
   );
@@ -34,7 +34,7 @@ function SuccessContent() {
   }, [countdown, router]);
 
   return (
-    <div className="min-h-screen bg-background text-foreground overflow-hidden relative flex items-center justify-center" style={{ fontFamily: "'Inter', sans-serif" }}>
+    <div className="dark min-h-screen bg-black text-foreground overflow-hidden relative flex items-center justify-center" style={{ fontFamily: "'Inter', sans-serif" }}>
       {/* Background effects */}
       <motion.div
         animate={{ x: [0, 30, 0], y: [0, -20, 0] }}

@@ -343,7 +343,7 @@ export default function OmniDeckPage() {
                   <div className="w-2 h-2 bg-neon-cyan" />
                   <span className="text-[11px] font-bold tracking-[0.2em] text-neon-cyan">AGENCY MODE — B2B CLIENT BRIDGE</span>
                 </div>
-                <button onClick={() => setAgencyMode(false)} className="text-zinc-400 hover:text-white transition-colors">
+                <button onClick={() => setAgencyMode(false)} className="text-muted-foreground hover:text-foreground transition-colors">
                   <X className="w-4 h-4" />
                 </button>
               </div>
@@ -352,7 +352,7 @@ export default function OmniDeckPage() {
                 <div className="space-y-0">
                   {AGENCY_CLIENTS.map((client) => (
                     <div key={client.name} className="grid grid-cols-[1fr_90px_60px_90px] border-b border-terminal-border py-2.5 items-center">
-                      <span className="text-[12px] text-white font-medium">{client.name}</span>
+                      <span className="text-[12px] text-foreground font-medium">{client.name}</span>
                       <span className="text-[12px] text-neon-amber text-right font-mono">{client.spend}</span>
                       <span className="text-[12px] text-neon-cyan text-right font-mono">{client.roas}x</span>
                       <span className={`text-[10px] font-bold text-right tracking-widest ${

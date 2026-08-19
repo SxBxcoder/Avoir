@@ -66,13 +66,13 @@ export default function LanguageSelector({ value, onChange }: LanguageSelectorPr
     <div ref={ref} className="relative">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2 px-3 py-2 rounded-lg border border-zinc-700 bg-zinc-900/50 hover:border-rose-500/50 transition-colors text-sm"
+        className="flex items-center gap-2 px-3 py-2 rounded-lg border border-border bg-card/50 hover:border-danger transition-colors text-sm"
       >
-        <Globe className="w-4 h-4 text-zinc-400" />
-        <span className="text-zinc-300">
+        <Globe className="w-4 h-4 text-muted-foreground" />
+        <span className="text-muted-foreground">
           {selected?.flag} {selected?.native_name || 'English'}
         </span>
-        <ChevronDown className={`w-3 h-3 text-zinc-500 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+        <ChevronDown className={`w-3 h-3 text-muted-foreground transition-transform ${isOpen ? 'rotate-180' : ''}`} />
       </button>
 
       <AnimatePresence>
@@ -81,20 +81,20 @@ export default function LanguageSelector({ value, onChange }: LanguageSelectorPr
             initial={{ opacity: 0, y: -4 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -4 }}
-            className="absolute top-full mt-1 left-0 z-50 w-52 bg-zinc-900 border border-zinc-700 rounded-xl shadow-2xl overflow-hidden"
+            className="absolute top-full mt-1 left-0 z-50 w-52 bg-card border border-border rounded-xl shadow-2xl overflow-hidden"
           >
             {languages.map(lang => (
               <button
                 key={lang.code}
                 onClick={() => handleSelect(lang.code)}
-                className={`w-full flex items-center gap-3 px-4 py-2.5 text-left hover:bg-zinc-800 transition-colors ${
-                  lang.code === value ? 'bg-rose-500/10 text-rose-400' : 'text-zinc-300'
+                className={`w-full flex items-center gap-3 px-4 py-2.5 text-left hover:bg-muted transition-colors ${
+                  lang.code === value ? 'bg-danger/10 text-danger' : 'text-muted-foreground'
                 }`}
               >
                 <span className="text-base">{lang.flag}</span>
                 <div>
                   <div className="text-sm font-medium">{lang.native_name}</div>
-                  <div className="text-[10px] text-zinc-500">{lang.name}</div>
+                  <div className="text-[10px] text-muted-foreground">{lang.name}</div>
                 </div>
               </button>
             ))}

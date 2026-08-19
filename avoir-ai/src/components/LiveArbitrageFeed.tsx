@@ -62,23 +62,23 @@ export function LiveArbitrageFeed({ onDeploy }: { onDeploy: (directive: string) 
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.5 }}
-          className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-red-500/10 border border-red-500/20 mb-4"
+          className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-danger/10 border border-danger mb-4"
         >
-          <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-          <span className="text-[10px] font-tactical text-red-400 tracking-widest">LIVE MARKET DATA</span>
+          <div className="w-2 h-2 rounded-full bg-danger animate-pulse" />
+          <span className="text-[10px] font-tactical text-danger tracking-widest">LIVE MARKET DATA</span>
         </motion.div>
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.5, delay: 0.1 }}
-          className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-zinc-800/80 border border-zinc-700 mb-4 ml-3"
+          className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-muted/80 border border-border mb-4 ml-3"
         >
-          <span className="text-[10px] font-mono text-zinc-400 tracking-widest">SIMULATED DATA</span>
+          <span className="text-[10px] font-mono text-muted-foreground tracking-widest">SIMULATED DATA</span>
         </motion.div>
-        <h1 className="text-4xl lg:text-5xl font-bold font-tactical tracking-wider text-white mb-4">
-          CULTURAL <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-cyan-400">ARBITRAGE</span>
+        <h1 className="text-4xl lg:text-5xl font-bold font-tactical tracking-wider text-foreground mb-4">
+          CULTURAL <span className="text-transparent bg-clip-text bg-gradient-to-r from-info to-cyan">ARBITRAGE</span>
         </h1>
-        <p className="text-zinc-400 text-sm max-w-xl mx-auto font-mono">
+        <p className="text-muted-foreground text-sm max-w-xl mx-auto font-mono">
           Our AI Quants are scanning global social networks for mispriced attention. 
           Deploy capital into high-momentum trends before market saturation.
         </p>
@@ -101,8 +101,8 @@ export function LiveArbitrageFeed({ onDeploy }: { onDeploy: (directive: string) 
               onClick={() => setActiveIdx(idx)}
               className={`relative rounded-2xl border p-6 cursor-pointer transition-all duration-300 ${
                 isActive 
-                  ? 'bg-zinc-900/80 border-indigo-500/50 shadow-[0_0_30px_rgba(99,102,241,0.15)] scale-105 z-10' 
-                  : 'bg-zinc-950/50 border-zinc-800/50 hover:border-zinc-700 hover:bg-zinc-900/50 scale-100 z-0 opacity-60 hover:opacity-100'
+                  ? 'bg-card/80 border-info shadow-[0_0_30px_rgba(99,102,241,0.15)] scale-105 z-10' 
+                  : 'bg-card/50 border-border/50 hover:border-border hover:bg-card/50 scale-100 z-0 opacity-60 hover:opacity-100'
               }`}
             >
               {/* Active Indicator */}
@@ -112,27 +112,27 @@ export function LiveArbitrageFeed({ onDeploy }: { onDeploy: (directive: string) 
 
               <div className="flex justify-between items-start mb-4">
                 <div className="flex flex-col">
-                  <span className="text-[10px] font-tactical text-indigo-400 mb-1 tracking-widest">OPPORTUNITY</span>
-                  <h3 className="text-lg font-bold text-white leading-tight">{opp.topic}</h3>
+                  <span className="text-[10px] font-tactical text-info mb-1 tracking-widest">OPPORTUNITY</span>
+                  <h3 className="text-lg font-bold text-foreground leading-tight">{opp.topic}</h3>
                 </div>
                 <div className="p-2 rounded-lg bg-white/5">
-                  <TrendingUp className={`w-5 h-5 ${isActive ? 'text-green-400' : 'text-zinc-500'}`} />
+                  <TrendingUp className={`w-5 h-5 ${isActive ? 'text-success' : 'text-muted-foreground'}`} />
                 </div>
               </div>
 
               {/* Metrics Grid */}
               <div className="grid grid-cols-2 gap-3 mb-6">
-                <div className="bg-black/50 rounded-lg p-3 border border-white/5">
-                  <div className="flex items-center gap-1.5 mb-1 text-[10px] text-zinc-500 font-mono">
+                <div className="bg-background/50 rounded-lg p-3 border border-border">
+                  <div className="flex items-center gap-1.5 mb-1 text-[10px] text-muted-foreground font-mono">
                     <ShieldAlert className="w-3 h-3" /> COMPETITION
                   </div>
-                  <div className="text-lg font-tactical text-emerald-400">{opp.competition}%</div>
+                  <div className="text-lg font-tactical text-success">{opp.competition}%</div>
                 </div>
-                <div className="bg-black/50 rounded-lg p-3 border border-white/5">
-                  <div className="flex items-center gap-1.5 mb-1 text-[10px] text-zinc-500 font-mono">
+                <div className="bg-background/50 rounded-lg p-3 border border-border">
+                  <div className="flex items-center gap-1.5 mb-1 text-[10px] text-muted-foreground font-mono">
                     <BarChart2 className="w-3 h-3" /> PRED. ROAS
                   </div>
-                  <div className="text-lg font-tactical text-indigo-400">{opp.predictedRoas}x</div>
+                  <div className="text-lg font-tactical text-info">{opp.predictedRoas}x</div>
                 </div>
               </div>
 
@@ -147,7 +147,7 @@ export function LiveArbitrageFeed({ onDeploy }: { onDeploy: (directive: string) 
                       e.stopPropagation();
                       onDeploy(opp.directive);
                     }}
-                    className="w-full py-3 rounded-xl bg-indigo-500 text-white font-tactical text-sm tracking-wider hover:bg-indigo-600 transition-colors flex items-center justify-center gap-2 group overflow-hidden relative"
+                    className="w-full py-3 rounded-xl bg-info text-white font-tactical text-sm tracking-wider hover:bg-info transition-colors flex items-center justify-center gap-2 group overflow-hidden relative"
                   >
                     <div className="absolute inset-0 bg-[linear-gradient(45deg,transparent_25%,rgba(255,255,255,0.2)_50%,transparent_75%)] bg-[length:250%_250%,100%_100%] animate-shimmer" />
                     <Cpu className="w-4 h-4 group-hover:scale-110 transition-transform" />

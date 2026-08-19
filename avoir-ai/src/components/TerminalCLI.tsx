@@ -148,14 +148,14 @@ export default function TerminalCLI({ onCommand }: TerminalCLIProps) {
   const renderOutput = (text: string, isError: boolean) => {
     if (!text) return null;
     return (
-      <pre className={`text-[11px] whitespace-pre-wrap pl-[100px] ${isError ? 'text-neon-red' : 'text-zinc-300'}`}>
+      <pre className={`text-[11px] whitespace-pre-wrap pl-[100px] ${isError ? 'text-neon-red' : 'text-muted-foreground'}`}>
         {text}
       </pre>
     );
   };
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-terminal-border bg-black">
+    <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-terminal-border bg-background">
       {/* Output history */}
       <div
         ref={scrollRef}
@@ -165,9 +165,9 @@ export default function TerminalCLI({ onCommand }: TerminalCLIProps) {
           <div key={idx}>
             {entry.type === 'command' && (
               <div className="flex items-center gap-2">
-                <span className="text-[9px] text-zinc-500 w-[80px] flex-shrink-0">{entry.timestamp}</span>
+                <span className="text-[9px] text-muted-foreground w-[80px] flex-shrink-0">{entry.timestamp}</span>
                 <span className="text-[11px] text-neon-amber font-bold">$</span>
-                <span className="text-[11px] text-white">{entry.input}</span>
+                <span className="text-[11px] text-foreground">{entry.input}</span>
               </div>
             )}
             {entry.type === 'response' && renderOutput(entry.output, false)}
@@ -186,7 +186,7 @@ export default function TerminalCLI({ onCommand }: TerminalCLIProps) {
             <div
               key={s}
               className={`px-3 py-1.5 text-[11px] font-mono cursor-pointer ${
-                i === suggestionIdx ? 'bg-neon-amber/10 text-neon-amber' : 'text-zinc-400'
+                i === suggestionIdx ? 'bg-neon-amber/10 text-neon-amber' : 'text-muted-foreground'
               }`}
               onClick={() => { setInput(s); setShowSuggestions(false); inputRef.current?.focus(); }}
             >
@@ -207,7 +207,7 @@ export default function TerminalCLI({ onCommand }: TerminalCLIProps) {
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder={booted ? 'Type /help for commands...' : ''}
-            className="w-full bg-transparent text-[12px] text-white font-mono outline-none placeholder:text-zinc-600 caret-transparent"
+            className="w-full bg-transparent text-[12px] text-foreground font-mono outline-none placeholder:text-zinc-600 caret-transparent"
             autoFocus
             disabled={!booted}
           />
@@ -215,7 +215,7 @@ export default function TerminalCLI({ onCommand }: TerminalCLIProps) {
             <span className="animate-pulse">█</span>
           </span>
         </div>
-        <span className="text-[9px] text-zinc-500 ml-2 hidden sm:block">TAB ↹ autocomplete</span>
+        <span className="text-[9px] text-muted-foreground ml-2 hidden sm:block">TAB ↹ autocomplete</span>
       </div>
     </div>
   );

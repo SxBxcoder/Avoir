@@ -255,7 +255,7 @@ export default function TerminalChart({
     draw();
   };
 
-  const trendColor = trend === 'up' ? 'text-neon-green' : trend === 'down' ? 'text-neon-red' : 'text-zinc-500';
+  const trendColor = trend === 'up' ? 'text-neon-green' : trend === 'down' ? 'text-neon-red' : 'text-muted-foreground';
   const changeColor = changePercent >= 0 ? 'text-neon-green' : 'text-neon-red';
 
   return (
@@ -280,7 +280,7 @@ export default function TerminalChart({
       <div ref={containerRef} className="relative">
         <canvas
           ref={canvasRef}
-          className="w-full h-[100px] bg-black cursor-crosshair"
+          className="w-full h-[100px] bg-background cursor-crosshair"
           onMouseMove={handleMouseMove}
           onMouseLeave={handleMouseLeave}
         />
