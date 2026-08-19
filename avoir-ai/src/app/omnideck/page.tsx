@@ -260,7 +260,7 @@ export default function OmniDeckPage() {
       <header className="relative z-10 border-b border-terminal-border bg-background flex-shrink-0">
         <div className="h-10 flex items-center justify-between px-4">
           <div className="flex items-center gap-2.5 min-w-0">
-            <button onClick={() => router.push('/')} className="text-zinc-400 hover:text-neon-amber transition-colors text-[10px] flex-shrink-0">
+            <button onClick={() => router.push('/dashboard')} className="text-zinc-400 hover:text-neon-amber transition-colors text-[10px] flex-shrink-0">
               [ESC]
             </button>
             <div className="h-4 w-px bg-terminal-border flex-shrink-0" />

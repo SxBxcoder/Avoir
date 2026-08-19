@@ -85,7 +85,8 @@ export default function OnboardingPage() {
       if (!res.ok) throw new Error('Failed to save DNA');
       
       // Redirect to dashboard
-      router.push('/');
+      const isDemo = new URLSearchParams(window.location.search).get('demo');
+      router.push(isDemo ? '/dashboard?demo=true' : '/dashboard');
     } catch (err) {
       clientLog.error(err);
       setSubmitError(err instanceof Error ? err.message : 'Failed to save your brand profile. Please try again.');

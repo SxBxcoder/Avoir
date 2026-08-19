@@ -7,7 +7,6 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth/provider';
 import Link from 'next/link';
 import Image from 'next/image';
-import CampaignDashboard from '@/components/CampaignDashboard';
 import TechGeometryCanvas from '@/components/TechGeometryCanvas';
 import { ThemeToggle } from '@/components/ThemeToggle';
 
@@ -201,14 +200,13 @@ export default function Home() {
     );
   }
 
-  // Authenticated: Show Dashboard
+  // Authenticated: Redirect to Dashboard Hub
   if (isLoggedIn) {
+    router.replace('/dashboard');
     return (
-      <CampaignDashboard
-        accessToken={resolvedAccessToken || ''}
-        userEmail={userEmail || ''}
-        onLogout={handleLogout}
-      />
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="w-10 h-10 border-2 border-white/20 border-t-indigo-500 rounded-full animate-spin" />
+      </div>
     );
   }
 

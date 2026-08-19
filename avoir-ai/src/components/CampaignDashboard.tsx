@@ -90,6 +90,8 @@ interface CampaignDashboardProps {
   accessToken: string;
   userEmail: string;
   onLogout?: () => void;
+  /** When true, renders only the chat/canvas content without sidebar, mobile header, or status bar. Use inside the dashboard layout. */
+  embedded?: boolean;
 }
 
 // ============================================================================
@@ -181,7 +183,7 @@ function CookingStatus({ messages }: { messages: string[] }) {
       transition={bouncySpring}
       className="flex justify-start"
     >
-      <div className="max-w-[85%] lg:max-w-[70%] rounded-2xl p-5 glass-card glow-border-active overflow-hidden">
+      <div className="max-w-[90%] sm:max-w-[85%] lg:max-w-[70%] rounded-2xl p-4 sm:p-5 glass-card glow-border-active overflow-hidden">
         <div className="flex items-center gap-3 mb-4">
           <div className="pulse-ring relative w-3 h-3 rounded-full bg-info flex-shrink-0" />
           <span className="text-sm font-tactical tracking-widest text-info font-bold">
@@ -294,7 +296,7 @@ function WelcomeScreen({ onQuickAction }: { onQuickAction: (text: string) => voi
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.6 }}
-      className="absolute inset-0 flex flex-col items-center justify-center px-6 overflow-hidden"
+      className="absolute inset-0 flex flex-col items-center justify-center px-4 sm:px-6 overflow-auto"
     >
       <NeuralNetworkCanvas />
       
@@ -408,7 +410,7 @@ function extractCampaignData(text: string): { campaign: CampaignData | null; dis
 // MAIN DASHBOARD
 // ============================================================================
 
-export default function CampaignDashboard({ accessToken, userEmail, onLogout }: CampaignDashboardProps) {
+export default function CampaignDashboard({ accessToken, userEmail, onLogout, embedded = false }: CampaignDashboardProps) {
   // Chat States
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState('');
@@ -1013,11 +1015,12 @@ export default function CampaignDashboard({ accessToken, userEmail, onLogout }: 
   // ========================================================================
   return (
     <LayoutGroup>
-      <div className="h-screen bg-background text-foreground flex flex-col overflow-hidden" style={{ fontFamily: "'Inter', sans-serif" }}>
+      <div className={`${embedded ? 'h-full' : 'h-screen'} bg-background text-foreground flex flex-col overflow-hidden`} style={{ fontFamily: "'Inter', sans-serif" }}>
         <InteractivePlasmaCanvas />
       <OnboardingTour />
 
-      {/* Mobile Header */}
+      {/* Mobile Header — only when NOT embedded in dashboard layout */}
+      {!embedded && (
       <div className="lg:hidden fixed top-0 left-0 right-0 z-40 bg-card/90 backdrop-blur-2xl border-b border-border/50">
         <div className="flex items-center justify-between px-4 py-3">
           <button
@@ -1067,8 +1070,10 @@ export default function CampaignDashboard({ accessToken, userEmail, onLogout }: 
           </div>
         </div>
       </div>
+      )}
 
-      {/* Mobile Overlay */}
+      {/* Mobile Overlay — only when NOT embedded */}
+      {!embedded && (
       <AnimatePresence>
         {isMobileSidebarOpen && (
           <motion.div
@@ -1080,9 +1085,10 @@ export default function CampaignDashboard({ accessToken, userEmail, onLogout }: 
           />
         )}
       </AnimatePresence>
+      )}
 
       {/* MAIN LAYOUT */}
-      <div className="flex-1 flex flex-row h-full w-full relative overflow-hidden">
+      <div className={`flex-1 ${embedded ? 'flex flex-col' : 'flex flex-row'} h-full w-full relative overflow-hidden ${embedded ? '!h-auto' : ''}`}>
         
         {/* Trend Radar */}
         <TrendRadar
@@ -1091,14 +1097,15 @@ export default function CampaignDashboard({ accessToken, userEmail, onLogout }: 
         />
 
         {/* ================================================================
-            MAIN CHAT AREA (Scrollable)
+            SIDEBAR — only when NOT embedded in dashboard layout
             ================================================================ */}
+        {!embedded && (
         <motion.aside 
           onClick={(e) => e.stopPropagation()}
           animate={{ width: sidebarCollapsed ? 72 : 300 }}
           transition={smoothSpring}
           className={`fixed inset-y-0 left-0 z-50 flex flex-col bg-card/80 backdrop-blur-2xl border-r border-border/50 overflow-hidden
-            lg:relative lg:translate-x-0
+            lg:sticky lg:top-0 lg:h-screen lg:translate-x-0
             ${isMobileSidebarOpen ? 'translate-x-0 w-[80%] max-w-[300px]' : '-translate-x-full lg:translate-x-0'}
             transition-transform duration-300 lg:transition-none
           `}
@@ -1393,11 +1400,12 @@ export default function CampaignDashboard({ accessToken, userEmail, onLogout }: 
             )}
           </div>
         </motion.aside>
+        )}
 
         {/* ================================================================
             MAIN CONTENT — Chat + Canvas + Input
             ================================================================ */}
-        <div className="flex-1 flex flex-col min-w-0 relative z-10 overflow-hidden">
+        <div className={`${embedded ? 'flex-1 flex flex-col min-w-0 relative z-10 overflow-hidden h-full' : 'flex-1 flex flex-col min-w-0 relative z-10 overflow-hidden'}`}>
           
           {/* Chat / Canvas Area — Scrollable */}
           <div className="flex-1 overflow-y-auto relative flex flex-col">
@@ -1428,7 +1436,7 @@ export default function CampaignDashboard({ accessToken, userEmail, onLogout }: 
                       className={msg.role === 'user' ? 'flex justify-end' : 'flex justify-start'}
                     >
                       <div
-                        className={`max-w-[85%] lg:max-w-[70%] rounded-2xl p-4 ${
+                        className={`max-w-[90%] sm:max-w-[85%] lg:max-w-[70%] rounded-2xl p-3 sm:p-4 ${
                           msg.role === 'user'
                             ? 'bg-gradient-to-br from-indigo-600 to-indigo-700 text-white ml-auto shadow-lg shadow-indigo-500/10'
                             : 'glass-card text-zinc-100'
@@ -1454,7 +1462,7 @@ export default function CampaignDashboard({ accessToken, userEmail, onLogout }: 
                       className="w-full mt-4 bg-background/40 backdrop-blur-md rounded-2xl border border-info overflow-hidden relative"
                     >
                       {/* Matrix / Sci-Fi Header */}
-                      <div className="bg-info/40 border-b border-info px-6 py-3 flex items-center justify-between">
+                      <div className="bg-info/40 border-b border-info px-4 sm:px-6 py-3 flex items-center justify-between flex-wrap gap-2">
                         <div className="flex items-center gap-3">
                           <Activity className={`w-4 h-4 ${simulationPhase === 'running' ? 'text-info animate-pulse' : 'text-success'}`} />
                           <span className="text-xs font-tactical tracking-widest text-info">
@@ -1476,7 +1484,7 @@ export default function CampaignDashboard({ accessToken, userEmail, onLogout }: 
                       </div>
 
                       {/* Content Grid */}
-                      <div className="p-6">
+                      <div className="p-4 sm:p-6">
                         {simulationPhase === 'running' ? (
                           <div className="flex flex-col items-center justify-center py-8 space-y-6">
                             <div className="relative">
@@ -1492,7 +1500,7 @@ export default function CampaignDashboard({ accessToken, userEmail, onLogout }: 
                             </div>
                           </div>
                         ) : simulationData ? (
-                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
                             {simulationData.simulation.map((persona, idx) => (
                               <motion.div 
                                 key={idx}
@@ -1572,7 +1580,7 @@ export default function CampaignDashboard({ accessToken, userEmail, onLogout }: 
                       </div>
                       
                       {/* Hedge Fund Metrics */}
-                      <div className="hidden md:flex gap-4">
+                      <div className="hidden sm:flex gap-4">
                         <div className="bg-card/80 border border-border rounded-lg px-3 py-1.5 flex flex-col items-center">
                           <span className="text-[9px] text-muted-foreground font-tactical">PRED. SHARPE</span>
                           <span className="text-sm font-mono text-success">{(simulationData?.predicted_score ? (simulationData.predicted_score / 35).toFixed(1) : '2.4')}</span>
@@ -1593,7 +1601,7 @@ export default function CampaignDashboard({ accessToken, userEmail, onLogout }: 
                       variants={staggerContainer}
                       initial="hidden"
                       animate="show"
-                      className="grid grid-cols-1 md:grid-cols-3 gap-4"
+                      className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4"
                     >
                       {/* Hook Card */}
                       <motion.div
@@ -1758,7 +1766,7 @@ export default function CampaignDashboard({ accessToken, userEmail, onLogout }: 
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.2, ...springConfig }}
-                        className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4"
+                        className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4"
                       >
                         {/* Top of Funnel */}
                         <div className="glass-card rounded-2xl p-5 border border-cyan bg-cyan/5 relative overflow-hidden group">
@@ -1837,7 +1845,7 @@ export default function CampaignDashboard({ accessToken, userEmail, onLogout }: 
                         variants={staggerContainer}
                         initial="hidden"
                         animate="show"
-                        className="grid grid-cols-1 md:grid-cols-3 gap-4"
+                        className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4"
                       >
                         {currentCampaign.captions.map((caption, idx) => (
                           <motion.div
@@ -1874,7 +1882,7 @@ export default function CampaignDashboard({ accessToken, userEmail, onLogout }: 
                       transition={{ delay: 0.5 }}
                       className="mt-8 pt-8 border-t border-border/50"
                     >
-                      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-4">
+                      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-3">
                         <button
                           onClick={handleShareWithClient}
                           disabled={isSharing}
@@ -1887,7 +1895,7 @@ export default function CampaignDashboard({ accessToken, userEmail, onLogout }: 
                           ) : (
                             <Share2 className="w-5 h-5 text-pink-400 group-hover:scale-110 transition-transform" />
                           )}
-                          <span className="text-sm font-bold text-foreground font-tactical tracking-widest whitespace-nowrap">
+                          <span className="text-xs sm:text-sm font-bold text-foreground font-tactical tracking-widest whitespace-nowrap">
                             {copied === 'share-link' ? 'PORTAL OPENED' : 'SHARE CLIENT'}
                           </span>
                         </button>
@@ -1897,7 +1905,7 @@ export default function CampaignDashboard({ accessToken, userEmail, onLogout }: 
                           className="w-full flex items-center justify-center gap-3 py-4 rounded-2xl bg-gradient-to-r from-yellow-600/20 to-amber-600/20 hover:from-yellow-600/40 hover:to-amber-600/40 border border-warning hover:border-warning transition-all group overflow-hidden relative shadow-[0_0_30px_rgba(234,179,8,0.1)] hover:shadow-[0_0_40px_rgba(234,179,8,0.3)]"
                         >
                           <Rocket className="w-5 h-5 text-warning group-hover:scale-110 transition-transform" />
-                          <span className="text-sm font-bold text-foreground font-tactical tracking-widest">MARK AS WINNER</span>
+                          <span className="text-xs sm:text-sm font-bold text-foreground font-tactical tracking-widest">MARK AS WINNER</span>
                         </button>
                         
                         <button
@@ -1908,7 +1916,7 @@ export default function CampaignDashboard({ accessToken, userEmail, onLogout }: 
                           className="w-full flex items-center justify-center gap-3 py-4 rounded-2xl bg-gradient-to-r from-cyan-600/20 to-blue-600/20 hover:from-cyan-600/40 hover:to-blue-600/40 border border-cyan hover:border-cyan transition-all group overflow-hidden relative shadow-[0_0_30px_rgba(6,182,212,0.1)] hover:shadow-[0_0_40px_rgba(6,182,212,0.3)]"
                         >
                           <Target className="w-5 h-5 text-cyan group-hover:scale-110 transition-transform" />
-                          <span className="text-sm font-bold text-foreground font-tactical tracking-widest">A/B OPTIMIZE</span>
+                          <span className="text-xs sm:text-sm font-bold text-foreground font-tactical tracking-widest">A/B OPTIMIZE</span>
                         </button>
                         
                         <button
@@ -1916,7 +1924,7 @@ export default function CampaignDashboard({ accessToken, userEmail, onLogout }: 
                           className="w-full flex items-center justify-center gap-3 py-4 rounded-2xl bg-gradient-to-r from-indigo-600/20 to-blue-600/20 hover:from-indigo-600/40 hover:to-blue-600/40 border border-info hover:border-info transition-all group overflow-hidden relative shadow-[0_0_30px_rgba(99,102,241,0.1)] hover:shadow-[0_0_40px_rgba(99,102,241,0.3)]"
                         >
                           <Cpu className="w-5 h-5 text-info group-hover:scale-110 transition-transform" />
-                          <span className="text-sm font-bold text-foreground font-tactical tracking-widest">DEPLOY CAPITAL</span>
+                          <span className="text-xs sm:text-sm font-bold text-foreground font-tactical tracking-widest">DEPLOY CAPITAL</span>
                         </button>
                         
                         <button
@@ -1924,7 +1932,7 @@ export default function CampaignDashboard({ accessToken, userEmail, onLogout }: 
                           className="w-full flex items-center justify-center gap-3 py-4 rounded-2xl bg-gradient-to-r from-emerald-600/20 to-teal-600/20 hover:from-emerald-600/40 hover:to-teal-600/40 border border-success hover:border-success transition-all group overflow-hidden relative shadow-[0_0_30px_rgba(16,185,129,0.1)] hover:shadow-[0_0_40px_rgba(16,185,129,0.3)]"
                         >
                           <Activity className="w-5 h-5 text-success group-hover:scale-110 transition-transform" />
-                          <span className="text-sm font-bold text-foreground font-tactical tracking-widest">REPORT DATA</span>
+                          <span className="text-xs sm:text-sm font-bold text-foreground font-tactical tracking-widest">REPORT DATA</span>
                         </button>
 
                         <button
@@ -1932,7 +1940,7 @@ export default function CampaignDashboard({ accessToken, userEmail, onLogout }: 
                           className="w-full flex items-center justify-center gap-3 py-4 rounded-2xl bg-gradient-to-r from-orange-600/20 to-amber-600/20 hover:from-orange-600/40 hover:to-amber-600/40 border border-orange-500/30 hover:border-orange-500/60 transition-all group overflow-hidden relative shadow-[0_0_30px_rgba(249,115,22,0.1)] hover:shadow-[0_0_40px_rgba(249,115,22,0.3)]"
                         >
                           <Eye className="w-5 h-5 text-orange-400 group-hover:scale-110 transition-transform" />
-                          <span className="text-sm font-bold text-foreground font-tactical tracking-widest">COMPETITOR INTEL</span>
+                          <span className="text-xs sm:text-sm font-bold text-foreground font-tactical tracking-widest">COMPETITOR INTEL</span>
                         </button>
                         
                         <button
@@ -1940,7 +1948,7 @@ export default function CampaignDashboard({ accessToken, userEmail, onLogout }: 
                           className="w-full flex items-center justify-center gap-3 py-4 rounded-2xl bg-gradient-to-r from-purple-600/20 to-pink-600/20 hover:from-purple-600/40 hover:to-pink-600/40 border border-primary hover:border-primary transition-all group overflow-hidden relative shadow-[0_0_30px_rgba(168,85,247,0.1)] hover:shadow-[0_0_40px_rgba(168,85,247,0.3)]"
                         >
                           <Video className="w-5 h-5 text-primary group-hover:scale-110 transition-transform" />
-                          <span className="text-sm font-bold text-foreground font-tactical tracking-widest">SUMMON CLONE</span>
+                          <span className="text-xs sm:text-sm font-bold text-foreground font-tactical tracking-widest">SUMMON CLONE</span>
                         </button>
                       </div>
                     </motion.div>
@@ -1988,7 +1996,7 @@ export default function CampaignDashboard({ accessToken, userEmail, onLogout }: 
           {/* ================================================================
               BOTTOM INPUT BAR — Always visible, glassmorphism
               ================================================================ */}
-          <div id="tour-input-bar" className="flex-shrink-0 border-t border-border/50 bg-card/60 backdrop-blur-2xl p-4 relative z-20">
+          <div id="tour-input-bar" className="flex-shrink-0 border-t border-border/50 bg-card/60 backdrop-blur-2xl p-3 sm:p-4 relative z-20">
             <AnimatePresence>
               {showInterrogation && (
                 <StrategicInterrogationPanel
@@ -2127,7 +2135,8 @@ export default function CampaignDashboard({ accessToken, userEmail, onLogout }: 
         )}
       </AnimatePresence>
 
-      {/* Status Bar — Desktop Only */}
+      {/* Status Bar — Desktop Only, hidden when embedded */}
+      {!embedded && (
       <div className="hidden lg:flex h-[36px] z-[60] border-t border-border/50 bg-card/90 backdrop-blur-xl px-6 items-center justify-between text-xs font-tactical flex-shrink-0">
         <div className="flex items-center gap-6">
           <div className="flex items-center gap-2">
@@ -2168,6 +2177,7 @@ export default function CampaignDashboard({ accessToken, userEmail, onLogout }: 
           <span className="text-muted-foreground whitespace-nowrap">AVOIR // ONLINE</span>
         </div>
       </div>
+      )}
 
       {/* Capital Deployment Simulator Modal */}
       <AnimatePresence>

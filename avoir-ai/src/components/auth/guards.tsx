@@ -27,8 +27,8 @@ import { useAuth } from '@/lib/auth/provider';
  * no `//`, no `/\`, no scheme) are allowed. Anything else falls back to `/`.
  */
 export function getSafeRedirectPath(raw: string | null): string {
-  if (!raw) return '/';
-  if (!raw.startsWith('/') || raw.startsWith('//') || raw.startsWith('/\\')) return '/';
+  if (!raw) return '/dashboard';
+  if (!raw.startsWith('/') || raw.startsWith('//') || raw.startsWith('/\\')) return '/dashboard';
   return raw;
 }
 

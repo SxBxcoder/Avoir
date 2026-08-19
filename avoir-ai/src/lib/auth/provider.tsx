@@ -88,7 +88,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setAccessToken(resolvedToken);
       setIdToken(resolvedIdToken);
 
-      // One-time legacy migration (email-keyed → sub-keyed DynamoDB rows).
+      // One-time legacy migration (email-keyed ΓåÆ sub-keyed DynamoDB rows).
       // Fire-and-forget: safe to retry on every session refresh. The email is
       // derived server-side from the verified ID token, so the body is empty.
       if (resolvedIdToken) {
