@@ -15,6 +15,7 @@
 
 import { synthesize, cloneVoice, deleteVoice } from './elevenlabs';
 import { createVideo, pollVideo } from './heygen';
+import { saveShadowClone } from '@/lib/db/shadowClones';
 import { logger } from '@/lib/logger';
 import type { PipelineStep } from '@/lib/types/shadowClone';
 
@@ -99,6 +100,18 @@ export function runShadowClonePipeline(ctx: PipelineContext): ReadableStream {
         // Final video event
         controller.enqueue(sseVideo(result.video_url));
         controller.close();
+
+        // Persist result
+        await saveShadowClone({
+          userId: ctx.userId,
+          videoId: videoTask.video_id,
+          script: ctx.script,
+          imageUrl: ctx.imageUrl,
+          videoUrl: result.video_url,
+          elevenLabsVoiceId: voiceId,
+          heygenAvatarId: ctx.avatarId,
+          createdAt: new Date().toISOString(),
+        }).catch(() => {});
 
         logger.info('services.shadowClonePipeline', 'Pipeline completed', {
           userId: ctx.userId,
