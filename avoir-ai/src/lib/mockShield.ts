@@ -418,13 +418,16 @@ export function createMockShadowCloneStream(): ReadableStream {
         { step: 2, message: 'Generating avatar mesh from brand assets...' },
         { step: 3, message: 'Synthesizing voice profile with ElevenLabs...' },
         { step: 4, message: 'Rendering video with HeyGen pipeline...' },
-        { step: 5, message: '✅ Shadow Clone ready for deployment' },
       ];
 
       for (const s of steps) {
-        controller.enqueue(encoder.encode(`data: ${JSON.stringify(s)}\n\n`));
+        controller.enqueue(encoder.encode(`event: status\ndata: ${JSON.stringify(s)}\n\n`));
         await new Promise(r => setTimeout(r, 2000));
       }
+
+      // Final video event — mock URL for demo mode
+      const videoEvent = { video_url: 'https://storage.googleapis.com/avoir-demo/shadow-clone-demo.mp4' };
+      controller.enqueue(encoder.encode(`event: video\ndata: ${JSON.stringify(videoEvent)}\n\n`));
       controller.close();
     },
   });

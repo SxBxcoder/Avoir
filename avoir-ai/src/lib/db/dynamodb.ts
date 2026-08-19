@@ -27,6 +27,7 @@ export const TABLES = {
   COMPETITORS: process.env.DYNAMODB_COMPETITORS_TABLE || 'avoir-competitors',
   ALIASES: process.env.DYNAMODB_ALIASES_TABLE || 'avoir-user-aliases',
   AD_ACCOUNTS: process.env.DYNAMODB_AD_ACCOUNTS_TABLE || 'avoir-ad-accounts',
+  SHADOW_CLONES: process.env.DYNAMODB_SHADOW_CLONES_TABLE || 'avoir-shadow-clones',
 } as const;
 
 // ============================================================================

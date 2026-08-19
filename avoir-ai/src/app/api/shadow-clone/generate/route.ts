@@ -1,12 +1,26 @@
+/**
+ * Avoir — Shadow Clone Generation API
+ *
+ * POST /api/shadow-clone/generate
+ *
+ * Generates a "Shadow Clone" avatar video from campaign assets.
+ * Runs the full pipeline directly (ElevenLabs TTS → HeyGen video)
+ * and streams progress via SSE.
+ *
+ * Cost: 50 credits (pre-reserved atomically before pipeline starts).
+ *       Refunded if pipeline fails before HeyGen accepts the task.
+ */
+
+// Allow up to 5 minutes for HeyGen video generation polling
+export const maxDuration = 300;
+
 import { NextResponse } from 'next/server';
 import { getSubscription, deductCredits, addCredits } from '@/lib/services/subscription';
 import { isDemoMode, createMockShadowCloneStream } from '@/lib/mockShield';
 import { requireUser, authErrorResponse } from '@/lib/auth/requireUser';
+import { runShadowClonePipeline } from '@/lib/services/shadowClonePipeline';
 import { logger } from '@/lib/logger';
 
-/**
- * Proxy for Shadow Clone SSE stream
- */
 export async function POST(req: Request) {
   // Demo Mock Shield
   if (isDemoMode()) {
@@ -20,30 +34,32 @@ export async function POST(req: Request) {
   }
 
   try {
-    // Identity comes from the verified Cognito JWT — no anonymous bypass.
     const { userId } = await requireUser(req);
 
     const body = await req.json().catch(() => ({}));
+    const script = body.script || '';
+    const imageUrl = body.image_url || '';
 
-    // 1. Check Credits (fast UX gate — the authoritative reservation is below)
+    if (!script) {
+      return NextResponse.json({ error: 'script is required' }, { status: 400 });
+    }
+
+    // 1. Credit pre-check (fast UX gate)
     const sub = await getSubscription(userId);
     if (sub.credits < 50) {
-      logger.warn('shadow-clone', 'Blocked: insufficient credits', { credits: sub.credits });
       return NextResponse.json(
-        { 
+        {
           error: 'Insufficient Credits',
           message: `Shadow Clone costs 50 credits. You have ${sub.credits}. Please upgrade to Pro or Enterprise.`,
           upgradeRequired: true,
           currentCredits: sub.credits,
           cost: 50,
         },
-        { status: 402 } // Payment Required
+        { status: 402 }
       );
     }
 
-    // 2. Reserve credits atomically BEFORE starting the paid job. The
-    // conditional decrement means concurrent requests can never all pass the
-    // read-only pre-check and overdraw — only the balance can reserve.
+    // 2. Atomic credit reservation
     const deduction = await deductCredits(userId, 50);
     if (!deduction.success) {
       return NextResponse.json(
@@ -54,31 +70,23 @@ export async function POST(req: Request) {
           currentCredits: deduction.subscription.credits,
           cost: 50,
         },
-        { status: 402 } // Payment Required
+        { status: 402 }
       );
     }
 
-    // Call Python backend running on port 8000
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-    const response = await fetch(`${apiUrl}/api/shadow-clone/generate`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(req.headers.get('Authorization') ? { 'Authorization': req.headers.get('Authorization') as string } : {}),
+    // 3. Run the pipeline as an SSE stream, passing AbortSignal for ghost polling cleanup
+    const pipeline = runShadowClonePipeline(
+      {
+        userId,
+        script,
+        imageUrl,
+        voiceId: body.voice_id,
+        avatarId: body.avatar_id,
       },
-      body: JSON.stringify(body),
-    });
+      req.signal
+    );
 
-    if (!response.ok) {
-      // Backend refused the job — refund the reservation; the user never
-      // received a stream. Best-effort: addCredits never throws.
-      await addCredits(userId, 50).catch(() => {});
-      throw new Error(`Backend Error: ${response.status}`);
-    }
-
-    // Return the SSE stream directly (the reservation stands — the backend
-    // accepted the job)
-    return new Response(response.body, {
+    return new Response(pipeline, {
       headers: {
         'Content-Type': 'text/event-stream',
         'Cache-Control': 'no-cache, no-transform',
@@ -88,8 +96,8 @@ export async function POST(req: Request) {
   } catch (error: unknown) {
     const authErr = authErrorResponse(error);
     if (authErr) return authErr;
-    logger.error('shadow-clone', 'Proxy failed', { err: error });
-    const message = error instanceof Error ? error.message : 'Stream failed';
+    logger.error('shadow-clone', 'Generation failed', { err: error });
+    const message = error instanceof Error ? error.message : 'Generation failed';
     return new Response(
       JSON.stringify({ error: message }),
       { status: 500, headers: { 'Content-Type': 'application/json' } }
