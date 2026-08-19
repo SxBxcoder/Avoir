@@ -11,15 +11,22 @@
  * Emits SSE events matching the client parser:
  *   event: status  → { step, message }
  *   event: video   → { video_url }
+ *
+ * Credits are refunded if the pipeline fails before HeyGen accepts the task
+ * (i.e. before createVideo succeeds).
  */
 
 import { synthesize, cloneVoice, deleteVoice } from './elevenlabs';
 import { createVideo, pollVideo } from './heygen';
 import { saveShadowClone } from '@/lib/db/shadowClones';
+import { addCredits } from '@/lib/services/subscription';
 import { logger } from '@/lib/logger';
 import type { PipelineStep } from '@/lib/types/shadowClone';
 
 const encoder = new TextEncoder();
+
+// Max base64 payload size for HeyGen (1MB safety limit)
+const MAX_AUDIO_BASE64_BYTES = 1_000_000;
 
 // ============================================================================
 // SSE HELPERS
@@ -48,16 +55,23 @@ export interface PipelineContext {
 /**
  * Runs the full Shadow Clone pipeline as an SSE ReadableStream.
  *
- * Each step emits an `event: status` SSE event with a step number and message.
- * On completion, emits `event: video` with the final video URL.
- * On failure, emits `event: status` with step 0 and an error message.
+ * @param ctx    - Pipeline inputs (userId, script, image, optional overrides)
+ * @param signal - AbortSignal from the request — checked during polling to
+ *                 cleanly abort if the client disconnects.
  */
-export function runShadowClonePipeline(ctx: PipelineContext): ReadableStream {
+export function runShadowClonePipeline(
+  ctx: PipelineContext,
+  signal?: AbortSignal
+): ReadableStream {
   return new ReadableStream({
     async start(controller) {
       let voiceId: string | null = null;
+      let heygenAccepted = false;
 
       try {
+        // Check for early disconnect
+        if (signal?.aborted) throw new Error('Client disconnected');
+
         // Step 1: Analyze brand voice
         controller.enqueue(sseStatus(1, 'Analyzing brand voice DNA...'));
         await new Promise((r) => setTimeout(r, 500));
@@ -72,9 +86,14 @@ export function runShadowClonePipeline(ctx: PipelineContext): ReadableStream {
         controller.enqueue(sseStatus(3, 'Synthesizing voice with ElevenLabs...'));
         const audio = await synthesize(voiceId, ctx.script);
 
-        // Upload audio to a temporary hosting (HeyGen needs a URL)
-        // We use a data URI for now — HeyGen accepts base64 audio
+        // Base64 payload size guard — HeyGen may reject oversized payloads
         const audioBase64 = audio.audio_buffer.toString('base64');
+        if (audioBase64.length > MAX_AUDIO_BASE64_BYTES) {
+          throw new Error(
+            `Audio payload too large (${(audioBase64.length / 1_000_000).toFixed(1)}MB). ` +
+            `Script is too long for HeyGen data URI — keep scripts under ~45 seconds.`
+          );
+        }
         const audioDataUrl = `data:audio/mpeg;base64,${audioBase64}`;
 
         // Step 4: Generate video via HeyGen
@@ -84,11 +103,17 @@ export function runShadowClonePipeline(ctx: PipelineContext): ReadableStream {
           avatarId: ctx.avatarId,
           script: ctx.script,
         });
+        heygenAccepted = true;
 
-        // Poll for completion
-        const result = await pollVideo(videoTask.video_id, (status) => {
-          controller.enqueue(sseStatus(4, status));
-        });
+        // Poll for completion — pass AbortSignal to abort on client disconnect
+        const result = await pollVideo(
+          videoTask.video_id,
+          (status) => {
+            controller.enqueue(sseStatus(4, status));
+          },
+          undefined,
+          signal
+        );
 
         if (result.status === 'failed' || !result.video_url) {
           throw new Error(result.error || 'Video generation failed');
@@ -123,7 +148,17 @@ export function runShadowClonePipeline(ctx: PipelineContext): ReadableStream {
         logger.error('services.shadowClonePipeline', 'Pipeline failed', {
           userId: ctx.userId,
           error: message,
+          heygenAccepted,
         });
+
+        // Refund credits if HeyGen never accepted the task
+        // ( ElevenLabs error, base64 size limit, client disconnected early, etc. )
+        if (!heygenAccepted) {
+          await addCredits(ctx.userId, 50).catch(() => {});
+          logger.info('services.shadowClonePipeline', 'Credits refunded (pre-HeyGen failure)', {
+            userId: ctx.userId,
+          });
+        }
 
         controller.enqueue(sseStatus(0, `ERROR: ${message}`));
         controller.close();

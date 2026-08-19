@@ -112,13 +112,19 @@ export async function createVideo(params: {
 export async function pollVideo(
   videoId: string,
   onProgress?: (status: string) => void,
-  maxAttempts = MAX_POLL_ATTEMPTS
+  maxAttempts = MAX_POLL_ATTEMPTS,
+  signal?: AbortSignal
 ): Promise<HeyGenVideoResult> {
   if (!API_KEY) {
     throw new Error('HEYGEN_API_KEY not configured');
   }
 
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    // Abort cleanly if client disconnected
+    if (signal?.aborted) {
+      throw new Error('Client disconnected');
+    }
+
     try {
       const res = await fetch(`${BASE_URL}/v1/video_status.get?video_id=${videoId}`, {
         headers: { 'X-Api-Key': API_KEY },

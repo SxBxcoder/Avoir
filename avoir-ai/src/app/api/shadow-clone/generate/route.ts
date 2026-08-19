@@ -8,7 +8,11 @@
  * and streams progress via SSE.
  *
  * Cost: 50 credits (pre-reserved atomically before pipeline starts).
+ *       Refunded if pipeline fails before HeyGen accepts the task.
  */
+
+// Allow up to 5 minutes for HeyGen video generation polling
+export const maxDuration = 300;
 
 import { NextResponse } from 'next/server';
 import { getSubscription, deductCredits, addCredits } from '@/lib/services/subscription';
@@ -70,19 +74,17 @@ export async function POST(req: Request) {
       );
     }
 
-    // 3. Run the pipeline as an SSE stream
-    const pipeline = runShadowClonePipeline({
-      userId,
-      script,
-      imageUrl,
-      voiceId: body.voice_id,
-      avatarId: body.avatar_id,
-    });
-
-    // Note: credits are consumed on pipeline start. If the pipeline fails
-    // internally, the error event is emitted but credits are not refunded
-    // because the pipeline attempted real API calls (ElevenLabs + HeyGen).
-    // The user sees the error in the modal.
+    // 3. Run the pipeline as an SSE stream, passing AbortSignal for ghost polling cleanup
+    const pipeline = runShadowClonePipeline(
+      {
+        userId,
+        script,
+        imageUrl,
+        voiceId: body.voice_id,
+        avatarId: body.avatar_id,
+      },
+      req.signal
+    );
 
     return new Response(pipeline, {
       headers: {
