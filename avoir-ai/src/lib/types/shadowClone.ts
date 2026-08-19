@@ -24,7 +24,7 @@ export interface ShadowCloneRequest {
 // PIPELINE EVENTS (SSE)
 // ============================================================================
 
-export type PipelineStep = 1 | 2 | 3 | 4 | 5;
+export type PipelineStep = 0 | 1 | 2 | 3 | 4 | 5;
 
 export interface PipelineStatusEvent {
   step: PipelineStep;
