@@ -15,6 +15,8 @@ interface PerformanceReportPanelProps {
   campaignId: string;
   campaignSnapshot: { hook: string; offer: string; cta: string };
   accessToken: string;
+  /** 'webhook' = data came from Meta/Google Ads callback */
+  source?: 'manual' | 'webhook';
   onClose: () => void;
   onReported: () => void;
 }
@@ -45,6 +47,7 @@ export default function PerformanceReportPanel({
   campaignId,
   campaignSnapshot,
   accessToken,
+  source = 'manual',
   onClose,
   onReported,
 }: PerformanceReportPanelProps) {
@@ -179,7 +182,7 @@ export default function PerformanceReportPanel({
                         value={metrics[field.key] || ''}
                         onChange={(e) => handleMetricChange(field.key, e.target.value)}
                         placeholder={field.placeholder}
-                        className="w-full bg-background border border-border focus:border-success rounded-xl px-4 py-2.5 text-sm text-foreground placeholder-zinc-600 outline-none transition-all focus:ring-1 focus:ring-emerald-500/30"
+                        className="w-full bg-background border border-border focus:border-success rounded-xl px-4 py-2.5 text-sm text-foreground placeholder-muted-foreground outline-none transition-all focus:ring-1 focus:ring-success/30"
                       />
                     </div>
                   ))}
@@ -215,6 +218,12 @@ export default function PerformanceReportPanel({
                   <Check className="w-8 h-8 text-success" />
                 </motion.div>
                 <h4 className="text-lg font-bold text-foreground mb-2">Intelligence Recorded</h4>
+                {source === 'webhook' && (
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 mb-2 rounded-full bg-success/10 border border-success/30 text-[11px] font-bold text-success uppercase tracking-wider">
+                    <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
+                    Auto-tracked
+                  </span>
+                )}
                 <p className="text-sm text-muted-foreground">Your AI will use this data to generate better campaigns.</p>
               </motion.div>
             )}
