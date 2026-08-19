@@ -58,13 +58,13 @@ export function CapitalDeploymentSimulator({ onClose, campaignPlan }: CapitalDep
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 p-2 sm:p-4">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-background/90 p-2 sm:p-4">
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         transition={{ duration: 0.1 }}
-        className="w-full max-w-2xl border border-terminal-border bg-black max-h-[90vh] overflow-y-auto terminal-scrollbar"
+        className="w-full max-w-2xl border border-terminal-border bg-background max-h-[90vh] overflow-y-auto terminal-scrollbar"
       >
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-2.5 border-b border-terminal-border bg-terminal-surface">
@@ -192,7 +192,7 @@ export function CapitalDeploymentSimulator({ onClose, campaignPlan }: CapitalDep
                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-0 border border-terminal-border mb-4">
                         <div className="p-3 border-b sm:border-b-0 sm:border-r border-terminal-border text-center">
                           <p className="text-[8px] sm:text-[9px] text-zinc-600 tracking-widest mb-1">PROJECTED REACH</p>
-                          <p className="text-[12px] sm:text-[14px] font-bold text-white">{simulationResult.projected_reach.toLocaleString()}</p>
+                          <p className="text-[12px] sm:text-[14px] font-bold text-foreground">{simulationResult.projected_reach.toLocaleString()}</p>
                         </div>
                         <div className="p-3 border-b sm:border-b-0 sm:border-r border-terminal-border text-center">
                           <p className="text-[8px] sm:text-[9px] text-zinc-600 tracking-widest mb-1">EXPECTED CTR</p>

@@ -65,7 +65,7 @@ export default function TickerTape({ positions, totalAum }: TickerTapeProps) {
 
   return (
     <div
-      className="relative z-10 border-b border-terminal-border bg-black overflow-hidden group"
+      className="relative z-10 border-b border-terminal-border bg-background overflow-hidden group"
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
     >
@@ -73,7 +73,7 @@ export default function TickerTape({ positions, totalAum }: TickerTapeProps) {
         {/* Static label */}
         <div className="flex-shrink-0 px-3 h-full flex items-center gap-2 bg-terminal-surface border-r border-terminal-border">
           <div className="w-1.5 h-1.5 bg-neon-green animate-pulse" />
-          <span className="text-[9px] font-bold text-zinc-400 tracking-[0.2em]">FEED</span>
+          <span className="text-[9px] font-bold text-muted-foreground tracking-[0.2em]">FEED</span>
         </div>
 
         {/* Scrolling content */}
@@ -88,7 +88,7 @@ export default function TickerTape({ positions, totalAum }: TickerTapeProps) {
           >
             {duplicated.map((item, idx) => (
               <div key={idx} className="flex items-center gap-2 flex-shrink-0">
-                <span className="text-[9px] text-zinc-500 tracking-widest">{item.label}</span>
+                <span className="text-[9px] text-muted-foreground tracking-widest">{item.label}</span>
                 <span className={`text-[10px] font-bold ${COLOR_MAP[item.color]}`}>
                   {item.value}
                 </span>
@@ -100,7 +100,7 @@ export default function TickerTape({ positions, totalAum }: TickerTapeProps) {
 
         {/* Timestamp */}
         <div className="flex-shrink-0 px-3 h-full flex items-center bg-terminal-surface border-l border-terminal-border">
-          <span className="text-[9px] text-zinc-500 font-mono">{timeStr}</span>
+          <span className="text-[9px] text-muted-foreground font-mono">{timeStr}</span>
         </div>
       </div>
 

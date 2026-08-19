@@ -36,6 +36,7 @@ const generateSchema = z.object({
   topic: z.string().optional(),
   goal: z.string().optional(),
   messages: z.array(campaignMessageSchema).optional(),
+  language: z.string().optional(),
 });
 
 export async function POST(req: Request) {
@@ -63,6 +64,7 @@ export async function POST(req: Request) {
       );
     }
     const { goal: campaignGoal, messages: conversationMessages } = parsedRequest;
+    const campaignLanguage = parsed.data.language || 'en';
 
     const rateLimit = await checkRateLimit(userId, 10, 60); // 10 requests per minute
     if (!rateLimit.allowed) {
@@ -133,6 +135,7 @@ export async function POST(req: Request) {
           goal: campaignGoal,
           messages: conversationMessages,
           user_id: userId,
+          language: campaignLanguage,
         }),
       });
 
@@ -164,6 +167,7 @@ export async function POST(req: Request) {
     // ========================================================================
     const campaign = await createCampaign(userId, {
       goal: campaignGoal,
+      language: campaignLanguage,
       plan: {
         hook: parsedData.plan?.hook || parsedData.hook || '',
         offer: parsedData.plan?.offer || parsedData.offer || '',
@@ -185,6 +189,7 @@ export async function POST(req: Request) {
       imageUrl: parsedData.image_url || parsedData.imageUrl || "",
       messages: parsedData.messages || conversationMessages,
       campaignId: campaign.campaignId,
+      language: campaignLanguage,
       status: parsedData.status || 'completed',
     });
 

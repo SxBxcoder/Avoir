@@ -135,28 +135,28 @@ export default function OrderBook({ positions, onSelect }: OrderBookProps) {
       <div className="flex items-center justify-between px-4 py-2 border-b border-terminal-border bg-terminal-surface flex-shrink-0">
         <div className="flex items-center gap-2">
           <div className="w-2 h-2 bg-neon-amber" />
-          <span className="text-[11px] font-bold text-zinc-300 tracking-[0.2em]">ORDER BOOK</span>
+          <span className="text-[11px] font-bold text-muted-foreground tracking-[0.2em]">ORDER BOOK</span>
         </div>
         <span className="text-[11px] text-neon-amber font-bold">AUM ${totalAum.toLocaleString()}</span>
       </div>
 
       {/* Column headers */}
       <div className="grid grid-cols-[28px_1fr_72px_60px_68px_64px_80px] border-b border-terminal-border bg-terminal-surface/50 flex-shrink-0">
-        <span className="px-1.5 py-1.5 text-[9px] text-zinc-400 tracking-widest">#</span>
-        <button onClick={() => handleSort('asset')} className="px-2 py-1.5 text-[9px] text-zinc-400 tracking-widest text-left hover:text-zinc-200">
+        <span className="px-1.5 py-1.5 text-[9px] text-muted-foreground tracking-widest">#</span>
+        <button onClick={() => handleSort('asset')} className="px-2 py-1.5 text-[9px] text-muted-foreground tracking-widest text-left hover:text-foreground">
           ASSET<SortIndicator field="asset" />
         </button>
-        <button onClick={() => handleSort('spend')} className="px-1.5 py-1.5 text-[9px] text-zinc-400 tracking-widest text-right hover:text-zinc-200">
+        <button onClick={() => handleSort('spend')} className="px-1.5 py-1.5 text-[9px] text-muted-foreground tracking-widest text-right hover:text-foreground">
           ALLOC<SortIndicator field="spend" />
         </button>
-        <button onClick={() => handleSort('roas')} className="px-1.5 py-1.5 text-[9px] text-zinc-400 tracking-widest text-right hover:text-zinc-200">
+        <button onClick={() => handleSort('roas')} className="px-1.5 py-1.5 text-[9px] text-muted-foreground tracking-widest text-right hover:text-foreground">
           ROAS<SortIndicator field="roas" />
         </button>
-        <button onClick={() => handleSort('momentum')} className="px-1.5 py-1.5 text-[9px] text-zinc-400 tracking-widest text-right hover:text-zinc-200">
+        <button onClick={() => handleSort('momentum')} className="px-1.5 py-1.5 text-[9px] text-muted-foreground tracking-widest text-right hover:text-foreground">
           MOM<SortIndicator field="momentum" />
         </button>
-        <span className="px-1.5 py-1.5 text-[9px] text-zinc-500 tracking-widest text-center">CHART</span>
-        <button onClick={() => handleSort('status')} className="px-1.5 py-1.5 text-[9px] text-zinc-400 tracking-widest text-right hover:text-zinc-200">
+        <span className="px-1.5 py-1.5 text-[9px] text-muted-foreground tracking-widest text-center">CHART</span>
+        <button onClick={() => handleSort('status')} className="px-1.5 py-1.5 text-[9px] text-muted-foreground tracking-widest text-right hover:text-foreground">
           STATUS<SortIndicator field="status" />
         </button>
       </div>
@@ -177,8 +177,8 @@ export default function OrderBook({ positions, onSelect }: OrderBookProps) {
                     : 'hover:bg-terminal-surface'
             }`}
           >
-            <span className="px-1.5 py-2 text-[10px] text-zinc-500 font-mono">{pos.id.replace('pos-', '')}</span>
-            <span className="px-2 py-2 text-[12px] text-white font-medium truncate pr-1">{pos.asset}</span>
+            <span className="px-1.5 py-2 text-[10px] text-muted-foreground font-mono">{pos.id.replace('pos-', '')}</span>
+            <span className="px-2 py-2 text-[12px] text-foreground font-medium truncate pr-1">{pos.asset}</span>
             <span className="px-1.5 py-2 text-[12px] text-neon-amber font-bold text-right font-mono">${pos.spend}</span>
             <span className="px-1.5 py-2 text-[12px] text-neon-cyan font-bold text-right font-mono">{pos.roas}x</span>
             <span className={`px-1.5 py-2 text-[12px] font-bold text-right font-mono ${
@@ -212,16 +212,16 @@ export default function OrderBook({ positions, onSelect }: OrderBookProps) {
       {/* Summary bar */}
       <div className="flex items-center justify-between px-4 py-1.5 border-t border-terminal-border bg-terminal-surface flex-shrink-0">
         <div className="flex items-center gap-4">
-          <span className="text-[10px] text-zinc-400">
+          <span className="text-[10px] text-muted-foreground">
             <span className="text-neon-green font-bold">{activeCount}</span> ACTIVE
           </span>
           {decayCount > 0 && (
-            <span className="text-[10px] text-zinc-400">
+            <span className="text-[10px] text-muted-foreground">
               <span className="text-neon-red font-bold">{decayCount}</span> DECAY
             </span>
           )}
         </div>
-        <span className="text-[10px] text-zinc-400">
+        <span className="text-[10px] text-muted-foreground">
           AVG ROAS <span className="text-neon-cyan font-bold">{avgRoas.toFixed(1)}x</span>
         </span>
       </div>

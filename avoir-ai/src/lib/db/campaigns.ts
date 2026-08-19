@@ -31,6 +31,7 @@ export interface Campaign {
   captions: string[];
   imageUrl: string;
   messages: Array<{ role: string; content: string; displayContent?: string }>;
+  language?: string;  // Campaign language (e.g. 'en', 'hi', 'hi-en', 'es')
   tier: string;       // Which Diamond Cascade tier was used
   status: string;     // 'completed' | 'failed' | 'pending'
   isWinner?: boolean; // P1: Campaign Memory Flywheel flag

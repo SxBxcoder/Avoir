@@ -21,6 +21,17 @@ const config: Config = {
         "terminal-surface": "var(--terminal-surface)",
         "terminal-border": "var(--terminal-border)",
         "terminal-border-bright": "var(--terminal-border-bright)",
+        "grid-color": "var(--grid-color)",
+        
+        // Semantic Dynamic Colors
+        success: "rgb(var(--color-success) / <alpha-value>)",
+        info: "rgb(var(--color-info) / <alpha-value>)",
+        warning: "rgb(var(--color-warning) / <alpha-value>)",
+        danger: "rgb(var(--color-danger) / <alpha-value>)",
+        primary: "rgb(var(--color-primary) / <alpha-value>)",
+        cyan: "rgb(var(--color-cyan) / <alpha-value>)",
+
+        // Legacy Neon (Keep for fallback)
         "neon-amber": "#F59E0B",
         "neon-cyan": "#22D3EE",
         "neon-green": "#4ADE80",
