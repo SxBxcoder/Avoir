@@ -205,7 +205,7 @@ export async function deleteCampaign(userId: string, campaignId: string): Promis
 /**
  * Queries a user's campaigns to find one matching an external ad platform ID.
  * Uses QueryCommand (PK: userId) instead of ScanCommand to avoid full-table scans.
- * Filters results in-memory for the externalIds nested attribute.
+ * Paginates through all results (DynamoDB 1MB limit) to find the match.
  */
 export async function findCampaignByExternalId(
   userId: string,
@@ -216,19 +216,28 @@ export async function findCampaignByExternalId(
   const field = platform === 'meta' ? 'metaCampaignId' : 'googleCampaignId';
 
   try {
-    const result = await client.send(
-      new QueryCommand({
-        TableName: TABLES.CAMPAIGNS,
-        KeyConditionExpression: '#uid = :uid',
-        ExpressionAttributeNames: { '#uid': 'userId' },
-        ExpressionAttributeValues: { ':uid': userId },
-      })
-    );
+    let lastKey: Record<string, any> | undefined;
 
-    const match = (result.Items as Campaign[] | undefined)?.find(
-      (c) => c.externalIds?.[field] === externalId
-    );
-    return match || null;
+    do {
+      const result = await client.send(
+        new QueryCommand({
+          TableName: TABLES.CAMPAIGNS,
+          KeyConditionExpression: '#uid = :uid',
+          ExpressionAttributeNames: { '#uid': 'userId' },
+          ExpressionAttributeValues: { ':uid': userId },
+          ExclusiveStartKey: lastKey,
+        })
+      );
+
+      const match = (result.Items as Campaign[] | undefined)?.find(
+        (c) => c.externalIds?.[field] === externalId
+      );
+      if (match) return match;
+
+      lastKey = result.LastEvaluatedKey;
+    } while (lastKey);
+
+    return null;
   } catch (err: any) {
     logger.error('db.campaigns', 'External ID lookup failed', { err });
     return null;

@@ -228,7 +228,6 @@ export async function findUserByPlatformAccount(
           FilterExpression: '#paid = :paid',
           ExpressionAttributeNames: { '#paid': 'platformAccountId' },
           ExpressionAttributeValues: { ':paid': platformAccountId },
-          Limit: 1,
         })
       );
 
