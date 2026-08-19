@@ -26,6 +26,7 @@ export const TABLES = {
   INTELLIGENCE: process.env.DYNAMODB_INTELLIGENCE_TABLE || 'avoir-intelligence',
   COMPETITORS: process.env.DYNAMODB_COMPETITORS_TABLE || 'avoir-competitors',
   ALIASES: process.env.DYNAMODB_ALIASES_TABLE || 'avoir-user-aliases',
+  AD_ACCOUNTS: process.env.DYNAMODB_AD_ACCOUNTS_TABLE || 'avoir-ad-accounts',
 } as const;
 
 // ============================================================================
