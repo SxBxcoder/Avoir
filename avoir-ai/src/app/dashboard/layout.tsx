@@ -22,7 +22,7 @@ export default function DashboardLayout({
 
   return (
     <RequireAuth>
-      <div className="min-h-screen bg-black flex">
+      <div className="min-h-screen bg-background flex">
         {/* Sidebar */}
         <DashboardSidebar
           collapsed={sidebarCollapsed}
