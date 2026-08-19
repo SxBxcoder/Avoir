@@ -34,8 +34,12 @@ const webhookSecret = process.env.GOOGLE_ADS_WEBHOOK_SECRET || '';
 
 function verifyGoogleSignature(body: string, signature: string | null): boolean {
   if (!webhookSecret) {
-    logger.warn('webhook.google-ads', 'GOOGLE_ADS_WEBHOOK_SECRET not configured — skipping verification');
-    return true; // Fail open in dev if secret not set
+    if (process.env.NODE_ENV === 'development') {
+      logger.warn('webhook.google-ads', 'GOOGLE_ADS_WEBHOOK_SECRET not configured — skipping verification (dev only)');
+      return true;
+    }
+    logger.error('webhook.google-ads', 'GOOGLE_ADS_WEBHOOK_SECRET not configured — rejecting in production');
+    return false;
   }
   if (!signature) return false;
 
@@ -54,7 +58,7 @@ export async function POST(req: Request) {
   }
 
   const body = await req.text();
-  const signature = req.headers.get('x-goog-signature') || req.headers.get('x-hub-signature-256');
+  const signature = req.headers.get('x-goog-signature');
 
   if (!verifyGoogleSignature(body, signature)) {
     logger.warn('webhook.google-ads', 'Invalid signature');

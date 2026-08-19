@@ -182,7 +182,7 @@ export default function PerformanceReportPanel({
                         value={metrics[field.key] || ''}
                         onChange={(e) => handleMetricChange(field.key, e.target.value)}
                         placeholder={field.placeholder}
-                        className="w-full bg-background border border-border focus:border-success rounded-xl px-4 py-2.5 text-sm text-foreground placeholder-zinc-600 outline-none transition-all focus:ring-1 focus:ring-emerald-500/30"
+                        className="w-full bg-background border border-border focus:border-success rounded-xl px-4 py-2.5 text-sm text-foreground placeholder-muted-foreground outline-none transition-all focus:ring-1 focus:ring-success/30"
                       />
                     </div>
                   ))}

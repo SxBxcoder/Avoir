@@ -33,8 +33,12 @@ const webhookSecret = process.env.META_ADS_WEBHOOK_SECRET || '';
 
 function verifyMetaSignature(body: string, signature: string | null): boolean {
   if (!webhookSecret) {
-    logger.warn('webhook.meta-ads', 'META_ADS_WEBHOOK_SECRET not configured — skipping verification');
-    return true; // Fail open in dev if secret not set
+    if (process.env.NODE_ENV === 'development') {
+      logger.warn('webhook.meta-ads', 'META_ADS_WEBHOOK_SECRET not configured — skipping verification (dev only)');
+      return true;
+    }
+    logger.error('webhook.meta-ads', 'META_ADS_WEBHOOK_SECRET not configured — rejecting in production');
+    return false;
   }
   if (!signature) return false;
 

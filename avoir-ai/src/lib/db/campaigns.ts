@@ -10,7 +10,7 @@
  *               createdAt, updatedAt, ttl
  */
 
-import { PutCommand, QueryCommand, GetCommand, DeleteCommand, ScanCommand } from '@aws-sdk/lib-dynamodb';
+import { PutCommand, QueryCommand, GetCommand, DeleteCommand } from '@aws-sdk/lib-dynamodb';
 import { getDynamoClient, TABLES } from './dynamodb';
 import { v4 as uuidv4 } from 'uuid';
 import { logger } from '@/lib/logger';
@@ -203,8 +203,9 @@ export async function deleteCampaign(userId: string, campaignId: string): Promis
 // ============================================================================
 
 /**
- * Scans a user's campaigns to find one matching an external ad platform ID.
- * Used by webhook handlers to map Meta/Google ad callbacks to internal campaigns.
+ * Queries a user's campaigns to find one matching an external ad platform ID.
+ * Uses QueryCommand (PK: userId) instead of ScanCommand to avoid full-table scans.
+ * Filters results in-memory for the externalIds nested attribute.
  */
 export async function findCampaignByExternalId(
   userId: string,
@@ -216,22 +217,18 @@ export async function findCampaignByExternalId(
 
   try {
     const result = await client.send(
-      new ScanCommand({
+      new QueryCommand({
         TableName: TABLES.CAMPAIGNS,
-        FilterExpression: '#uid = :uid AND externalIds.#field = :extId',
-        ExpressionAttributeNames: {
-          '#uid': 'userId',
-          '#field': field,
-        },
-        ExpressionAttributeValues: {
-          ':uid': userId,
-          ':extId': externalId,
-        },
-        Limit: 1,
+        KeyConditionExpression: '#uid = :uid',
+        ExpressionAttributeNames: { '#uid': 'userId' },
+        ExpressionAttributeValues: { ':uid': userId },
       })
     );
 
-    return (result.Items?.[0] as Campaign) || null;
+    const match = (result.Items as Campaign[] | undefined)?.find(
+      (c) => c.externalIds?.[field] === externalId
+    );
+    return match || null;
   } catch (err: any) {
     logger.error('db.campaigns', 'External ID lookup failed', { err });
     return null;
