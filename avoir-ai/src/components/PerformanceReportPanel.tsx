@@ -108,29 +108,29 @@ export default function PerformanceReportPanel({
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm"
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-background/70 backdrop-blur-sm"
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
       <motion.div
         initial={{ scale: 0.9, y: 30 }}
         animate={{ scale: 1, y: 0 }}
         exit={{ scale: 0.9, y: 30 }}
-        className="w-full max-w-lg mx-4 bg-zinc-950 border border-zinc-800 rounded-2xl shadow-2xl shadow-indigo-500/10 overflow-hidden"
+        className="w-full max-w-lg mx-4 bg-card border border-border rounded-2xl shadow-2xl shadow-indigo-500/10 overflow-hidden"
       >
         {/* Header */}
-        <div className="p-6 border-b border-zinc-800/50">
+        <div className="p-6 border-b border-border/50">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-emerald-500/10 rounded-xl border border-emerald-500/20">
-                <BarChart3 className="w-5 h-5 text-emerald-400" />
+              <div className="p-2 bg-success/10 rounded-xl border border-success">
+                <BarChart3 className="w-5 h-5 text-success" />
               </div>
               <div>
-                <h3 className="text-sm font-bold font-tactical tracking-wider text-emerald-400">PERFORMANCE INTELLIGENCE</h3>
-                <p className="text-xs text-zinc-500 mt-0.5">Report metrics → Your AI gets smarter</p>
+                <h3 className="text-sm font-bold font-tactical tracking-wider text-success">PERFORMANCE INTELLIGENCE</h3>
+                <p className="text-xs text-muted-foreground mt-0.5">Report metrics → Your AI gets smarter</p>
               </div>
             </div>
-            <button onClick={onClose} className="p-2 hover:bg-zinc-800 rounded-lg transition-colors">
-              <X className="w-5 h-5 text-zinc-500" />
+            <button onClick={onClose} className="p-2 hover:bg-muted rounded-lg transition-colors">
+              <X className="w-5 h-5 text-muted-foreground" />
             </button>
           </div>
         </div>
@@ -140,7 +140,7 @@ export default function PerformanceReportPanel({
           <AnimatePresence mode="wait">
             {step === 'platform' && (
               <motion.div key="platform" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
-                <p className="text-sm text-zinc-400 mb-4">Where did you deploy this campaign?</p>
+                <p className="text-sm text-muted-foreground mb-4">Where did you deploy this campaign?</p>
                 <div className="grid grid-cols-2 gap-3">
                   {PLATFORMS.map((p) => (
                     <button
@@ -148,12 +148,12 @@ export default function PerformanceReportPanel({
                       onClick={() => { setSelectedPlatform(p.id); setStep('metrics'); }}
                       className={`group p-4 rounded-xl border transition-all text-left hover:scale-[1.02] ${
                         selectedPlatform === p.id
-                          ? 'border-emerald-500/50 bg-emerald-500/5'
-                          : 'border-zinc-800 hover:border-zinc-700 bg-zinc-900/50'
+                          ? 'border-success bg-success/5'
+                          : 'border-border hover:border-border bg-card/50'
                       }`}
                     >
                       <span className="text-2xl">{p.icon}</span>
-                      <p className="text-sm font-medium text-white mt-2">{p.label}</p>
+                      <p className="text-sm font-medium text-foreground mt-2">{p.label}</p>
                     </button>
                   ))}
                 </div>
@@ -164,22 +164,22 @@ export default function PerformanceReportPanel({
               <motion.div key="metrics" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
                 <div className="flex items-center gap-2 mb-4">
                   <span className="text-lg">{PLATFORMS.find(p => p.id === selectedPlatform)?.icon}</span>
-                  <p className="text-sm text-zinc-400">
-                    Enter your <span className="text-white font-medium">{PLATFORMS.find(p => p.id === selectedPlatform)?.label}</span> metrics
+                  <p className="text-sm text-muted-foreground">
+                    Enter your <span className="text-foreground font-medium">{PLATFORMS.find(p => p.id === selectedPlatform)?.label}</span> metrics
                   </p>
                 </div>
 
                 <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2">
                   {METRIC_FIELDS.map((field) => (
                     <div key={field.key}>
-                      <label className="text-xs text-zinc-500 font-medium mb-1 block">{field.label}</label>
+                      <label className="text-xs text-muted-foreground font-medium mb-1 block">{field.label}</label>
                       <input
                         type="number"
                         step="any"
                         value={metrics[field.key] || ''}
                         onChange={(e) => handleMetricChange(field.key, e.target.value)}
                         placeholder={field.placeholder}
-                        className="w-full bg-black border border-zinc-800 focus:border-emerald-500/50 rounded-xl px-4 py-2.5 text-sm text-white placeholder-zinc-600 outline-none transition-all focus:ring-1 focus:ring-emerald-500/30"
+                        className="w-full bg-background border border-border focus:border-success rounded-xl px-4 py-2.5 text-sm text-foreground placeholder-zinc-600 outline-none transition-all focus:ring-1 focus:ring-emerald-500/30"
                       />
                     </div>
                   ))}
@@ -188,14 +188,14 @@ export default function PerformanceReportPanel({
                 <div className="flex gap-3 mt-6">
                   <button
                     onClick={() => setStep('platform')}
-                    className="flex-1 py-3 rounded-xl border border-zinc-800 text-sm text-zinc-400 hover:text-white hover:border-zinc-700 transition-all"
+                    className="flex-1 py-3 rounded-xl border border-border text-sm text-muted-foreground hover:text-foreground hover:border-border transition-all"
                   >
                     Back
                   </button>
                   <button
                     onClick={handleSubmit}
                     disabled={isSubmitting}
-                    className="flex-1 py-3 rounded-xl bg-gradient-to-r from-emerald-600 to-green-600 text-white text-sm font-bold hover:from-emerald-500 hover:to-green-500 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                    className="flex-1 py-3 rounded-xl bg-gradient-to-r from-success to-green-600 text-white text-sm font-bold hover:from-success hover:to-green-500 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
                   >
                     {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <TrendingUp className="w-4 h-4" />}
                     {isSubmitting ? 'Recording...' : 'Record Intelligence'}
@@ -210,12 +210,12 @@ export default function PerformanceReportPanel({
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
                   transition={{ type: 'spring', stiffness: 400, damping: 20, delay: 0.1 }}
-                  className="w-16 h-16 mx-auto mb-4 rounded-full bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center"
+                  className="w-16 h-16 mx-auto mb-4 rounded-full bg-success/10 border border-success flex items-center justify-center"
                 >
-                  <Check className="w-8 h-8 text-emerald-400" />
+                  <Check className="w-8 h-8 text-success" />
                 </motion.div>
-                <h4 className="text-lg font-bold text-white mb-2">Intelligence Recorded</h4>
-                <p className="text-sm text-zinc-400">Your AI will use this data to generate better campaigns.</p>
+                <h4 className="text-lg font-bold text-foreground mb-2">Intelligence Recorded</h4>
+                <p className="text-sm text-muted-foreground">Your AI will use this data to generate better campaigns.</p>
               </motion.div>
             )}
           </AnimatePresence>

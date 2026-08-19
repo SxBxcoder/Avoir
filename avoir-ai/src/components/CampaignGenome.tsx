@@ -58,10 +58,10 @@ const GENOME_CONFIG = {
     subtitle: 'Maximum reach, shares, saves',
     icon: Flame,
     gradient: 'from-red-500/20 to-orange-500/20',
-    border: 'border-red-500/30 hover:border-red-500/50',
+    border: 'border-danger hover:border-danger',
     glow: 'shadow-[0_0_30px_rgba(239,68,68,0.15)]',
-    iconColor: 'text-red-400',
-    labelColor: 'text-red-400',
+    iconColor: 'text-danger',
+    labelColor: 'text-danger',
     fillColor: 'rgba(239, 68, 68, 0.2)',
     strokeColor: 'rgba(239, 68, 68, 0.8)',
   },
@@ -70,10 +70,10 @@ const GENOME_CONFIG = {
     subtitle: 'Maximum clicks, sign-ups, purchases',
     icon: Target,
     gradient: 'from-emerald-500/20 to-green-500/20',
-    border: 'border-emerald-500/30 hover:border-emerald-500/50',
+    border: 'border-success hover:border-success',
     glow: 'shadow-[0_0_30px_rgba(16,185,129,0.15)]',
-    iconColor: 'text-emerald-400',
-    labelColor: 'text-emerald-400',
+    iconColor: 'text-success',
+    labelColor: 'text-success',
     fillColor: 'rgba(16, 185, 129, 0.2)',
     strokeColor: 'rgba(16, 185, 129, 0.8)',
   },
@@ -82,10 +82,10 @@ const GENOME_CONFIG = {
     subtitle: 'Maximum brand trust & community',
     icon: Shield,
     gradient: 'from-indigo-500/20 to-blue-500/20',
-    border: 'border-indigo-500/30 hover:border-indigo-500/50',
+    border: 'border-info hover:border-info',
     glow: 'shadow-[0_0_30px_rgba(99,102,241,0.15)]',
-    iconColor: 'text-indigo-400',
-    labelColor: 'text-indigo-400',
+    iconColor: 'text-info',
+    labelColor: 'text-info',
     fillColor: 'rgba(99, 102, 241, 0.2)',
     strokeColor: 'rgba(99, 102, 241, 0.8)',
   },
@@ -252,8 +252,8 @@ function MergeModal({ variants, onMerge, onClose }: {
     value: string;
     onChange: (v: 'virality' | 'conversion' | 'authority') => void;
   }) => (
-    <div className="flex items-center justify-between py-3 border-b border-zinc-800/50">
-      <span className="text-sm font-bold text-zinc-300">{label}</span>
+    <div className="flex items-center justify-between py-3 border-b border-border/50">
+      <span className="text-sm font-bold text-muted-foreground">{label}</span>
       <div className="flex gap-2">
         {(['virality', 'conversion', 'authority'] as const).map(type => {
           const config = GENOME_CONFIG[type];
@@ -264,7 +264,7 @@ function MergeModal({ variants, onMerge, onClose }: {
               className={`px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all ${
                 value === type
                   ? `bg-gradient-to-r ${config.gradient} ${config.labelColor} border ${config.border}`
-                  : 'bg-zinc-800/50 text-zinc-500 border border-zinc-700/50 hover:bg-zinc-700/50'
+                  : 'bg-muted/50 text-muted-foreground border border-border/50 hover:bg-muted/50'
               }`}
             >
               {config.label.split(' ')[0]}
@@ -280,7 +280,7 @@ function MergeModal({ variants, onMerge, onClose }: {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
+      className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm"
       onClick={onClose}
     >
       <motion.div
@@ -288,20 +288,20 @@ function MergeModal({ variants, onMerge, onClose }: {
         animate={{ scale: 1, opacity: 1 }}
         exit={{ scale: 0.9, opacity: 0 }}
         onClick={e => e.stopPropagation()}
-        className="w-full max-w-lg bg-zinc-950 border border-zinc-800 rounded-2xl p-8 shadow-2xl"
+        className="w-full max-w-lg bg-card border border-border rounded-2xl p-8 shadow-2xl"
       >
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-purple-500/10 rounded-xl">
-              <Merge className="w-5 h-5 text-purple-400" />
+            <div className="p-2 bg-primary/10 rounded-xl">
+              <Merge className="w-5 h-5 text-primary" />
             </div>
             <div>
-              <h3 className="text-lg font-bold text-white">Merge Genomes</h3>
-              <p className="text-xs text-zinc-500">Pick the best element from each variant</p>
+              <h3 className="text-lg font-bold text-foreground">Merge Genomes</h3>
+              <p className="text-xs text-muted-foreground">Pick the best element from each variant</p>
             </div>
           </div>
-          <button onClick={onClose} className="p-2 hover:bg-zinc-800 rounded-lg transition-colors">
-            <X className="w-5 h-5 text-zinc-500" />
+          <button onClick={onClose} className="p-2 hover:bg-muted rounded-lg transition-colors">
+            <X className="w-5 h-5 text-muted-foreground" />
           </button>
         </div>
 
@@ -312,11 +312,11 @@ function MergeModal({ variants, onMerge, onClose }: {
         </div>
 
         {/* Preview */}
-        <div className="mt-6 p-4 rounded-xl bg-zinc-900/80 border border-zinc-800/50 space-y-2">
-          <span className="text-[10px] font-tactical text-purple-400 uppercase tracking-widest">MERGED PREVIEW</span>
-          <p className="text-sm font-bold text-white">{getVariant(hookFrom).plan.hook}</p>
-          <p className="text-xs text-zinc-400">{getVariant(offerFrom).plan.offer}</p>
-          <p className="text-xs text-zinc-300 font-medium">{getVariant(ctaFrom).plan.cta}</p>
+        <div className="mt-6 p-4 rounded-xl bg-card/80 border border-border/50 space-y-2">
+          <span className="text-[10px] font-tactical text-primary uppercase tracking-widest">MERGED PREVIEW</span>
+          <p className="text-sm font-bold text-foreground">{getVariant(hookFrom).plan.hook}</p>
+          <p className="text-xs text-muted-foreground">{getVariant(offerFrom).plan.offer}</p>
+          <p className="text-xs text-muted-foreground font-medium">{getVariant(ctaFrom).plan.cta}</p>
         </div>
 
         <motion.button
@@ -362,7 +362,7 @@ export default function CampaignGenome({ variants, onSelectVariant, onMergeVaria
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.5 }}
-      className="space-y-6 pt-8 border-t border-zinc-800/50 mt-8"
+      className="space-y-6 pt-8 border-t border-border/50 mt-8"
     >
       {/* Section Header */}
       <div className="flex items-center justify-between">
@@ -374,19 +374,19 @@ export default function CampaignGenome({ variants, onSelectVariant, onMergeVaria
         >
           <div className="relative">
             <div className="absolute inset-0 bg-gradient-to-r from-red-500/30 via-emerald-500/30 to-indigo-500/30 rounded-lg blur-lg" />
-            <div className="relative p-1.5 bg-zinc-900 rounded-lg border border-zinc-700/50">
-              <Sparkles className="w-4 h-4 text-white" />
+            <div className="relative p-1.5 bg-card rounded-lg border border-border/50">
+              <Sparkles className="w-4 h-4 text-foreground" />
             </div>
           </div>
-          <h3 className="text-xs font-tactical text-white uppercase tracking-wider">Campaign Genome™</h3>
-          <span className="text-[10px] px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-400 border border-purple-500/20 font-bold">3 VARIANTS</span>
+          <h3 className="text-xs font-tactical text-foreground uppercase tracking-wider">Campaign Genome™</h3>
+          <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary/20 text-primary border border-primary font-bold">3 VARIANTS</span>
         </motion.div>
 
         <motion.button
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
           onClick={() => setShowMerge(true)}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-400 text-xs font-bold hover:bg-purple-500/20 transition-all"
+          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary/10 border border-primary text-primary text-xs font-bold hover:bg-primary/20 transition-all"
         >
           <Merge className="w-3.5 h-3.5" /> Merge Custom
         </motion.button>
@@ -416,14 +416,14 @@ export default function CampaignGenome({ variants, onSelectVariant, onMergeVaria
                 {/* Genome Header */}
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className={`p-2 rounded-xl bg-black/30`}>
+                    <div className={`p-2 rounded-xl bg-background/30`}>
                       <Icon className={`w-5 h-5 ${config.iconColor}`} />
                     </div>
                     <div>
                       <h4 className={`text-sm font-bold font-tactical tracking-wider ${config.labelColor}`}>
                         {config.label}
                       </h4>
-                      <p className="text-[10px] text-zinc-500">{config.subtitle}</p>
+                      <p className="text-[10px] text-muted-foreground">{config.subtitle}</p>
                     </div>
                   </div>
                 </div>
@@ -439,34 +439,34 @@ export default function CampaignGenome({ variants, onSelectVariant, onMergeVaria
 
                 {/* Copy Section */}
                 <div className="space-y-3">
-                  <div className="p-3 rounded-xl bg-black/30 border border-white/5">
+                  <div className="p-3 rounded-xl bg-background/30 border border-border">
                     <div className="flex items-center justify-between mb-1">
-                      <span className="text-[10px] font-tactical text-zinc-500">HOOK</span>
-                      <button onClick={() => copyToClipboard(variant.plan.hook, `${key}-hook`)} className="p-1 hover:bg-zinc-800 rounded transition-colors">
-                        {copied === `${key}-hook` ? <Check className="w-3 h-3 text-green-400" /> : <Copy className="w-3 h-3 text-zinc-600" />}
+                      <span className="text-[10px] font-tactical text-muted-foreground">HOOK</span>
+                      <button onClick={() => copyToClipboard(variant.plan.hook, `${key}-hook`)} className="p-1 hover:bg-muted rounded transition-colors">
+                        {copied === `${key}-hook` ? <Check className="w-3 h-3 text-success" /> : <Copy className="w-3 h-3 text-zinc-600" />}
                       </button>
                     </div>
-                    <p className="text-sm font-bold text-white leading-snug">{variant.plan.hook}</p>
+                    <p className="text-sm font-bold text-foreground leading-snug">{variant.plan.hook}</p>
                   </div>
-                  <div className="p-3 rounded-xl bg-black/30 border border-white/5">
-                    <span className="text-[10px] font-tactical text-zinc-500">OFFER</span>
-                    <p className="text-xs text-zinc-300 mt-1">{variant.plan.offer}</p>
+                  <div className="p-3 rounded-xl bg-background/30 border border-border">
+                    <span className="text-[10px] font-tactical text-muted-foreground">OFFER</span>
+                    <p className="text-xs text-muted-foreground mt-1">{variant.plan.offer}</p>
                   </div>
-                  <div className="p-3 rounded-xl bg-black/30 border border-white/5">
-                    <span className="text-[10px] font-tactical text-zinc-500">CTA</span>
-                    <p className="text-xs text-zinc-300 font-bold mt-1">{variant.plan.cta}</p>
+                  <div className="p-3 rounded-xl bg-background/30 border border-border">
+                    <span className="text-[10px] font-tactical text-muted-foreground">CTA</span>
+                    <p className="text-xs text-muted-foreground font-bold mt-1">{variant.plan.cta}</p>
                   </div>
 
                   {/* Funnel Matrix (P3) */}
                   {variant.plan.funnel && (
                     <>
-                      <div className="p-3 rounded-xl bg-cyan-900/10 border border-cyan-500/10 mt-2">
-                        <span className="text-[10px] font-tactical text-cyan-400">TOP OF FUNNEL (VIDEO)</span>
-                        <p className="text-[11px] font-mono text-zinc-400 mt-1 line-clamp-3">{variant.plan.funnel.top}</p>
+                      <div className="p-3 rounded-xl bg-cyan/10 border border-cyan mt-2">
+                        <span className="text-[10px] font-tactical text-cyan">TOP OF FUNNEL (VIDEO)</span>
+                        <p className="text-[11px] font-mono text-muted-foreground mt-1 line-clamp-3">{variant.plan.funnel.top}</p>
                       </div>
-                      <div className="p-3 rounded-xl bg-rose-900/10 border border-rose-500/10">
-                        <span className="text-[10px] font-tactical text-rose-400">BOTTOM OF FUNNEL</span>
-                        <p className="text-[11px] font-mono text-zinc-400 mt-1 line-clamp-2">{variant.plan.funnel.bottom}</p>
+                      <div className="p-3 rounded-xl bg-danger/10 border border-danger">
+                        <span className="text-[10px] font-tactical text-danger">BOTTOM OF FUNNEL</span>
+                        <p className="text-[11px] font-mono text-muted-foreground mt-1 line-clamp-2">{variant.plan.funnel.bottom}</p>
                       </div>
                     </>
                   )}
@@ -477,7 +477,7 @@ export default function CampaignGenome({ variants, onSelectVariant, onMergeVaria
                   <>
                     <button
                       onClick={() => setExpandedReasoning(prev => ({ ...prev, [key]: !prev[key] }))}
-                      className="flex items-center gap-1.5 text-[11px] text-amber-400/80 hover:text-amber-300 transition-colors font-medium"
+                      className="flex items-center gap-1.5 text-[11px] text-warning/80 hover:text-warning transition-colors font-medium"
                     >
                       <Sparkles className="w-3 h-3" />
                       Strategy Rationale
@@ -491,18 +491,18 @@ export default function CampaignGenome({ variants, onSelectVariant, onMergeVaria
                           exit={{ height: 0, opacity: 0 }}
                           className="overflow-hidden"
                         >
-                          <div className="p-3 rounded-xl bg-black/20 border border-amber-500/10 space-y-2">
-                            <p className="text-[11px] text-zinc-400 italic">{variant.plan.reasoning.hook_rationale}</p>
+                          <div className="p-3 rounded-xl bg-background/20 border border-warning space-y-2">
+                            <p className="text-[11px] text-muted-foreground italic">{variant.plan.reasoning.hook_rationale}</p>
                             <div className="flex items-center gap-2">
-                              <Eye className="w-3 h-3 text-indigo-400" />
-                              <p className="text-[11px] text-indigo-300">{variant.plan.reasoning.audience_insight}</p>
+                              <Eye className="w-3 h-3 text-info" />
+                              <p className="text-[11px] text-info">{variant.plan.reasoning.audience_insight}</p>
                             </div>
                             <span className={`inline-block text-[10px] font-bold px-2 py-0.5 rounded-full ${
                               variant.plan.reasoning.confidence_score >= 80
-                                ? 'bg-green-500/20 text-green-400'
+                                ? 'bg-success/20 text-success'
                                 : variant.plan.reasoning.confidence_score >= 60
-                                ? 'bg-amber-500/20 text-amber-400'
-                                : 'bg-red-500/20 text-red-400'
+                                ? 'bg-warning/20 text-warning'
+                                : 'bg-danger/20 text-danger'
                             }`}>
                               {variant.plan.reasoning.confidence_score}% confidence
                             </span>

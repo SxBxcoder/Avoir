@@ -18,42 +18,54 @@
    ============================================================================ */
 
 :root {
-  /* LIGHT MODE (High Contrast Bloomberg Terminal Style) */
-  --bg-primary: #f8f9fa;
-  --bg-secondary: #e5e7eb;
-  --bg-card: #ffffff;
-  --bg-elevated: #f3f4f6;
-  --text-primary: #111827;
+  /* LIGHT MODE (God-Tier SaaS / Shopify Style) */
+  --bg-primary: #f8fafc; /* Subtle cool pearl canvas */
+  --bg-secondary: #f1f5f9;
+  --bg-card: #ffffff;    /* Crisp pure white cards */
+  --bg-elevated: #ffffff;
+  --text-primary: #0f172a; /* Slate 900 (Pitch black alternative) */
   
   --terminal-bg: #ffffff;
-  --terminal-surface: #f9fafb;
-  --terminal-border: #000000;
-  --terminal-border-bright: #333333;
+  --terminal-surface: #f8fafc;
+  --terminal-border: #e2e8f0; /* Sharp subtle border */
+  --terminal-border-bright: #cbd5e1;
 
-  /* Accent gradients (Adjusted for light mode contrast) */
-  --accent-cyan: #0891b2;
-  --accent-indigo: #4f46e5;
-  --accent-purple: #9333ea;
-  --accent-pink: #db2777;
-  --accent-green: #16a34a;
-  --accent-amber: #d97706;
+  /* Accent gradients (Vibrant for Light Mode) */
+  --accent-cyan: #06b6d4;
+  --accent-indigo: #6366f1;
+  --accent-purple: #a855f7;
+  --accent-pink: #ec4899;
+  --accent-green: #10b981;
+  --accent-amber: #f59e0b;
   
-  /* Glow intensities */
-  --glow-sm: 0 0 10px;
-  --glow-md: 0 0 20px;
-  --glow-lg: 0 0 40px;
-  --glow-xl: 0 0 80px;
+  /* Dynamic Semantic Accents (RGB tuples for Tailwind opacity/gradients) */
+  --color-success: 16 185 129; /* Emerald 500 */
+  --color-info: 99 102 241;    /* Indigo 500 */
+  --color-warning: 245 158 11; /* Amber 500 */
+  --color-danger: 239 68 68;   /* Red 500 */
+  --color-primary: 139 92 246; /* Violet 500 */
+  --color-cyan: 14 165 233;    /* Sky 500 */
+  
+  /* Glow intensities (Premium drop shadows for Light Mode) */
+  --glow-sm: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.05);
+  --glow-md: 0 10px 15px -3px rgb(0 0 0 / 0.08), 0 4px 6px -4px rgb(0 0 0 / 0.08);
+  --glow-lg: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+  --glow-xl: 0 25px 50px -12px rgb(0 0 0 / 0.15);
 
   /* Semantic UI Colors */
-  --muted: #f3f4f6;
-  --muted-foreground: #6b7280;
-  --border: #e5e7eb;
+  --muted: #f1f5f9;
+  --muted-foreground: #64748b; /* Slate 500 */
+  --border: #e2e8f0;
   --card: #ffffff;
-  --card-foreground: #111827;
+  --card-foreground: #0f172a;
 
   /* Glassmorphism Colors */
-  --glass-bg: rgba(255, 255, 255, 0.7);
-  --glass-bg-hover: rgba(255, 255, 255, 0.9);
+  --glass-bg: rgba(255, 255, 255, 0.85);
+  --glass-bg-hover: rgba(255, 255, 255, 0.95);
+  --glass-shadow: 0 4px 24px -4px rgba(0, 0, 0, 0.08), 0 2px 8px -2px rgba(0, 0, 0, 0.04);
+  
+  /* Grid & UI Accents */
+  --grid-color: rgba(15, 23, 42, 0.03); /* Extremely subtle grid */
 }
 
 .dark {
@@ -76,6 +88,14 @@
   --card: #09090b;
   --card-foreground: #fafafa;
 
+  /* Dynamic Semantic Accents (RGB tuples) */
+  --color-success: 52 211 153; /* emerald-400 */
+  --color-info: 129 140 248;   /* indigo-400 */
+  --color-warning: 251 191 36; /* amber-400 */
+  --color-danger: 248 113 113; /* red-400 */
+  --color-primary: 192 132 252; /* purple-400 */
+  --color-cyan: 34 211 238;    /* cyan-400 */
+
   /* Accent gradients */
   --accent-cyan: #06b6d4;
   --accent-indigo: #6366f1;
@@ -87,6 +107,10 @@
   /* Glassmorphism Colors */
   --glass-bg: rgba(17, 17, 24, 0.6);
   --glass-bg-hover: rgba(17, 17, 24, 0.8);
+  --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  
+  /* Grid & UI Accents */
+  --grid-color: rgba(255,255,255,0.015);
 }
 
 :root {
@@ -201,6 +225,7 @@ body {
   -webkit-backdrop-filter: blur(20px);
   border: 1px solid rgba(99, 102, 241, 0.1);
   border-radius: 16px;
+  box-shadow: var(--glass-shadow);
   transition: all 0.4s var(--ease-smooth);
 }
 

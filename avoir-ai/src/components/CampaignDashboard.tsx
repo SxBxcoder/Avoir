@@ -134,7 +134,7 @@ function AnimatedGridBG() {
         className="absolute top-1/2 right-1/3 w-[400px] h-[400px] bg-gradient-radial from-purple-500/5 via-transparent to-transparent rounded-full blur-3xl"
       />
       {/* Subtle grid overlay */}
-      <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.015)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.015)_1px,transparent_1px)] bg-[size:48px_48px]" />
+      <div className="absolute inset-0 bg-[linear-gradient(to_right,var(--grid-color)_1px,transparent_1px),linear-gradient(to_bottom,var(--grid-color)_1px,transparent_1px)] bg-[size:48px_48px]" />
     </div>
   );
 }
@@ -149,7 +149,7 @@ function FloatingParticles() {
       {[...Array(15)].map((_, i) => (
         <motion.div
           key={i}
-          className="absolute w-1 h-1 rounded-full bg-indigo-400/20"
+          className="absolute w-1 h-1 rounded-full bg-info/20"
           style={{ left: `${Math.random() * 100}%`, top: `${Math.random() * 100}%` }}
           animate={{
             y: [0, -40, 0],
@@ -183,8 +183,8 @@ function CookingStatus({ messages }: { messages: string[] }) {
     >
       <div className="max-w-[85%] lg:max-w-[70%] rounded-2xl p-5 glass-card glow-border-active overflow-hidden">
         <div className="flex items-center gap-3 mb-4">
-          <div className="pulse-ring relative w-3 h-3 rounded-full bg-indigo-500 flex-shrink-0" />
-          <span className="text-sm font-tactical tracking-widest text-indigo-400 font-bold">
+          <div className="pulse-ring relative w-3 h-3 rounded-full bg-info flex-shrink-0" />
+          <span className="text-sm font-tactical tracking-widest text-info font-bold">
             DIAMOND CASCADE ACTIVE
           </span>
         </div>
@@ -203,7 +203,7 @@ function CookingStatus({ messages }: { messages: string[] }) {
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
                   transition={bouncySpring}
-                  className={`text-xs ${idx === messages.length - 1 ? 'text-indigo-300' : 'text-zinc-600'}`}
+                  className={`text-xs ${idx === messages.length - 1 ? 'text-info' : 'text-zinc-600'}`}
                 >
                   {msg}
                 </motion.span>
@@ -217,7 +217,7 @@ function CookingStatus({ messages }: { messages: string[] }) {
           <div className="cooking-dots">
             <span /><span /><span />
           </div>
-          <span className="text-xs font-tactical text-zinc-500">Processing...</span>
+          <span className="text-xs font-tactical text-muted-foreground">Processing...</span>
         </div>
       </div>
     </motion.div>
@@ -283,9 +283,9 @@ function MagneticButton({
 
 function WelcomeScreen({ onQuickAction }: { onQuickAction: (text: string) => void }) {
   const quickActions = [
-    { icon: <Rocket className="w-4 h-4" />, label: 'Product Launch', prompt: 'Create a viral campaign for my new product launch targeting global Gen-Z', color: 'from-indigo-500/20 to-purple-500/20', border: 'border-indigo-500/20', iconColor: 'text-indigo-400' },
-    { icon: <TrendingUp className="w-4 h-4" />, label: 'Brand Awareness', prompt: 'Generate a high-converting brand awareness campaign for Instagram and YouTube', color: 'from-purple-500/20 to-pink-500/20', border: 'border-purple-500/20', iconColor: 'text-purple-400' },
-    { icon: <Target className="w-4 h-4" />, label: 'Event Promotion', prompt: 'Create a social media campaign to promote my upcoming event in New York', color: 'from-cyan-500/20 to-blue-500/20', border: 'border-cyan-500/20', iconColor: 'text-cyan-400' },
+    { icon: <Rocket className="w-4 h-4" />, label: 'Product Launch', prompt: 'Create a viral campaign for my new product launch targeting global Gen-Z', color: 'from-indigo-500/20 to-purple-500/20', border: 'border-info', iconColor: 'text-info' },
+    { icon: <TrendingUp className="w-4 h-4" />, label: 'Brand Awareness', prompt: 'Generate a high-converting brand awareness campaign for Instagram and YouTube', color: 'from-purple-500/20 to-pink-500/20', border: 'border-primary', iconColor: 'text-primary' },
+    { icon: <Target className="w-4 h-4" />, label: 'Event Promotion', prompt: 'Create a social media campaign to promote my upcoming event in New York', color: 'from-cyan-500/20 to-blue-500/20', border: 'border-cyan', iconColor: 'text-cyan' },
     { icon: <Flame className="w-4 h-4" />, label: 'Viral Content', prompt: 'Generate viral meme-worthy captions for my streetwear brand', color: 'from-orange-500/20 to-red-500/20', border: 'border-orange-500/20', iconColor: 'text-orange-400' },
   ];
 
@@ -316,13 +316,13 @@ function WelcomeScreen({ onQuickAction }: { onQuickAction: (text: string) => voi
             ]
           }}
           transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
-          className="w-20 h-20 rounded-2xl bg-gradient-to-br from-indigo-500/10 to-purple-500/10 border border-indigo-500/20 flex items-center justify-center"
+          className="w-20 h-20 rounded-2xl bg-gradient-to-br from-indigo-500/10 to-purple-500/10 border border-info flex items-center justify-center"
         >
           <motion.div
             animate={{ rotate: [0, 5, -5, 0] }}
             transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
           >
-            <Sparkles className="w-10 h-10 text-indigo-400" />
+            <Sparkles className="w-10 h-10 text-info" />
           </motion.div>
         </motion.div>
       </motion.div>
@@ -337,7 +337,7 @@ function WelcomeScreen({ onQuickAction }: { onQuickAction: (text: string) => voi
           What would you like to{' '}
           <span className="fluid-text-hero">create?</span>
         </h2>
-        <p className="text-zinc-500 text-sm max-w-md mx-auto">
+        <p className="text-muted-foreground text-sm max-w-md mx-auto">
           Enter your campaign goal below or pick a quick action to get started
         </p>
       </motion.div>
@@ -356,13 +356,13 @@ function WelcomeScreen({ onQuickAction }: { onQuickAction: (text: string) => voi
             whileHover={{ y: -4, scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             onClick={() => onQuickAction(action.prompt)}
-            className={`group glass-card glow-border rounded-xl p-4 text-left cursor-pointer transition-all hover:border-white/20`}
+            className={`group glass-card glow-border rounded-xl p-4 text-left cursor-pointer transition-all hover:border-border`}
           >
             <div className={`w-9 h-9 rounded-lg bg-gradient-to-br ${action.color} flex items-center justify-center mb-3 border ${action.border} ${action.iconColor}`}>
               {action.icon}
             </div>
-            <p className="text-sm font-semibold text-white mb-1">{action.label}</p>
-            <p className="text-xs text-zinc-500 leading-relaxed line-clamp-2">{action.prompt}</p>
+            <p className="text-sm font-semibold text-foreground mb-1">{action.label}</p>
+            <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2">{action.prompt}</p>
           </motion.button>
         ))}
       </motion.div>
@@ -1013,52 +1013,52 @@ export default function CampaignDashboard({ accessToken, userEmail, onLogout }: 
   // ========================================================================
   return (
     <LayoutGroup>
-      <div className="h-screen bg-black text-white flex flex-col overflow-hidden" style={{ fontFamily: "'Inter', sans-serif" }}>
+      <div className="h-screen bg-background text-foreground flex flex-col overflow-hidden" style={{ fontFamily: "'Inter', sans-serif" }}>
         <InteractivePlasmaCanvas />
       <OnboardingTour />
 
       {/* Mobile Header */}
-      <div className="lg:hidden fixed top-0 left-0 right-0 z-40 bg-zinc-950/90 backdrop-blur-2xl border-b border-zinc-800/50">
+      <div className="lg:hidden fixed top-0 left-0 right-0 z-40 bg-card/90 backdrop-blur-2xl border-b border-border/50">
         <div className="flex items-center justify-between px-4 py-3">
           <button
             onClick={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}
-            className="p-2 hover:bg-zinc-800 rounded-lg transition-colors"
+            className="p-2 hover:bg-muted rounded-lg transition-colors"
           >
             {isMobileSidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </button>
           
           <div className="flex items-center gap-2">
-            <Flame className="w-4 h-4 text-indigo-400" />
+            <Flame className="w-4 h-4 text-info" />
             <span className="text-xs font-tactical font-bold fluid-text-hero">AVOIR</span>
-            <span className="text-[10px] font-tactical text-zinc-500">// COMMAND</span>
+            <span className="text-[10px] font-tactical text-muted-foreground">// COMMAND</span>
           </div>
 
           <div className="flex items-center gap-3 text-xs font-tactical">
             <div className="flex items-center gap-1">
-              <Radio className={`w-3 h-3 ${systemStatus.tier === 'ACTIVE' ? 'text-green-400' : systemStatus.tier === 'ERROR' ? 'text-red-400' : 'text-indigo-400'}`} />
+              <Radio className={`w-3 h-3 ${systemStatus.tier === 'ACTIVE' ? 'text-success' : systemStatus.tier === 'ERROR' ? 'text-danger' : 'text-info'}`} />
               <span className={`font-bold ${
-                systemStatus.tier === 'ACTIVE' ? 'text-green-400' :
-                systemStatus.tier === 'ERROR' ? 'text-red-400' :
-                systemStatus.tier.startsWith('TIER') ? 'text-yellow-400' :
-                'text-zinc-400'
+                systemStatus.tier === 'ACTIVE' ? 'text-success' :
+                systemStatus.tier === 'ERROR' ? 'text-danger' :
+                systemStatus.tier.startsWith('TIER') ? 'text-warning' :
+                'text-muted-foreground'
               }`}>
                 {systemStatus.tier === 'STANDBY' ? 'RDY' : systemStatus.tier.replace('TIER_', 'T')}
               </span>
             </div>
             
-            <div className="h-3 w-px bg-zinc-800" />
+            <div className="h-3 w-px bg-muted" />
             
-            <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-zinc-900 border border-zinc-800">
+            <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-card border border-border">
               <Sparkles className={`w-3 h-3 ${
-                intelligenceLevel === 'DIAMOND' ? 'text-blue-400' :
-                intelligenceLevel === 'GOLD' ? 'text-yellow-400' :
-                intelligenceLevel === 'SILVER' ? 'text-zinc-300' :
+                intelligenceLevel === 'DIAMOND' ? 'text-info' :
+                intelligenceLevel === 'GOLD' ? 'text-warning' :
+                intelligenceLevel === 'SILVER' ? 'text-muted-foreground' :
                 'text-orange-400'
               }`} />
               <span className={`font-bold tracking-wider ${
-                intelligenceLevel === 'DIAMOND' ? 'text-blue-400' :
-                intelligenceLevel === 'GOLD' ? 'text-yellow-400' :
-                intelligenceLevel === 'SILVER' ? 'text-zinc-300' :
+                intelligenceLevel === 'DIAMOND' ? 'text-info' :
+                intelligenceLevel === 'GOLD' ? 'text-warning' :
+                intelligenceLevel === 'SILVER' ? 'text-muted-foreground' :
                 'text-orange-400'
               }`}>
                 {intelligenceLevel} INTEL
@@ -1075,7 +1075,7 @@ export default function CampaignDashboard({ accessToken, userEmail, onLogout }: 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/80 z-40 lg:hidden"
+            className="fixed inset-0 bg-background/80 z-40 lg:hidden"
             onClick={() => setIsMobileSidebarOpen(false)}
           />
         )}
@@ -1097,14 +1097,14 @@ export default function CampaignDashboard({ accessToken, userEmail, onLogout }: 
           onClick={(e) => e.stopPropagation()}
           animate={{ width: sidebarCollapsed ? 72 : 300 }}
           transition={smoothSpring}
-          className={`fixed inset-y-0 left-0 z-50 flex flex-col bg-zinc-950/80 backdrop-blur-2xl border-r border-zinc-800/50 overflow-hidden
+          className={`fixed inset-y-0 left-0 z-50 flex flex-col bg-card/80 backdrop-blur-2xl border-r border-border/50 overflow-hidden
             lg:relative lg:translate-x-0
             ${isMobileSidebarOpen ? 'translate-x-0 w-[80%] max-w-[300px]' : '-translate-x-full lg:translate-x-0'}
             transition-transform duration-300 lg:transition-none
           `}
         >
           {/* Sidebar Header */}
-          <div className="p-4 border-b border-zinc-800/50 flex-shrink-0">
+          <div className="p-4 border-b border-border/50 flex-shrink-0">
             <div className="flex items-center justify-between mb-2">
               <AnimatePresence mode="wait">
                 {!sidebarCollapsed && (
@@ -1114,17 +1114,17 @@ export default function CampaignDashboard({ accessToken, userEmail, onLogout }: 
                     exit={{ opacity: 0 }}
                     className="flex items-center gap-2.5"
                   >
-                    <div className="w-8 h-8 rounded-lg bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center flex-shrink-0">
-                      <Terminal className="w-4 h-4 text-indigo-400" />
+                    <div className="w-8 h-8 rounded-lg bg-info/10 border border-info flex items-center justify-center flex-shrink-0">
+                      <Terminal className="w-4 h-4 text-info" />
                     </div>
-                    <h2 className="text-sm font-tactical font-bold text-white tracking-wider whitespace-nowrap">COMMAND CENTER</h2>
+                    <h2 className="text-sm font-tactical font-bold text-foreground tracking-wider whitespace-nowrap">COMMAND CENTER</h2>
                   </motion.div>
                 )}
               </AnimatePresence>
               <div className="flex items-center gap-1 flex-shrink-0">
                 <button
                   onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-                  className="hidden lg:block p-1.5 rounded-lg hover:bg-zinc-800 transition-colors text-zinc-400 hover:text-white"
+                  className="hidden lg:block p-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
                   title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
                 >
                   <motion.div animate={{ rotate: sidebarCollapsed ? 0 : 180 }} transition={smoothSpring}>
@@ -1134,7 +1134,7 @@ export default function CampaignDashboard({ accessToken, userEmail, onLogout }: 
                 {onLogout && (
                   <button
                     onClick={onLogout}
-                    className="p-1.5 rounded-lg hover:bg-zinc-800 transition-colors text-zinc-400 hover:text-red-400"
+                    className="p-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-danger"
                     title="Logout"
                   >
                     <LogOut className="w-4 h-4" />
@@ -1142,7 +1142,7 @@ export default function CampaignDashboard({ accessToken, userEmail, onLogout }: 
                 )}
                 <button
                   onClick={() => setIsMobileSidebarOpen(false)}
-                  className="lg:hidden p-1.5 rounded-lg hover:bg-zinc-800 transition-colors text-zinc-400"
+                  className="lg:hidden p-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground"
                 >
                   <X className="w-4 h-4" />
                 </button>
@@ -1152,9 +1152,9 @@ export default function CampaignDashboard({ accessToken, userEmail, onLogout }: 
             {!sidebarCollapsed && (
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
                 <div className="flex items-center gap-2">
-                  <p className="text-xs text-zinc-400 font-medium truncate">{userEmail}</p>
+                  <p className="text-xs text-muted-foreground font-medium truncate">{userEmail}</p>
                   <span className={`text-[10px] font-tactical font-bold px-2 py-0.5 rounded-md whitespace-nowrap ${
-                    isPaidUser ? 'bg-indigo-500/15 text-indigo-400 border border-indigo-500/25' : 'bg-zinc-800 text-zinc-500 border border-zinc-700'
+                    isPaidUser ? 'bg-info/15 text-info border border-info' : 'bg-muted text-muted-foreground border border-border'
                   }`}>
                     {planName.toUpperCase()}
                   </span>
@@ -1163,11 +1163,11 @@ export default function CampaignDashboard({ accessToken, userEmail, onLogout }: 
                 {/* Usage indicator */}
                 {!isPaidUser && remaining >= 0 && (
                   <div id="tour-credits" className="mt-3">
-                    <div className="flex items-center justify-between text-[10px] font-tactical text-zinc-500 mb-1.5">
+                    <div className="flex items-center justify-between text-[10px] font-tactical text-muted-foreground mb-1.5">
                       <span>CAMPAIGNS</span>
-                      <span className={remaining === 0 ? 'text-red-400' : ''}>{subscription?.campaignsUsedThisMonth || 0}/{PLANS.free.campaignsPerMonth}</span>
+                      <span className={remaining === 0 ? 'text-danger' : ''}>{subscription?.campaignsUsedThisMonth || 0}/{PLANS.free.campaignsPerMonth}</span>
                     </div>
-                    <div className="w-full h-1.5 bg-zinc-800/80 rounded-full overflow-hidden">
+                    <div className="w-full h-1.5 bg-muted/80 rounded-full overflow-hidden">
                       <motion.div
                         initial={{ width: 0 }}
                         animate={{ width: `${((subscription?.campaignsUsedThisMonth || 0) / PLANS.free.campaignsPerMonth) * 100}%` }}
@@ -1204,11 +1204,11 @@ export default function CampaignDashboard({ accessToken, userEmail, onLogout }: 
                     setIsMobileSidebarOpen(false);
                     setSystemStatus({ tier: 'STANDBY', dbSync: 'OK', region: 'US-EAST-1' });
                   }}
-                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl glass-card hover:border-indigo-500/30 cursor-pointer transition-all group"
+                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl glass-card hover:border-info cursor-pointer transition-all group"
                   title="New Directive"
                 >
-                  <Plus className="w-4 h-4 text-indigo-400 group-hover:text-indigo-300 transition-colors flex-shrink-0" />
-                  {!sidebarCollapsed && <span className="text-sm font-medium text-zinc-300 group-hover:text-white transition-colors whitespace-nowrap">New Directive</span>}
+                  <Plus className="w-4 h-4 text-info group-hover:text-info transition-colors flex-shrink-0" />
+                  {!sidebarCollapsed && <span className="text-sm font-medium text-muted-foreground group-hover:text-foreground transition-colors whitespace-nowrap">New Directive</span>}
                 </button>
               </motion.div>
 
@@ -1216,7 +1216,7 @@ export default function CampaignDashboard({ accessToken, userEmail, onLogout }: 
               {!sidebarCollapsed && (
                 <motion.div variants={staggerItem} className="pt-3">
                   <div className="flex items-center justify-between px-1 mb-2">
-                    <span className="text-[10px] font-tactical text-zinc-500 tracking-widest">CAMPAIGN LIBRARY</span>
+                    <span className="text-[10px] font-tactical text-muted-foreground tracking-widest">CAMPAIGN LIBRARY</span>
                     <span className="text-[10px] text-zinc-600 font-mono">{campaignHistory.length}</span>
                   </div>
                   
@@ -1249,13 +1249,13 @@ export default function CampaignDashboard({ accessToken, userEmail, onLogout }: 
                             onClick={() => loadCampaign(campaign)}
                             className={`w-full text-left px-3 py-2.5 rounded-xl border transition-all group relative ${
                               isActive 
-                                ? 'bg-indigo-500/10 border-indigo-500/30 shadow-[0_0_12px_rgba(99,102,241,0.08)]' 
-                                : 'bg-transparent border-transparent hover:bg-zinc-900/60 hover:border-zinc-800'
+                                ? 'bg-info/10 border-info shadow-[0_0_12px_rgba(99,102,241,0.08)]' 
+                                : 'bg-transparent border-transparent hover:bg-card/60 hover:border-border'
                             }`}
                           >
                             <div className="flex items-start justify-between gap-2">
                               <div className="min-w-0 flex-1">
-                                <p className={`text-[12px] font-medium leading-snug truncate ${isActive ? 'text-white' : 'text-zinc-300'}`}>
+                                <p className={`text-[12px] font-medium leading-snug truncate ${isActive ? 'text-foreground' : 'text-muted-foreground'}`}>
                                   {campaign.goal.length > 45 ? campaign.goal.slice(0, 45) + '…' : campaign.goal}
                                 </p>
                                 <div className="flex items-center gap-2 mt-1">
@@ -1264,9 +1264,9 @@ export default function CampaignDashboard({ accessToken, userEmail, onLogout }: 
                                     {timeAgo}
                                   </span>
                                   <span className={`text-[8px] font-tactical font-bold px-1.5 py-0.5 rounded ${
-                                    campaign.tier?.includes('GEMINI') ? 'bg-cyan-500/10 text-cyan-500 border border-cyan-500/20' :
-                                    campaign.tier?.includes('GPT') ? 'bg-green-500/10 text-green-500 border border-green-500/20' :
-                                    'bg-zinc-800 text-zinc-500 border border-zinc-700'
+                                    campaign.tier?.includes('GEMINI') ? 'bg-cyan/10 text-cyan border border-cyan' :
+                                    campaign.tier?.includes('GPT') ? 'bg-success/10 text-success border border-success' :
+                                    'bg-muted text-muted-foreground border border-border'
                                   }`}>
                                     {campaign.tier?.replace('TIER_1_', '').replace('TIER_2_', '') || 'AI'}
                                   </span>
@@ -1275,10 +1275,10 @@ export default function CampaignDashboard({ accessToken, userEmail, onLogout }: 
                               {/* Delete button — visible on hover */}
                               <button
                                 onClick={(e) => { e.stopPropagation(); deleteCampaign(campaign.campaignId); }}
-                                className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-500/20 rounded-lg transition-all flex-shrink-0 mt-0.5"
+                                className="opacity-0 group-hover:opacity-100 p-1 hover:bg-danger/20 rounded-lg transition-all flex-shrink-0 mt-0.5"
                                 title="Delete campaign"
                               >
-                                <Trash2 className="w-3 h-3 text-zinc-600 hover:text-red-400" />
+                                <Trash2 className="w-3 h-3 text-zinc-600 hover:text-danger" />
                               </button>
                             </div>
                           </motion.button>
@@ -1290,7 +1290,7 @@ export default function CampaignDashboard({ accessToken, userEmail, onLogout }: 
               )}
 
               {/* ── Divider ── */}
-              {!sidebarCollapsed && <div className="border-t border-zinc-800/50 my-2" />}
+              {!sidebarCollapsed && <div className="border-t border-border/50 my-2" />}
 
               {/* Action Buttons */}
               <motion.div variants={staggerItem}>
@@ -1307,11 +1307,11 @@ export default function CampaignDashboard({ accessToken, userEmail, onLogout }: 
                       setIsMobileSidebarOpen(false);
                     }
                   }}
-                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl glass-card hover:border-purple-500/30 cursor-pointer transition-all group"
+                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl glass-card hover:border-primary cursor-pointer transition-all group"
                   title="Export Campaign"
                 >
-                  <Download className="w-4 h-4 text-purple-400 group-hover:text-purple-300 transition-colors flex-shrink-0" />
-                  {!sidebarCollapsed && <span className="text-sm font-medium text-zinc-300 group-hover:text-white transition-colors whitespace-nowrap">Export Campaign</span>}
+                  <Download className="w-4 h-4 text-primary group-hover:text-primary transition-colors flex-shrink-0" />
+                  {!sidebarCollapsed && <span className="text-sm font-medium text-muted-foreground group-hover:text-foreground transition-colors whitespace-nowrap">Export Campaign</span>}
                 </button>
               </motion.div>
               
@@ -1321,11 +1321,11 @@ export default function CampaignDashboard({ accessToken, userEmail, onLogout }: 
                   onClick={() => {
                     window.location.href = '/omnideck';
                   }}
-                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl glass-card hover:border-red-500/30 cursor-pointer transition-all group"
+                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl glass-card hover:border-danger cursor-pointer transition-all group"
                   title="Omni-Deck Command Center"
                 >
-                  <Target className="w-4 h-4 text-red-400 group-hover:text-red-300 transition-colors flex-shrink-0" />
-                  {!sidebarCollapsed && <span className="text-sm font-medium text-zinc-300 group-hover:text-white transition-colors whitespace-nowrap">Omni-Deck</span>}
+                  <Target className="w-4 h-4 text-danger group-hover:text-danger transition-colors flex-shrink-0" />
+                  {!sidebarCollapsed && <span className="text-sm font-medium text-muted-foreground group-hover:text-foreground transition-colors whitespace-nowrap">Omni-Deck</span>}
                 </button>
               </motion.div>
               
@@ -1335,11 +1335,11 @@ export default function CampaignDashboard({ accessToken, userEmail, onLogout }: 
                     window.open('https://github.com/SxBxcoder/Avoir', '_blank');
                     setIsMobileSidebarOpen(false);
                   }}
-                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl glass-card hover:border-cyan-500/30 cursor-pointer transition-all group"
+                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl glass-card hover:border-cyan cursor-pointer transition-all group"
                   title="View Architecture"
                 >
-                  <BookOpen className="w-4 h-4 text-cyan-400 group-hover:text-cyan-300 transition-colors flex-shrink-0" />
-                  {!sidebarCollapsed && <span className="text-sm font-medium text-zinc-300 group-hover:text-white transition-colors whitespace-nowrap">View Architecture</span>}
+                  <BookOpen className="w-4 h-4 text-cyan group-hover:text-cyan transition-colors flex-shrink-0" />
+                  {!sidebarCollapsed && <span className="text-sm font-medium text-muted-foreground group-hover:text-foreground transition-colors whitespace-nowrap">View Architecture</span>}
                 </button>
               </motion.div>
             </motion.div>
@@ -1347,7 +1347,7 @@ export default function CampaignDashboard({ accessToken, userEmail, onLogout }: 
 
 
           {/* Bottom Action — Upgrade / Billing */}
-          <div className="flex-shrink-0 p-3 border-t border-zinc-800/50">
+          <div className="flex-shrink-0 p-3 border-t border-border/50">
             {isPaidUser ? (
               <button 
                 onClick={async () => {
@@ -1369,26 +1369,26 @@ export default function CampaignDashboard({ accessToken, userEmail, onLogout }: 
                     }
                   }
                 }}
-                className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl glass-card hover:border-indigo-500/30 cursor-pointer transition-all group"
+                className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl glass-card hover:border-info cursor-pointer transition-all group"
                 title="Manage Billing"
               >
                 <div className="flex items-center gap-3">
-                  <CreditCard className="w-4 h-4 text-indigo-400 flex-shrink-0" />
-                  {!sidebarCollapsed && <span className="text-sm font-medium text-zinc-300 whitespace-nowrap">Manage Billing</span>}
+                  <CreditCard className="w-4 h-4 text-info flex-shrink-0" />
+                  {!sidebarCollapsed && <span className="text-sm font-medium text-muted-foreground whitespace-nowrap">Manage Billing</span>}
                 </div>
-                {!sidebarCollapsed && <span className="text-[10px] bg-green-500/15 text-green-400 px-2 py-0.5 rounded-md font-tactical font-bold border border-green-500/20">ACTIVE</span>}
+                {!sidebarCollapsed && <span className="text-[10px] bg-success/15 text-success px-2 py-0.5 rounded-md font-tactical font-bold border border-success">ACTIVE</span>}
               </button>
             ) : (
               <button 
                 onClick={() => setShowUpgradeModal(true)}
-                className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl bg-gradient-to-r from-indigo-500/10 to-purple-500/10 border border-indigo-500/20 hover:border-indigo-500/50 hover:from-indigo-500/20 hover:to-purple-500/20 cursor-pointer transition-all group"
+                className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl bg-gradient-to-r from-indigo-500/10 to-purple-500/10 border border-info hover:border-info hover:from-indigo-500/20 hover:to-purple-500/20 cursor-pointer transition-all group"
                 title="Upgrade to Pro"
               >
                 <div className="flex items-center gap-3">
-                  <Crown className="w-4 h-4 text-yellow-400 flex-shrink-0" />
-                  {!sidebarCollapsed && <span className="text-sm font-medium text-white whitespace-nowrap">Pro Plan</span>}
+                  <Crown className="w-4 h-4 text-warning flex-shrink-0" />
+                  {!sidebarCollapsed && <span className="text-sm font-medium text-foreground whitespace-nowrap">Pro Plan</span>}
                 </div>
-                {!sidebarCollapsed && <span className="text-xs bg-indigo-500 text-white px-2.5 py-1 rounded-lg font-bold">Upgrade</span>}
+                {!sidebarCollapsed && <span className="text-xs bg-info text-white px-2.5 py-1 rounded-lg font-bold">Upgrade</span>}
               </button>
             )}
           </div>
@@ -1410,7 +1410,7 @@ export default function CampaignDashboard({ accessToken, userEmail, onLogout }: 
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={springConfig}
-                  className="flex items-center space-x-2 text-cyan-500 mb-6"
+                  className="flex items-center space-x-2 text-cyan mb-6"
                 >
                   <Activity className="w-5 h-5" />
                   <span className="text-sm tracking-widest font-bold font-tactical">ACTIVE INTELLIGENCE FEED</span>
@@ -1451,23 +1451,23 @@ export default function CampaignDashboard({ accessToken, userEmail, onLogout }: 
                       key="simulation-ui"
                       initial={{ opacity: 0, y: 20 }}
                       animate={{ opacity: 1, y: 0 }}
-                      className="w-full mt-4 bg-black/40 backdrop-blur-md rounded-2xl border border-indigo-500/30 overflow-hidden relative"
+                      className="w-full mt-4 bg-background/40 backdrop-blur-md rounded-2xl border border-info overflow-hidden relative"
                     >
                       {/* Matrix / Sci-Fi Header */}
-                      <div className="bg-indigo-900/40 border-b border-indigo-500/20 px-6 py-3 flex items-center justify-between">
+                      <div className="bg-info/40 border-b border-info px-6 py-3 flex items-center justify-between">
                         <div className="flex items-center gap-3">
-                          <Activity className={`w-4 h-4 ${simulationPhase === 'running' ? 'text-indigo-400 animate-pulse' : 'text-emerald-400'}`} />
-                          <span className="text-xs font-tactical tracking-widest text-indigo-300">
+                          <Activity className={`w-4 h-4 ${simulationPhase === 'running' ? 'text-info animate-pulse' : 'text-success'}`} />
+                          <span className="text-xs font-tactical tracking-widest text-info">
                             {simulationPhase === 'running' ? 'SYNTHETIC BACKTESTING ACTIVE...' : 'VALIDATION COMPLETE'}
                           </span>
                         </div>
                         {simulationPhase === 'complete' && simulationData && (
                           <div className="flex items-center gap-2">
-                            <span className="text-[10px] uppercase text-zinc-400 font-bold tracking-wider">Predicted Success</span>
+                            <span className="text-[10px] uppercase text-muted-foreground font-bold tracking-wider">Predicted Success</span>
                             <span className={`text-sm font-black font-tactical px-2 py-0.5 rounded ${
-                              simulationData.predicted_score >= 90 ? 'bg-green-500/20 text-green-400' :
-                              simulationData.predicted_score >= 75 ? 'bg-amber-500/20 text-amber-400' :
-                              'bg-red-500/20 text-red-400'
+                              simulationData.predicted_score >= 90 ? 'bg-success/20 text-success' :
+                              simulationData.predicted_score >= 75 ? 'bg-warning/20 text-warning' :
+                              'bg-danger/20 text-danger'
                             }`}>
                               {simulationData.predicted_score}%
                             </span>
@@ -1480,15 +1480,15 @@ export default function CampaignDashboard({ accessToken, userEmail, onLogout }: 
                         {simulationPhase === 'running' ? (
                           <div className="flex flex-col items-center justify-center py-8 space-y-6">
                             <div className="relative">
-                              <div className="absolute inset-0 border border-indigo-500/50 rounded-full animate-ping opacity-20"></div>
+                              <div className="absolute inset-0 border border-info rounded-full animate-ping opacity-20"></div>
                               <div className="w-16 h-16 rounded-full border-2 border-t-indigo-500 border-r-indigo-500/30 border-b-indigo-500/10 border-l-indigo-500/30 animate-spin"></div>
-                              <div className="absolute inset-0 flex items-center justify-center text-indigo-400">
+                              <div className="absolute inset-0 flex items-center justify-center text-info">
                                 <Database className="w-6 h-6" />
                               </div>
                             </div>
                             <div className="text-center">
-                              <h4 className="text-sm font-bold text-indigo-200 mb-1">Spawning AI Personas</h4>
-                              <p className="text-xs text-indigo-400/60 font-mono">Running generated campaign against 3 distinct psychological profiles...</p>
+                              <h4 className="text-sm font-bold text-info mb-1">Spawning AI Personas</h4>
+                              <p className="text-xs text-info/60 font-mono">Running generated campaign against 3 distinct psychological profiles...</p>
                             </div>
                           </div>
                         ) : simulationData ? (
@@ -1501,24 +1501,24 @@ export default function CampaignDashboard({ accessToken, userEmail, onLogout }: 
                                 transition={{ delay: idx * 0.15 }}
                                 className={`rounded-xl p-4 border ${
                                   persona.approved 
-                                    ? 'bg-emerald-900/10 border-emerald-500/20' 
-                                    : 'bg-red-900/10 border-red-500/20'
+                                    ? 'bg-success/10 border-success' 
+                                    : 'bg-danger/10 border-danger'
                                 }`}
                               >
                                 <div className="flex items-center justify-between mb-3">
                                   <div>
-                                    <h5 className={`text-xs font-bold font-tactical tracking-wider ${persona.approved ? 'text-emerald-400' : 'text-red-400'}`}>
+                                    <h5 className={`text-xs font-bold font-tactical tracking-wider ${persona.approved ? 'text-success' : 'text-danger'}`}>
                                       {persona.name}
                                     </h5>
-                                    <p className="text-[10px] text-zinc-500 uppercase">{persona.role}</p>
+                                    <p className="text-[10px] text-muted-foreground uppercase">{persona.role}</p>
                                   </div>
                                   {persona.approved ? (
-                                    <Check className="w-4 h-4 text-emerald-500" />
+                                    <Check className="w-4 h-4 text-success" />
                                   ) : (
-                                    <X className="w-4 h-4 text-red-500" />
+                                    <X className="w-4 h-4 text-danger" />
                                   )}
                                 </div>
-                                <p className="text-xs text-zinc-300 italic leading-relaxed">"{persona.critique}"</p>
+                                <p className="text-xs text-muted-foreground italic leading-relaxed">"{persona.critique}"</p>
                               </motion.div>
                             ))}
                           </div>
@@ -1558,7 +1558,7 @@ export default function CampaignDashboard({ accessToken, userEmail, onLogout }: 
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     transition={{ duration: 0.5 }}
-                    className="space-y-6 pt-8 border-t border-zinc-800/50 mt-8"
+                    className="space-y-6 pt-8 border-t border-border/50 mt-8"
                   >
                     <motion.div
                       initial={{ opacity: 0, x: -20 }}
@@ -1567,23 +1567,23 @@ export default function CampaignDashboard({ accessToken, userEmail, onLogout }: 
                       className="flex items-center justify-between mb-6"
                     >
                       <div className="flex items-center gap-2">
-                        <Cpu className="w-4 h-4 text-indigo-400" />
-                        <h3 className="text-xs font-tactical text-indigo-400 uppercase tracking-wider">TRADE EXECUTION TICKET</h3>
+                        <Cpu className="w-4 h-4 text-info" />
+                        <h3 className="text-xs font-tactical text-info uppercase tracking-wider">TRADE EXECUTION TICKET</h3>
                       </div>
                       
                       {/* Hedge Fund Metrics */}
                       <div className="hidden md:flex gap-4">
-                        <div className="bg-zinc-900/80 border border-zinc-800 rounded-lg px-3 py-1.5 flex flex-col items-center">
-                          <span className="text-[9px] text-zinc-500 font-tactical">PRED. SHARPE</span>
-                          <span className="text-sm font-mono text-emerald-400">{(simulationData?.predicted_score ? (simulationData.predicted_score / 35).toFixed(1) : '2.4')}</span>
+                        <div className="bg-card/80 border border-border rounded-lg px-3 py-1.5 flex flex-col items-center">
+                          <span className="text-[9px] text-muted-foreground font-tactical">PRED. SHARPE</span>
+                          <span className="text-sm font-mono text-success">{(simulationData?.predicted_score ? (simulationData.predicted_score / 35).toFixed(1) : '2.4')}</span>
                         </div>
-                        <div className="bg-zinc-900/80 border border-zinc-800 rounded-lg px-3 py-1.5 flex flex-col items-center">
-                          <span className="text-[9px] text-zinc-500 font-tactical">VOLATILITY (RISK)</span>
-                          <span className="text-sm font-mono text-amber-400">{Math.floor(Math.random() * 20) + 5}%</span>
+                        <div className="bg-card/80 border border-border rounded-lg px-3 py-1.5 flex flex-col items-center">
+                          <span className="text-[9px] text-muted-foreground font-tactical">VOLATILITY (RISK)</span>
+                          <span className="text-sm font-mono text-warning">{Math.floor(Math.random() * 20) + 5}%</span>
                         </div>
-                        <div className="bg-zinc-900/80 border border-zinc-800 rounded-lg px-3 py-1.5 flex flex-col items-center">
-                          <span className="text-[9px] text-zinc-500 font-tactical">EXPECTED ALPHA</span>
-                          <span className="text-sm font-mono text-indigo-400">+{Math.floor(Math.random() * 15) + 5}%</span>
+                        <div className="bg-card/80 border border-border rounded-lg px-3 py-1.5 flex flex-col items-center">
+                          <span className="text-[9px] text-muted-foreground font-tactical">EXPECTED ALPHA</span>
+                          <span className="text-sm font-mono text-info">+{Math.floor(Math.random() * 15) + 5}%</span>
                         </div>
                       </div>
                     </motion.div>
@@ -1603,25 +1603,25 @@ export default function CampaignDashboard({ accessToken, userEmail, onLogout }: 
                       >
                         <div className="relative z-10">
                           <div className="flex items-center justify-between mb-3">
-                            <span className="text-xs font-tactical text-indigo-400 uppercase tracking-wider">THE HOOK</span>
+                            <span className="text-xs font-tactical text-info uppercase tracking-wider">THE HOOK</span>
                             <button
                               onClick={() => copyToClipboard(currentCampaign.plan.hook, 'hook')}
-                              className="p-1.5 hover:bg-zinc-800 rounded-lg transition-colors"
+                              className="p-1.5 hover:bg-muted rounded-lg transition-colors"
                             >
                               {copied === 'hook' ? (
-                                <Check className="w-4 h-4 text-green-400" />
+                                <Check className="w-4 h-4 text-success" />
                               ) : (
-                                <Copy className="w-4 h-4 text-zinc-500" />
+                                <Copy className="w-4 h-4 text-muted-foreground" />
                               )}
                             </button>
                           </div>
-                          <p className="text-lg font-bold text-white leading-tight">{currentCampaign.plan.hook}</p>
+                          <p className="text-lg font-bold text-foreground leading-tight">{currentCampaign.plan.hook}</p>
                           {/* Reasoning Toggle */}
                           {currentCampaign.plan.reasoning && (
                             <>
                               <button
                                 onClick={() => setReasoningExpanded(prev => ({ ...prev, hook: !prev.hook }))}
-                                className="flex items-center gap-1.5 mt-3 text-[11px] text-amber-400/80 hover:text-amber-300 transition-colors font-medium"
+                                className="flex items-center gap-1.5 mt-3 text-[11px] text-warning/80 hover:text-warning transition-colors font-medium"
                               >
                                 <Sparkles className="w-3 h-3" />
                                 Why this works
@@ -1636,7 +1636,7 @@ export default function CampaignDashboard({ accessToken, userEmail, onLogout }: 
                                     transition={{ duration: 0.25 }}
                                     className="overflow-hidden"
                                   >
-                                    <p className="text-xs text-zinc-400 italic mt-2 leading-relaxed border-t border-zinc-800/50 pt-2">
+                                    <p className="text-xs text-muted-foreground italic mt-2 leading-relaxed border-t border-border/50 pt-2">
                                       {currentCampaign.plan.reasoning.hook_rationale}
                                     </p>
                                   </motion.div>
@@ -1655,25 +1655,25 @@ export default function CampaignDashboard({ accessToken, userEmail, onLogout }: 
                       >
                         <div className="relative z-10">
                           <div className="flex items-center justify-between mb-3">
-                            <span className="text-xs font-tactical text-purple-400 uppercase tracking-wider">THE OFFER</span>
+                            <span className="text-xs font-tactical text-primary uppercase tracking-wider">THE OFFER</span>
                             <button
                               onClick={() => copyToClipboard(currentCampaign.plan.offer, 'offer')}
-                              className="p-1.5 hover:bg-zinc-800 rounded-lg transition-colors"
+                              className="p-1.5 hover:bg-muted rounded-lg transition-colors"
                             >
                               {copied === 'offer' ? (
-                                <Check className="w-4 h-4 text-green-400" />
+                                <Check className="w-4 h-4 text-success" />
                               ) : (
-                                <Copy className="w-4 h-4 text-zinc-500" />
+                                <Copy className="w-4 h-4 text-muted-foreground" />
                               )}
                             </button>
                           </div>
-                          <p className="text-base text-zinc-300 leading-tight">{currentCampaign.plan.offer}</p>
+                          <p className="text-base text-muted-foreground leading-tight">{currentCampaign.plan.offer}</p>
                           {/* Reasoning Toggle */}
                           {currentCampaign.plan.reasoning && (
                             <>
                               <button
                                 onClick={() => setReasoningExpanded(prev => ({ ...prev, offer: !prev.offer }))}
-                                className="flex items-center gap-1.5 mt-3 text-[11px] text-amber-400/80 hover:text-amber-300 transition-colors font-medium"
+                                className="flex items-center gap-1.5 mt-3 text-[11px] text-warning/80 hover:text-warning transition-colors font-medium"
                               >
                                 <Sparkles className="w-3 h-3" />
                                 Why this works
@@ -1688,7 +1688,7 @@ export default function CampaignDashboard({ accessToken, userEmail, onLogout }: 
                                     transition={{ duration: 0.25 }}
                                     className="overflow-hidden"
                                   >
-                                    <p className="text-xs text-zinc-400 italic mt-2 leading-relaxed border-t border-zinc-800/50 pt-2">
+                                    <p className="text-xs text-muted-foreground italic mt-2 leading-relaxed border-t border-border/50 pt-2">
                                       {currentCampaign.plan.reasoning.offer_rationale}
                                     </p>
                                   </motion.div>
@@ -1710,22 +1710,22 @@ export default function CampaignDashboard({ accessToken, userEmail, onLogout }: 
                             <span className="text-xs font-tactical text-pink-400 uppercase tracking-wider">ACTION</span>
                             <button
                               onClick={() => copyToClipboard(currentCampaign.plan.cta, 'cta')}
-                              className="p-1.5 hover:bg-zinc-800 rounded-lg transition-colors"
+                              className="p-1.5 hover:bg-muted rounded-lg transition-colors"
                             >
                               {copied === 'cta' ? (
-                                <Check className="w-4 h-4 text-green-400" />
+                                <Check className="w-4 h-4 text-success" />
                               ) : (
-                                <Copy className="w-4 h-4 text-zinc-500" />
+                                <Copy className="w-4 h-4 text-muted-foreground" />
                               )}
                             </button>
                           </div>
-                          <p className="text-base text-zinc-300 leading-tight">{currentCampaign.plan.cta}</p>
+                          <p className="text-base text-muted-foreground leading-tight">{currentCampaign.plan.cta}</p>
                           {/* Reasoning Toggle */}
                           {currentCampaign.plan.reasoning && (
                             <>
                               <button
                                 onClick={() => setReasoningExpanded(prev => ({ ...prev, cta: !prev.cta }))}
-                                className="flex items-center gap-1.5 mt-3 text-[11px] text-amber-400/80 hover:text-amber-300 transition-colors font-medium"
+                                className="flex items-center gap-1.5 mt-3 text-[11px] text-warning/80 hover:text-warning transition-colors font-medium"
                               >
                                 <Sparkles className="w-3 h-3" />
                                 Why this works
@@ -1740,7 +1740,7 @@ export default function CampaignDashboard({ accessToken, userEmail, onLogout }: 
                                     transition={{ duration: 0.25 }}
                                     className="overflow-hidden"
                                   >
-                                    <p className="text-xs text-zinc-400 italic mt-2 leading-relaxed border-t border-zinc-800/50 pt-2">
+                                    <p className="text-xs text-muted-foreground italic mt-2 leading-relaxed border-t border-border/50 pt-2">
                                       {currentCampaign.plan.reasoning.cta_rationale}
                                     </p>
                                   </motion.div>
@@ -1761,39 +1761,39 @@ export default function CampaignDashboard({ accessToken, userEmail, onLogout }: 
                         className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4"
                       >
                         {/* Top of Funnel */}
-                        <div className="glass-card rounded-2xl p-5 border border-cyan-500/20 bg-cyan-500/5 relative overflow-hidden group">
-                          <div className="absolute top-0 left-0 w-1 h-full bg-cyan-500/50" />
+                        <div className="glass-card rounded-2xl p-5 border border-cyan bg-cyan/5 relative overflow-hidden group">
+                          <div className="absolute top-0 left-0 w-1 h-full bg-cyan/50" />
                           <div className="flex items-center justify-between mb-3">
                             <div className="flex items-center gap-2">
-                              <Video className="w-4 h-4 text-cyan-400" />
-                              <span className="text-xs font-tactical text-cyan-400 uppercase tracking-widest">TOP OF FUNNEL (VIDEO)</span>
+                              <Video className="w-4 h-4 text-cyan" />
+                              <span className="text-xs font-tactical text-cyan uppercase tracking-widest">TOP OF FUNNEL (VIDEO)</span>
                             </div>
                             <button
                               onClick={() => copyToClipboard(currentCampaign.plan.funnel!.top, 'funnel-top')}
-                              className="p-1.5 hover:bg-zinc-800 rounded-lg transition-colors"
+                              className="p-1.5 hover:bg-muted rounded-lg transition-colors"
                             >
-                              {copied === 'funnel-top' ? <Check className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4 text-zinc-500" />}
+                              {copied === 'funnel-top' ? <Check className="w-4 h-4 text-success" /> : <Copy className="w-4 h-4 text-muted-foreground" />}
                             </button>
                           </div>
-                          <p className="text-sm text-zinc-300 leading-relaxed font-mono whitespace-pre-wrap">{currentCampaign.plan.funnel.top}</p>
+                          <p className="text-sm text-muted-foreground leading-relaxed font-mono whitespace-pre-wrap">{currentCampaign.plan.funnel.top}</p>
                         </div>
                         
                         {/* Bottom of Funnel */}
-                        <div className="glass-card rounded-2xl p-5 border border-rose-500/20 bg-rose-500/5 relative overflow-hidden group">
-                          <div className="absolute top-0 left-0 w-1 h-full bg-rose-500/50" />
+                        <div className="glass-card rounded-2xl p-5 border border-danger bg-danger/5 relative overflow-hidden group">
+                          <div className="absolute top-0 left-0 w-1 h-full bg-danger/50" />
                           <div className="flex items-center justify-between mb-3">
                             <div className="flex items-center gap-2">
-                              <MessageSquare className="w-4 h-4 text-rose-400" />
-                              <span className="text-xs font-tactical text-rose-400 uppercase tracking-widest">BOTTOM OF FUNNEL (RETARGET)</span>
+                              <MessageSquare className="w-4 h-4 text-danger" />
+                              <span className="text-xs font-tactical text-danger uppercase tracking-widest">BOTTOM OF FUNNEL (RETARGET)</span>
                             </div>
                             <button
                               onClick={() => copyToClipboard(currentCampaign.plan.funnel!.bottom, 'funnel-bottom')}
-                              className="p-1.5 hover:bg-zinc-800 rounded-lg transition-colors"
+                              className="p-1.5 hover:bg-muted rounded-lg transition-colors"
                             >
-                              {copied === 'funnel-bottom' ? <Check className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4 text-zinc-500" />}
+                              {copied === 'funnel-bottom' ? <Check className="w-4 h-4 text-success" /> : <Copy className="w-4 h-4 text-muted-foreground" />}
                             </button>
                           </div>
-                          <p className="text-sm text-zinc-300 leading-relaxed font-mono whitespace-pre-wrap">{currentCampaign.plan.funnel.bottom}</p>
+                          <p className="text-sm text-muted-foreground leading-relaxed font-mono whitespace-pre-wrap">{currentCampaign.plan.funnel.bottom}</p>
                         </div>
                       </motion.div>
                     )}
@@ -1804,26 +1804,26 @@ export default function CampaignDashboard({ accessToken, userEmail, onLogout }: 
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.3, ...springConfig }}
-                        className="glass-card rounded-2xl p-5 border border-indigo-500/20 bg-indigo-500/5"
+                        className="glass-card rounded-2xl p-5 border border-info bg-info/5"
                       >
                         <div className="flex items-start gap-3">
-                          <div className="flex-shrink-0 p-2 bg-indigo-500/10 rounded-xl">
-                            <Eye className="w-4 h-4 text-indigo-400" />
+                          <div className="flex-shrink-0 p-2 bg-info/10 rounded-xl">
+                            <Eye className="w-4 h-4 text-info" />
                           </div>
                           <div className="flex-1">
                             <div className="flex items-center justify-between mb-1.5">
-                              <span className="text-[10px] font-tactical text-indigo-400 uppercase tracking-widest">AUDIENCE INSIGHT</span>
+                              <span className="text-[10px] font-tactical text-info uppercase tracking-widest">AUDIENCE INSIGHT</span>
                               <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
                                 currentCampaign.plan.reasoning.confidence_score >= 80
-                                  ? 'bg-green-500/20 text-green-400 border border-green-500/20'
+                                  ? 'bg-success/20 text-success border border-success'
                                   : currentCampaign.plan.reasoning.confidence_score >= 60
-                                  ? 'bg-amber-500/20 text-amber-400 border border-amber-500/20'
-                                  : 'bg-red-500/20 text-red-400 border border-red-500/20'
+                                  ? 'bg-warning/20 text-warning border border-warning'
+                                  : 'bg-danger/20 text-danger border border-danger'
                               }`}>
                                 {currentCampaign.plan.reasoning.confidence_score}% CONFIDENCE
                               </span>
                             </div>
-                            <p className="text-sm text-zinc-300 leading-relaxed">
+                            <p className="text-sm text-muted-foreground leading-relaxed">
                               {currentCampaign.plan.reasoning.audience_insight}
                             </p>
                           </div>
@@ -1848,19 +1848,19 @@ export default function CampaignDashboard({ accessToken, userEmail, onLogout }: 
                           >
                             <div className="relative z-10">
                               <div className="flex items-center justify-between mb-3">
-                                <span className="text-xs font-tactical text-cyan-400 uppercase tracking-wider">CAPTION {idx + 1}</span>
+                                <span className="text-xs font-tactical text-cyan uppercase tracking-wider">CAPTION {idx + 1}</span>
                                 <button
                                   onClick={() => copyToClipboard(caption, `caption-${idx}`)}
-                                  className="p-1.5 hover:bg-zinc-800 rounded-lg transition-colors"
+                                  className="p-1.5 hover:bg-muted rounded-lg transition-colors"
                                 >
                                   {copied === `caption-${idx}` ? (
-                                    <Check className="w-4 h-4 text-green-400" />
+                                    <Check className="w-4 h-4 text-success" />
                                   ) : (
-                                    <Copy className="w-4 h-4 text-zinc-500" />
+                                    <Copy className="w-4 h-4 text-muted-foreground" />
                                   )}
                                 </button>
                               </div>
-                              <p className="text-sm text-zinc-300 leading-relaxed">{caption}</p>
+                              <p className="text-sm text-muted-foreground leading-relaxed">{caption}</p>
                             </div>
                           </motion.div>
                         ))}
@@ -1872,7 +1872,7 @@ export default function CampaignDashboard({ accessToken, userEmail, onLogout }: 
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: 0.5 }}
-                      className="mt-8 pt-8 border-t border-zinc-800/50"
+                      className="mt-8 pt-8 border-t border-border/50"
                     >
                       <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-4">
                         <button
@@ -1883,21 +1883,21 @@ export default function CampaignDashboard({ accessToken, userEmail, onLogout }: 
                           {isSharing ? (
                             <Loader2 className="w-5 h-5 text-pink-400 animate-spin" />
                           ) : copied === 'share-link' ? (
-                            <Check className="w-5 h-5 text-green-400" />
+                            <Check className="w-5 h-5 text-success" />
                           ) : (
                             <Share2 className="w-5 h-5 text-pink-400 group-hover:scale-110 transition-transform" />
                           )}
-                          <span className="text-sm font-bold text-white font-tactical tracking-widest whitespace-nowrap">
+                          <span className="text-sm font-bold text-foreground font-tactical tracking-widest whitespace-nowrap">
                             {copied === 'share-link' ? 'PORTAL OPENED' : 'SHARE CLIENT'}
                           </span>
                         </button>
 
                         <button
                           onClick={handleMarkWinner}
-                          className="w-full flex items-center justify-center gap-3 py-4 rounded-2xl bg-gradient-to-r from-yellow-600/20 to-amber-600/20 hover:from-yellow-600/40 hover:to-amber-600/40 border border-yellow-500/30 hover:border-yellow-500/60 transition-all group overflow-hidden relative shadow-[0_0_30px_rgba(234,179,8,0.1)] hover:shadow-[0_0_40px_rgba(234,179,8,0.3)]"
+                          className="w-full flex items-center justify-center gap-3 py-4 rounded-2xl bg-gradient-to-r from-yellow-600/20 to-amber-600/20 hover:from-yellow-600/40 hover:to-amber-600/40 border border-warning hover:border-warning transition-all group overflow-hidden relative shadow-[0_0_30px_rgba(234,179,8,0.1)] hover:shadow-[0_0_40px_rgba(234,179,8,0.3)]"
                         >
-                          <Rocket className="w-5 h-5 text-yellow-400 group-hover:scale-110 transition-transform" />
-                          <span className="text-sm font-bold text-white font-tactical tracking-widest">MARK AS WINNER</span>
+                          <Rocket className="w-5 h-5 text-warning group-hover:scale-110 transition-transform" />
+                          <span className="text-sm font-bold text-foreground font-tactical tracking-widest">MARK AS WINNER</span>
                         </button>
                         
                         <button
@@ -1905,26 +1905,26 @@ export default function CampaignDashboard({ accessToken, userEmail, onLogout }: 
                             setGenomeMode(true);
                             handleGenerate(`Auto-optimize this baseline campaign for A/B testing across 3 distinct psychological angles. Baseline: Hook: "${currentCampaign?.plan.hook}", Offer: "${currentCampaign?.plan.offer}"`);
                           }}
-                          className="w-full flex items-center justify-center gap-3 py-4 rounded-2xl bg-gradient-to-r from-cyan-600/20 to-blue-600/20 hover:from-cyan-600/40 hover:to-blue-600/40 border border-cyan-500/30 hover:border-cyan-500/60 transition-all group overflow-hidden relative shadow-[0_0_30px_rgba(6,182,212,0.1)] hover:shadow-[0_0_40px_rgba(6,182,212,0.3)]"
+                          className="w-full flex items-center justify-center gap-3 py-4 rounded-2xl bg-gradient-to-r from-cyan-600/20 to-blue-600/20 hover:from-cyan-600/40 hover:to-blue-600/40 border border-cyan hover:border-cyan transition-all group overflow-hidden relative shadow-[0_0_30px_rgba(6,182,212,0.1)] hover:shadow-[0_0_40px_rgba(6,182,212,0.3)]"
                         >
-                          <Target className="w-5 h-5 text-cyan-400 group-hover:scale-110 transition-transform" />
-                          <span className="text-sm font-bold text-white font-tactical tracking-widest">A/B OPTIMIZE</span>
+                          <Target className="w-5 h-5 text-cyan group-hover:scale-110 transition-transform" />
+                          <span className="text-sm font-bold text-foreground font-tactical tracking-widest">A/B OPTIMIZE</span>
                         </button>
                         
                         <button
                           onClick={() => setShowDeploymentSimulator(true)}
-                          className="w-full flex items-center justify-center gap-3 py-4 rounded-2xl bg-gradient-to-r from-indigo-600/20 to-blue-600/20 hover:from-indigo-600/40 hover:to-blue-600/40 border border-indigo-500/30 hover:border-indigo-500/60 transition-all group overflow-hidden relative shadow-[0_0_30px_rgba(99,102,241,0.1)] hover:shadow-[0_0_40px_rgba(99,102,241,0.3)]"
+                          className="w-full flex items-center justify-center gap-3 py-4 rounded-2xl bg-gradient-to-r from-indigo-600/20 to-blue-600/20 hover:from-indigo-600/40 hover:to-blue-600/40 border border-info hover:border-info transition-all group overflow-hidden relative shadow-[0_0_30px_rgba(99,102,241,0.1)] hover:shadow-[0_0_40px_rgba(99,102,241,0.3)]"
                         >
-                          <Cpu className="w-5 h-5 text-indigo-400 group-hover:scale-110 transition-transform" />
-                          <span className="text-sm font-bold text-white font-tactical tracking-widest">DEPLOY CAPITAL</span>
+                          <Cpu className="w-5 h-5 text-info group-hover:scale-110 transition-transform" />
+                          <span className="text-sm font-bold text-foreground font-tactical tracking-widest">DEPLOY CAPITAL</span>
                         </button>
                         
                         <button
                           onClick={() => setShowPerformanceReport(true)}
-                          className="w-full flex items-center justify-center gap-3 py-4 rounded-2xl bg-gradient-to-r from-emerald-600/20 to-teal-600/20 hover:from-emerald-600/40 hover:to-teal-600/40 border border-emerald-500/30 hover:border-emerald-500/60 transition-all group overflow-hidden relative shadow-[0_0_30px_rgba(16,185,129,0.1)] hover:shadow-[0_0_40px_rgba(16,185,129,0.3)]"
+                          className="w-full flex items-center justify-center gap-3 py-4 rounded-2xl bg-gradient-to-r from-emerald-600/20 to-teal-600/20 hover:from-emerald-600/40 hover:to-teal-600/40 border border-success hover:border-success transition-all group overflow-hidden relative shadow-[0_0_30px_rgba(16,185,129,0.1)] hover:shadow-[0_0_40px_rgba(16,185,129,0.3)]"
                         >
-                          <Activity className="w-5 h-5 text-emerald-400 group-hover:scale-110 transition-transform" />
-                          <span className="text-sm font-bold text-white font-tactical tracking-widest">REPORT DATA</span>
+                          <Activity className="w-5 h-5 text-success group-hover:scale-110 transition-transform" />
+                          <span className="text-sm font-bold text-foreground font-tactical tracking-widest">REPORT DATA</span>
                         </button>
 
                         <button
@@ -1932,15 +1932,15 @@ export default function CampaignDashboard({ accessToken, userEmail, onLogout }: 
                           className="w-full flex items-center justify-center gap-3 py-4 rounded-2xl bg-gradient-to-r from-orange-600/20 to-amber-600/20 hover:from-orange-600/40 hover:to-amber-600/40 border border-orange-500/30 hover:border-orange-500/60 transition-all group overflow-hidden relative shadow-[0_0_30px_rgba(249,115,22,0.1)] hover:shadow-[0_0_40px_rgba(249,115,22,0.3)]"
                         >
                           <Eye className="w-5 h-5 text-orange-400 group-hover:scale-110 transition-transform" />
-                          <span className="text-sm font-bold text-white font-tactical tracking-widest">COMPETITOR INTEL</span>
+                          <span className="text-sm font-bold text-foreground font-tactical tracking-widest">COMPETITOR INTEL</span>
                         </button>
                         
                         <button
                           onClick={handleSummonShadowClone}
-                          className="w-full flex items-center justify-center gap-3 py-4 rounded-2xl bg-gradient-to-r from-purple-600/20 to-pink-600/20 hover:from-purple-600/40 hover:to-pink-600/40 border border-purple-500/30 hover:border-purple-500/60 transition-all group overflow-hidden relative shadow-[0_0_30px_rgba(168,85,247,0.1)] hover:shadow-[0_0_40px_rgba(168,85,247,0.3)]"
+                          className="w-full flex items-center justify-center gap-3 py-4 rounded-2xl bg-gradient-to-r from-purple-600/20 to-pink-600/20 hover:from-purple-600/40 hover:to-pink-600/40 border border-primary hover:border-primary transition-all group overflow-hidden relative shadow-[0_0_30px_rgba(168,85,247,0.1)] hover:shadow-[0_0_40px_rgba(168,85,247,0.3)]"
                         >
-                          <Video className="w-5 h-5 text-purple-400 group-hover:scale-110 transition-transform" />
-                          <span className="text-sm font-bold text-white font-tactical tracking-widest">SUMMON CLONE</span>
+                          <Video className="w-5 h-5 text-primary group-hover:scale-110 transition-transform" />
+                          <span className="text-sm font-bold text-foreground font-tactical tracking-widest">SUMMON CLONE</span>
                         </button>
                       </div>
                     </motion.div>
@@ -1988,7 +1988,7 @@ export default function CampaignDashboard({ accessToken, userEmail, onLogout }: 
           {/* ================================================================
               BOTTOM INPUT BAR — Always visible, glassmorphism
               ================================================================ */}
-          <div id="tour-input-bar" className="flex-shrink-0 border-t border-zinc-800/50 bg-zinc-950/60 backdrop-blur-2xl p-4 relative z-20">
+          <div id="tour-input-bar" className="flex-shrink-0 border-t border-border/50 bg-card/60 backdrop-blur-2xl p-4 relative z-20">
             <AnimatePresence>
               {showInterrogation && (
                 <StrategicInterrogationPanel
@@ -2001,7 +2001,7 @@ export default function CampaignDashboard({ accessToken, userEmail, onLogout }: 
             <div className="max-w-4xl mx-auto">
               <div className="flex gap-3 items-center">
                 <div className="flex-1 relative group">
-                  <div className="absolute left-4 top-1/2 -translate-y-1/2 flex items-center gap-2 text-indigo-500 font-mono text-sm font-bold">
+                  <div className="absolute left-4 top-1/2 -translate-y-1/2 flex items-center gap-2 text-info font-mono text-sm font-bold">
                     <span>{'>_'}</span>
                   </div>
                   <input
@@ -2012,18 +2012,18 @@ export default function CampaignDashboard({ accessToken, userEmail, onLogout }: 
                     onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleGenerate()}
                     placeholder="Enter your campaign directive..."
                     disabled={isGenerating}
-                    className="w-full bg-zinc-900/50 border border-indigo-500/20 rounded-xl px-4 py-4 pl-12 text-sm text-indigo-100 placeholder-indigo-500/40 focus:outline-none focus:ring-1 focus:ring-indigo-500/50 focus:border-indigo-500/50 disabled:opacity-50 transition-all font-mono shadow-inner"
+                    className="w-full bg-card/50 border border-info rounded-xl px-4 py-4 pl-12 text-sm text-info placeholder-indigo-500/40 focus:outline-none focus:ring-1 focus:ring-indigo-500/50 focus:border-info disabled:opacity-50 transition-all font-mono shadow-inner"
                   />
                   {/* Glow effect on focus */}
-                  <div className="absolute inset-0 rounded-xl border border-indigo-500/0 group-focus-within:border-indigo-500/20 group-focus-within:shadow-[0_0_15px_rgba(99,102,241,0.15)] pointer-events-none transition-all" />
+                  <div className="absolute inset-0 rounded-xl border border-info group-focus-within:border-info group-focus-within:shadow-[0_0_15px_rgba(99,102,241,0.15)] pointer-events-none transition-all" />
                 </div>
                 <MagneticButton
                   onClick={() => handleGenerate()}
                   disabled={isGenerating || !inputValue.trim()}
-                  className="!px-6 !py-4 !rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-tactical tracking-wider"
+                  className="!px-6 !py-4 !rounded-xl bg-info hover:bg-info text-white font-tactical tracking-wider"
                 >
                   {isGenerating ? (
-                    <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }} className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full" />
+                    <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }} className="w-5 h-5 border-2 border-border border-t-white rounded-full" />
                   ) : (
                     <span className="flex items-center gap-2">EXECUTE <Send className="w-4 h-4" /></span>
                   )}
@@ -2038,8 +2038,8 @@ export default function CampaignDashboard({ accessToken, userEmail, onLogout }: 
                     onClick={() => setGenomeMode(!genomeMode)}
                     className={`flex items-center gap-1.5 px-2 py-1 rounded-md text-[10px] font-bold tracking-wider transition-colors border ${
                       genomeMode 
-                        ? 'bg-purple-500/20 text-purple-400 border-purple-500/30' 
-                        : 'bg-zinc-800/50 text-zinc-500 border-zinc-700/50 hover:bg-zinc-800'
+                        ? 'bg-primary/20 text-primary border-primary' 
+                        : 'bg-muted/50 text-muted-foreground border-border/50 hover:bg-muted'
                     }`}
                   >
                     <Sparkles className="w-3 h-3" />
@@ -2047,7 +2047,7 @@ export default function CampaignDashboard({ accessToken, userEmail, onLogout }: 
                     <span className="text-[9px] opacity-70 ml-1">(2 CREDITS)</span>
                   </button>
                 </div>
-                <p className="text-[10px] text-zinc-600">Press <kbd className="px-1.5 py-0.5 bg-zinc-800 rounded text-zinc-500 font-mono text-[9px]">Enter</kbd> to send</p>
+                <p className="text-[10px] text-zinc-600">Press <kbd className="px-1.5 py-0.5 bg-muted rounded text-muted-foreground font-mono text-[9px]">Enter</kbd> to send</p>
               </div>
             </div>
           </div>
@@ -2061,20 +2061,20 @@ export default function CampaignDashboard({ accessToken, userEmail, onLogout }: 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
+            className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm"
           >
             <motion.div
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
-              className="w-full max-w-2xl bg-zinc-950 border border-emerald-500/30 rounded-2xl overflow-hidden shadow-[0_0_50px_rgba(16,185,129,0.2)]"
+              className="w-full max-w-2xl bg-card border border-success rounded-2xl overflow-hidden shadow-[0_0_50px_rgba(16,185,129,0.2)]"
             >
-              <div className="p-6 border-b border-white/5 flex items-center justify-between">
+              <div className="p-6 border-b border-border flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <Activity className="w-5 h-5 text-emerald-400 animate-pulse" />
-                  <h3 className="text-xl font-tactical font-bold text-white tracking-widest">NEURAL CLONE FACTORY</h3>
+                  <Activity className="w-5 h-5 text-success animate-pulse" />
+                  <h3 className="text-xl font-tactical font-bold text-foreground tracking-widest">NEURAL CLONE FACTORY</h3>
                 </div>
-                <button onClick={() => setIsShadowModalOpen(false)} className="text-zinc-500 hover:text-white transition-colors">
+                <button onClick={() => setIsShadowModalOpen(false)} className="text-muted-foreground hover:text-foreground transition-colors">
                   <X className="w-6 h-6" />
                 </button>
               </div>
@@ -2082,25 +2082,25 @@ export default function CampaignDashboard({ accessToken, userEmail, onLogout }: 
               <div className="p-8">
                 {shadowCloneVideo ? (
                   <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
-                    <div className="aspect-video w-full bg-black rounded-xl overflow-hidden relative border border-white/10 group">
+                    <div className="aspect-video w-full bg-background rounded-xl overflow-hidden relative border border-border group">
                       <video src={shadowCloneVideo} className="w-full h-full object-cover" autoPlay loop muted playsInline />
-                      <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                        <PlayCircle className="w-16 h-16 text-white/80 cursor-pointer hover:text-white hover:scale-110 transition-all" />
+                      <div className="absolute inset-0 bg-background/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                        <PlayCircle className="w-16 h-16 text-foreground/80 cursor-pointer hover:text-foreground hover:scale-110 transition-all" />
                       </div>
                     </div>
-                    <p className="text-emerald-400 font-tactical text-center animate-pulse">ASSET READY FOR DEPLOYMENT</p>
+                    <p className="text-success font-tactical text-center animate-pulse">ASSET READY FOR DEPLOYMENT</p>
                   </motion.div>
                 ) : (
                   <div className="space-y-8 py-8">
                     <div className="flex justify-center">
                       <div className="relative">
-                        <div className="w-32 h-32 rounded-full border-4 border-zinc-800 flex items-center justify-center relative overflow-hidden">
+                        <div className="w-32 h-32 rounded-full border-4 border-border flex items-center justify-center relative overflow-hidden">
                           {currentCampaign?.image_url && <img src={currentCampaign.image_url} alt="Base" className="w-full h-full object-cover opacity-30" />}
-                          <div className="absolute inset-0 bg-emerald-500/20 animate-pulse" />
-                          <Loader2 className="w-10 h-10 text-emerald-400 absolute animate-spin" />
+                          <div className="absolute inset-0 bg-success/20 animate-pulse" />
+                          <Loader2 className="w-10 h-10 text-success absolute animate-spin" />
                         </div>
                         <motion.div 
-                          className="absolute -inset-4 border-2 border-emerald-500/30 rounded-full"
+                          className="absolute -inset-4 border-2 border-success rounded-full"
                           animate={{ scale: [1, 1.2, 1], opacity: [0.5, 0, 0.5] }}
                           transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
                         />
@@ -2108,13 +2108,13 @@ export default function CampaignDashboard({ accessToken, userEmail, onLogout }: 
                     </div>
                     
                     <div className="space-y-2 text-center">
-                      <p className="text-2xl font-tactical text-emerald-400">STEP {shadowCloneStatus?.step || 1} / 5</p>
-                      <p className="text-zinc-400 font-mono text-sm tracking-wider">{shadowCloneStatus?.message || "INITIALIZING..."}</p>
+                      <p className="text-2xl font-tactical text-success">STEP {shadowCloneStatus?.step || 1} / 5</p>
+                      <p className="text-muted-foreground font-mono text-sm tracking-wider">{shadowCloneStatus?.message || "INITIALIZING..."}</p>
                     </div>
                     
-                    <div className="w-full h-2 bg-zinc-800 rounded-full overflow-hidden">
+                    <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
                       <motion.div 
-                        className="h-full bg-emerald-500"
+                        className="h-full bg-success"
                         animate={{ width: `${((shadowCloneStatus?.step || 1) / 5) * 100}%` }}
                         transition={{ duration: 0.5 }}
                       />
@@ -2128,44 +2128,44 @@ export default function CampaignDashboard({ accessToken, userEmail, onLogout }: 
       </AnimatePresence>
 
       {/* Status Bar — Desktop Only */}
-      <div className="hidden lg:flex h-[36px] z-[60] border-t border-zinc-800/50 bg-zinc-950/90 backdrop-blur-xl px-6 items-center justify-between text-xs font-tactical flex-shrink-0">
+      <div className="hidden lg:flex h-[36px] z-[60] border-t border-border/50 bg-card/90 backdrop-blur-xl px-6 items-center justify-between text-xs font-tactical flex-shrink-0">
         <div className="flex items-center gap-6">
           <div className="flex items-center gap-2">
-            <Activity className="w-3 h-3 text-indigo-400" />
-            <span className="text-zinc-500">TIER:</span>
+            <Activity className="w-3 h-3 text-info" />
+            <span className="text-muted-foreground">TIER:</span>
             <span className={`font-bold ${
-              systemStatus.tier === 'ACTIVE' ? 'text-green-400' :
-              systemStatus.tier === 'ERROR' ? 'text-red-400' :
-              systemStatus.tier.startsWith('TIER') ? 'text-yellow-400' :
-              'text-zinc-400'
+              systemStatus.tier === 'ACTIVE' ? 'text-success' :
+              systemStatus.tier === 'ERROR' ? 'text-danger' :
+              systemStatus.tier.startsWith('TIER') ? 'text-warning' :
+              'text-muted-foreground'
             }`}>
               {systemStatus.tier}
             </span>
           </div>
           
           <div className="flex items-center gap-2">
-            <Database className="w-3 h-3 text-purple-400" />
-            <span className="text-zinc-500">DB_SYNC:</span>
+            <Database className="w-3 h-3 text-primary" />
+            <span className="text-muted-foreground">DB_SYNC:</span>
             <span className={`font-bold ${
-              systemStatus.dbSync === 'SYNCED' ? 'text-green-400' : 'text-zinc-400'
+              systemStatus.dbSync === 'SYNCED' ? 'text-success' : 'text-muted-foreground'
             }`}>
               {systemStatus.dbSync}
             </span>
           </div>
           
           <div className="flex items-center gap-2">
-            <Globe className="w-3 h-3 text-cyan-400" />
-            <span className="text-zinc-500">REGION:</span>
-            <span className="text-cyan-400 font-bold">{systemStatus.region}</span>
+            <Globe className="w-3 h-3 text-cyan" />
+            <span className="text-muted-foreground">REGION:</span>
+            <span className="text-cyan font-bold">{systemStatus.region}</span>
           </div>
         </div>
 
         <div className="flex items-center gap-2">
           <div className="relative flex h-2 w-2">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-success opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-success"></span>
           </div>
-          <span className="text-zinc-500 whitespace-nowrap">AVOIR // ONLINE</span>
+          <span className="text-muted-foreground whitespace-nowrap">AVOIR // ONLINE</span>
         </div>
       </div>
 
