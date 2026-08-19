@@ -119,32 +119,45 @@ export async function pollVideo(
   }
 
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
-    const res = await fetch(`${BASE_URL}/v1/video_status.get?video_id=${videoId}`, {
-      headers: { 'X-Api-Key': API_KEY },
-    });
+    try {
+      const res = await fetch(`${BASE_URL}/v1/video_status.get?video_id=${videoId}`, {
+        headers: { 'X-Api-Key': API_KEY },
+      });
 
-    if (!res.ok) {
-      const err = await res.text();
-      throw new Error(`HeyGen poll failed (${res.status}): ${err}`);
+      if (!res.ok) {
+        // Retry on transient server errors (5xx), fail on client errors (4xx)
+        if (res.status >= 500 && attempt < maxAttempts - 1) {
+          await new Promise((r) => setTimeout(r, POLL_INTERVAL_MS));
+          continue;
+        }
+        const err = await res.text();
+        throw new Error(`HeyGen poll failed (${res.status}): ${err}`);
+      }
+
+      const data = await res.json();
+      const status = data.data?.status;
+      const videoUrl = data.data?.video_url;
+
+      if (status === 'completed') {
+        logger.info('services.heygen', 'Video completed', { videoId, url: videoUrl });
+        return { video_id: videoId, status: 'completed', video_url: videoUrl };
+      }
+
+      if (status === 'failed') {
+        const error = data.data?.error || 'Unknown error';
+        logger.error('services.heygen', 'Video failed', { videoId, error });
+        return { video_id: videoId, status: 'failed', error };
+      }
+
+      // Still processing
+      onProgress?.(`Processing video... (${attempt + 1}/${maxAttempts})`);
+    } catch (err) {
+      // Network errors — retry on last attempt, otherwise continue
+      if (attempt === maxAttempts - 1) {
+        throw err;
+      }
+      logger.warn('services.heygen', 'Poll attempt failed (retrying)', { attempt, err });
     }
-
-    const data = await res.json();
-    const status = data.data?.status;
-    const videoUrl = data.data?.video_url;
-
-    if (status === 'completed') {
-      logger.info('services.heygen', 'Video completed', { videoId, url: videoUrl });
-      return { video_id: videoId, status: 'completed', video_url: videoUrl };
-    }
-
-    if (status === 'failed') {
-      const error = data.data?.error || 'Unknown error';
-      logger.error('services.heygen', 'Video failed', { videoId, error });
-      return { video_id: videoId, status: 'failed', error };
-    }
-
-    // Still processing
-    onProgress?.(`Processing video... (${attempt + 1}/${maxAttempts})`);
     await new Promise((r) => setTimeout(r, POLL_INTERVAL_MS));
   }
 
