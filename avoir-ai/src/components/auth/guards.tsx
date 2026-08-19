@@ -1,14 +1,14 @@
 'use client';
 
 /**
- * Avoir ΓÇö Route Guards
+ * Avoir — Route Guards
  *
  * Client-side route protection built on the AuthProvider.
  *
- *   <RequireAuth>  ΓÇö only renders children for signed-in users; redirects
+ *   <RequireAuth>  — only renders children for signed-in users; redirects
  *                    guests to /login?next=<path> so they return here after
  *                    authenticating.
- *   <GuestOnly>    ΓÇö only renders children for guests; redirects signed-in
+ *   <GuestOnly>    — only renders children for guests; redirects signed-in
  *                    users back to the app (e.g. login/register pages).
  *
  * Note: localStorage-backed sessions can't be validated on the server, so
@@ -27,8 +27,8 @@ import { useAuth } from '@/lib/auth/provider';
  * no `//`, no `/\`, no scheme) are allowed. Anything else falls back to `/`.
  */
 export function getSafeRedirectPath(raw: string | null): string {
-  if (!raw) return '/';
-  if (!raw.startsWith('/') || raw.startsWith('//') || raw.startsWith('/\\')) return '/';
+  if (!raw) return '/dashboard';
+  if (!raw.startsWith('/') || raw.startsWith('//') || raw.startsWith('/\\')) return '/dashboard';
   return raw;
 }
 
@@ -37,7 +37,7 @@ export function AuthLoadingScreen() {
     <div className="min-h-screen bg-black flex items-center justify-center">
       <div className="flex flex-col items-center gap-4">
         <div className="w-10 h-10 border-2 border-white/20 border-t-indigo-500 rounded-full animate-spin" />
-        <p className="text-sm text-zinc-500">AuthenticatingΓÇª</p>
+        <p className="text-sm text-zinc-500">Authenticating…</p>
       </div>
     </div>
   );

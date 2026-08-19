@@ -1,5 +1,5 @@
 /**
- * Avoir ΓÇö Auth Types & Error Taxonomy
+ * Avoir — Auth Types & Error Taxonomy
  *
  * Shared types for the authentication layer. The error codes below mirror
  * the AWS Cognito (aws-amplify) exception names so UI error handling stays

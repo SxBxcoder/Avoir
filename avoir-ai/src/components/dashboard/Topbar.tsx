@@ -43,8 +43,8 @@ export default function DashboardTopbar({
   }, []);
 
   const menuItems = [
-    { label: 'Profile', icon: User, href: '/dashboard/settings' },
-    { label: 'Account & Security', icon: Shield, href: '/dashboard/settings' },
+    { label: 'Profile', icon: User, href: '/dashboard/settings?tab=profile' },
+    { label: 'Account & Security', icon: Shield, href: '/dashboard/settings?tab=security' },
     { label: 'Billing', icon: CreditCard, href: '/pricing' },
     { label: 'Settings', icon: Settings, href: '/dashboard/settings' },
   ];

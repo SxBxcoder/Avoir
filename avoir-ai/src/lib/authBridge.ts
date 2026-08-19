@@ -1,5 +1,5 @@
 /**
- * Avoir ΓÇö Auth Bridge
+ * Avoir — Auth Bridge
  *
  * Routes auth calls to the Mock Auth (offline localStorage demo) when
  * demo mode is enabled or no Cognito User Pool is configured, and to the
@@ -16,7 +16,7 @@ const demoMode = isDemoMode();
 
 // Fail closed: the mock auth backend must be explicitly enabled via
 // NEXT_PUBLIC_DEMO_MODE=true. In any other build, a missing Cognito
-// configuration is a deployment error ΓÇö never silently fall back to
+// configuration is a deployment error — never silently fall back to
 // browser-local mock auth, which any visitor could satisfy.
 if (!demoMode && (!process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID || !process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID)) {
   throw new Error(
@@ -50,7 +50,7 @@ export const confirmResetPassword = pick(mock.confirmResetPassword, cognitoAuth.
 
 /**
  * Demo-only helper: creates a real mock session for the recorded ?demo=true
- * flow. No-op outside demo mode ΓÇö the mock is never reachable there.
+ * flow. No-op outside demo mode — the mock is never reachable there.
  */
 export async function demoSignIn(): Promise<void> {
   if (!useMockAuth) return;

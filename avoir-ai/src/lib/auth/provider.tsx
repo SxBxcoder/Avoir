@@ -1,14 +1,14 @@
 'use client';
 
 /**
- * Avoir ΓÇö Auth Provider
+ * Avoir — Auth Provider
  *
  * Single source of truth for authentication state across the entire app.
  * Pages consume auth via `useAuth()` instead of each page re-implementing
  * `getCurrentUser` / `fetchAuthSession` / redirect logic.
  *
  * The underlying implementation (real AWS Cognito vs local mock) is resolved
- * by `authBridge` based on the environment ΓÇö the provider never knows which
+ * by `authBridge` based on the environment — the provider never knows which
  * one is active, keeping the app portable between demo and production.
  */
 
@@ -75,7 +75,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         resolvedIdToken = session.tokens?.idToken?.toString() || null;
       } catch {
         // Token retrieval can fail independently (e.g. token rotation) while
-        // the user session is still valid ΓÇö keep the user signed in.
+        // the user session is still valid — keep the user signed in.
       }
 
       setUser({
@@ -126,7 +126,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     // The recorded demo flow (?demo=true) needs an authenticated session to
     // pass the route guards. In demo mode, create a real mock session so the
-    // provider ΓÇö not a page-level bypass ΓÇö is the source of truth.
+    // provider — not a page-level bypass — is the source of truth.
     const boot = async () => {
       if (isDemoRequest) {
         try {

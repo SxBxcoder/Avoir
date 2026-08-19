@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import {
   User,
@@ -31,6 +32,7 @@ const staggerItem = {
 };
 
 type Tab = 'profile' | 'security' | 'notifications' | 'preferences';
+const VALID_TABS: Tab[] = ['profile', 'security', 'notifications', 'preferences'];
 
 const TABS: { id: Tab; label: string; icon: typeof User }[] = [
   { id: 'profile', label: 'Profile', icon: User },
@@ -39,12 +41,29 @@ const TABS: { id: Tab; label: string; icon: typeof User }[] = [
   { id: 'preferences', label: 'Preferences', icon: Palette },
 ];
 
+function readTabParam(raw: string | null): Tab {
+  if (raw && VALID_TABS.includes(raw as Tab)) return raw as Tab;
+  return 'profile';
+}
+
 export default function SettingsPage() {
   const { email, user } = useAuth();
-  const [activeTab, setActiveTab] = useState<Tab>('profile');
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const [activeTab, setActiveTab] = useState<Tab>(() => readTabParam(searchParams.get('tab')));
   const [saved, setSaved] = useState(false);
 
   const initials = email ? email.split('@')[0].slice(0, 2).toUpperCase() : '??';
+
+  const switchTab = useCallback(
+    (tab: Tab) => {
+      setActiveTab(tab);
+      const params = new URLSearchParams(window.location.search);
+      params.set('tab', tab);
+      router.replace(`/dashboard/settings?${params.toString()}`, { scroll: false });
+    },
+    [router],
+  );
 
   useEffect(() => {
     if (saved) {
@@ -69,7 +88,7 @@ export default function SettingsPage() {
               {TABS.map((tab) => (
                 <button
                   key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
+                  onClick={() => switchTab(tab.id)}
                   className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-medium whitespace-nowrap transition-all ${
                     activeTab === tab.id
                       ? 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20'
@@ -114,11 +133,38 @@ function ProfileTab({ email, user, initials, onSave, saved }: {
   onSave: () => void;
   saved: boolean;
 }) {
-  const [displayName, setDisplayName] = useState(user?.username || email?.split('@')[0] || '');
+  const [displayName, setDisplayName] = useState('');
   const [saving, setSaving] = useState(false);
+  const [memberSince, setMemberSince] = useState<string>('');
+
+  useEffect(() => {
+    const stored = typeof window !== 'undefined' ? localStorage.getItem('avoir_display_name') : null;
+    setDisplayName(stored || user?.username || email?.split('@')[0] || '');
+  }, [user, email]);
+
+  useEffect(() => {
+    async function fetchMemberSince() {
+      try {
+        const res = await fetch('/api/user/profile');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.createdAt) {
+            setMemberSince(new Date(data.createdAt).getFullYear().toString());
+            return;
+          }
+        }
+      } catch {
+        // fall through
+      }
+      // Fallback: show current year
+      setMemberSince(new Date().getFullYear().toString());
+    }
+    fetchMemberSince();
+  }, []);
 
   const handleSave = async () => {
     setSaving(true);
+    localStorage.setItem('avoir_display_name', displayName);
     await new Promise((r) => setTimeout(r, 600));
     setSaving(false);
     onSave();
@@ -197,7 +243,7 @@ function ProfileTab({ email, user, initials, onSave, saved }: {
           </div>
           <div className="p-4 rounded-xl bg-zinc-900/50 border border-zinc-800/50">
             <p className="text-xs text-zinc-500 mb-1">Member Since</p>
-            <p className="text-lg font-bold text-white">2024</p>
+            <p className="text-lg font-bold text-white">{memberSince || '—'}</p>
           </div>
         </div>
       </div>
@@ -357,10 +403,22 @@ function SecurityTab({ email }: { email: string | null }) {
 // NOTIFICATIONS TAB
 // ============================================================================
 function NotificationsTab() {
-  const [emailNotifs, setEmailNotifs] = useState(true);
-  const [campaignUpdates, setCampaignUpdates] = useState(true);
-  const [weeklyDigest, setWeeklyDigest] = useState(false);
-  const [marketing, setMarketing] = useState(false);
+  const [prefs, setPrefs] = useState(() => {
+    if (typeof window === 'undefined') {
+      return { emailNotifs: true, campaignUpdates: true, weeklyDigest: false, marketing: false };
+    }
+    try {
+      const stored = localStorage.getItem('avoir_notifications');
+      if (stored) return JSON.parse(stored);
+    } catch { /* ignore */ }
+    return { emailNotifs: true, campaignUpdates: true, weeklyDigest: false, marketing: false };
+  });
+
+  const update = (key: keyof typeof prefs) => {
+    const next = { ...prefs, [key]: !prefs[key] };
+    setPrefs(next);
+    localStorage.setItem('avoir_notifications', JSON.stringify(next));
+  };
 
   const Toggle = ({ enabled, onToggle }: { enabled: boolean; onToggle: () => void }) => (
     <button
@@ -382,17 +440,17 @@ function NotificationsTab() {
         <h3 className="text-sm font-tactical font-bold text-zinc-500 tracking-widest mb-4">NOTIFICATION PREFERENCES</h3>
         <div className="space-y-4">
           {[
-            { label: 'Email Notifications', description: 'Receive updates about your account via email', enabled: emailNotifs, onToggle: () => setEmailNotifs(!emailNotifs) },
-            { label: 'Campaign Updates', description: 'Get notified when campaigns complete or fail', enabled: campaignUpdates, onToggle: () => setCampaignUpdates(!campaignUpdates) },
-            { label: 'Weekly Digest', description: 'Summary of your campaign performance each week', enabled: weeklyDigest, onToggle: () => setWeeklyDigest(!weeklyDigest) },
-            { label: 'Marketing Emails', description: 'Product updates, tips, and promotional content', enabled: marketing, onToggle: () => setMarketing(!marketing) },
+            { label: 'Email Notifications', description: 'Receive updates about your account via email', key: 'emailNotifs' as const },
+            { label: 'Campaign Updates', description: 'Get notified when campaigns complete or fail', key: 'campaignUpdates' as const },
+            { label: 'Weekly Digest', description: 'Summary of your campaign performance each week', key: 'weeklyDigest' as const },
+            { label: 'Marketing Emails', description: 'Product updates, tips, and promotional content', key: 'marketing' as const },
           ].map((item) => (
             <div key={item.label} className="flex items-center justify-between p-4 rounded-xl bg-zinc-900/50 border border-zinc-800/50">
               <div>
                 <p className="text-sm font-medium text-white">{item.label}</p>
                 <p className="text-xs text-zinc-500 mt-0.5">{item.description}</p>
               </div>
-              <Toggle enabled={item.enabled} onToggle={item.onToggle} />
+              <Toggle enabled={prefs[item.key]} onToggle={() => update(item.key)} />
             </div>
           ))}
         </div>
@@ -407,13 +465,48 @@ function NotificationsTab() {
 function PreferencesTab() {
   const [language, setLanguage] = useState('en');
   const [theme, setTheme] = useState('dark');
-
-  const languages = [
+  const [languages, setLanguages] = useState([
     { code: 'en', label: 'English' },
     { code: 'hi', label: 'Hindi' },
     { code: 'hi-en', label: 'Hinglish' },
     { code: 'es', label: 'Spanish' },
-  ];
+  ]);
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('avoir_preferences');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (parsed.language) setLanguage(parsed.language);
+        if (parsed.theme) setTheme(parsed.theme);
+      }
+    } catch { /* ignore */ }
+  }, []);
+
+  useEffect(() => {
+    fetch('/api/languages')
+      .then((r) => r.json())
+      .then((data) => {
+        if (Array.isArray(data) && data.length > 0) {
+          setLanguages(data);
+        }
+      })
+      .catch(() => {
+        // Keep the hardcoded fallback list
+      });
+  }, []);
+
+  const setLang = (code: string) => {
+    setLanguage(code);
+    const stored = (() => { try { return JSON.parse(localStorage.getItem('avoir_preferences') || '{}'); } catch { return {}; } })();
+    localStorage.setItem('avoir_preferences', JSON.stringify({ ...stored, language: code }));
+  };
+
+  const setThemeVal = (id: string) => {
+    setTheme(id);
+    const stored = (() => { try { return JSON.parse(localStorage.getItem('avoir_preferences') || '{}'); } catch { return {}; } })();
+    localStorage.setItem('avoir_preferences', JSON.stringify({ ...stored, theme: id }));
+  };
 
   const themes = [
     { id: 'dark', label: 'Dark', color: 'bg-zinc-900' },
@@ -429,7 +522,7 @@ function PreferencesTab() {
           {languages.map((lang) => (
             <button
               key={lang.code}
-              onClick={() => setLanguage(lang.code)}
+              onClick={() => setLang(lang.code)}
               className={`p-3 rounded-xl text-sm font-medium transition-all border ${
                 language === lang.code
                   ? 'bg-indigo-500/10 text-indigo-400 border-indigo-500/30'
@@ -453,7 +546,7 @@ function PreferencesTab() {
           {themes.map((t) => (
             <button
               key={t.id}
-              onClick={() => setTheme(t.id)}
+              onClick={() => setThemeVal(t.id)}
               className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all border ${
                 theme === t.id
                   ? 'bg-indigo-500/10 text-indigo-400 border-indigo-500/30'
