@@ -2,7 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Shield, Eye, Flame, AlertTriangle, Target, Activity, Loader2, X } from 'lucide-react';
+import { Shield, Eye, Flame, AlertTriangle, Target, Activity, Loader2, X, Globe, RefreshCw } from 'lucide-react';
+import { useAuth } from '@/lib/auth/provider';
+import { clientLog } from '@/lib/logClient';
 
 interface CompetitorAd {
   id: string;
@@ -11,6 +13,8 @@ interface CompetitorAd {
   engagement: string;
   runTime: string;
   detectedFormat: string;
+  platforms?: string[];
+  snapshotUrl?: string;
 }
 
 interface CompetitorIntel {
@@ -18,6 +22,8 @@ interface CompetitorIntel {
   topAds: CompetitorAd[];
   marketGaps: string[];
   lastUpdated: string;
+  source: 'facebook' | 'cache' | 'mock';
+  cachedUntil?: string;
 }
 
 interface CompetitorIntelPanelProps {
@@ -26,63 +32,122 @@ interface CompetitorIntelPanelProps {
   onInjectGap: (gap: string) => void;
 }
 
+const COUNTRIES = [
+  { code: 'ALL', label: 'Global' },
+  { code: 'US', label: 'United States' },
+  { code: 'GB', label: 'United Kingdom' },
+  { code: 'DE', label: 'Germany' },
+  { code: 'FR', label: 'France' },
+  { code: 'IN', label: 'India' },
+  { code: 'BR', label: 'Brazil' },
+  { code: 'AU', label: 'Australia' },
+  { code: 'CA', label: 'Canada' },
+];
+
+const PLATFORM_ICONS: Record<string, string> = {
+  FACEBOOK: '📘',
+  INSTAGRAM: '📸',
+  AUDIENCE_NETWORK: '📺',
+  MESSENGER: '💬',
+  WHATSAPP: '📱',
+  THREADS: '🧵',
+};
+
 export default function CompetitorIntelPanel({ industry, onClose, onInjectGap }: CompetitorIntelPanelProps) {
+  const { accessToken } = useAuth();
   const [intel, setIntel] = useState<CompetitorIntel | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [country, setCountry] = useState('ALL');
+  const [source, setSource] = useState<string>('mock');
+
+  const fetchIntel = async (fresh = false) => {
+    setIsLoading(true);
+    try {
+      const params = new URLSearchParams({ industry, country });
+      if (fresh) params.set('fresh', 'true');
+
+      const res = await fetch(`/api/competitors?${params}`, {
+        headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.intel) {
+          setIntel(data.intel);
+          setSource(data.source || 'mock');
+        }
+      }
+    } catch (err) {
+      clientLog.error('Failed to fetch competitor intel:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
     let mounted = true;
-    const fetchIntel = async () => {
-      setIsLoading(true);
-      try {
-        const res = await fetch(`/api/competitors?industry=${encodeURIComponent(industry)}`);
-        if (res.ok) {
-          const data = await res.json();
-          if (data.intel && mounted) {
-            setIntel(data.intel);
-          }
-        }
-      } catch (err) {
-        console.error('Failed to fetch competitor intel:', err);
-      } finally {
-        if (mounted) setIsLoading(false);
-      }
-    };
-
     fetchIntel();
     return () => { mounted = false; };
-  }, [industry]);
+  }, [industry, country, accessToken]);
+
+  const handleRefresh = () => fetchIntel(true);
 
   return (
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm"
     >
       <motion.div
         initial={{ scale: 0.95, y: 20 }}
         animate={{ scale: 1, y: 0 }}
         exit={{ scale: 0.95, y: 20 }}
-        className="relative w-full max-w-2xl bg-zinc-950 border border-zinc-800 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
+        className="relative w-full max-w-2xl bg-card border border-border rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
       >
         {/* Header */}
-        <div className="p-6 border-b border-zinc-800/50 flex items-center justify-between bg-gradient-to-r from-orange-500/10 to-transparent">
+        <div className="p-6 border-b border-border/50 flex items-center justify-between bg-gradient-to-r from-orange-500/10 to-transparent">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-orange-500/20 rounded-xl">
               <Eye className="w-6 h-6 text-orange-400" />
             </div>
             <div>
-              <h2 className="text-xl font-bold text-white font-tactical tracking-wider">COMPETITOR INTEL</h2>
-              <p className="text-sm text-zinc-400 flex items-center gap-2">
+              <div className="flex items-center gap-3">
+                <h2 className="text-xl font-bold text-foreground font-tactical tracking-wider">COMPETITOR INTEL</h2>
+                <SourceBadge source={source} cachedUntil={intel?.cachedUntil} />
+              </div>
+              <p className="text-sm text-muted-foreground flex items-center gap-2">
                 <Target className="w-4 h-4 text-orange-500/70" />
-                Live Analysis: <span className="text-orange-400 font-mono">{industry.toUpperCase()}</span>
+                Analysis: <span className="text-orange-400 font-mono">{industry.toUpperCase()}</span>
               </p>
             </div>
           </div>
-          <button onClick={onClose} className="p-2 hover:bg-zinc-800 rounded-xl transition-colors">
-            <X className="w-5 h-5 text-zinc-500" />
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleRefresh}
+              disabled={isLoading}
+              className="p-2 hover:bg-muted rounded-xl transition-colors"
+              title="Force refresh from Facebook Ad Library"
+            >
+              <RefreshCw className={`w-4 h-4 text-muted-foreground ${isLoading ? 'animate-spin' : ''}`} />
+            </button>
+            <button onClick={onClose} className="p-2 hover:bg-muted rounded-xl transition-colors">
+              <X className="w-5 h-5 text-muted-foreground" />
+            </button>
+          </div>
+        </div>
+
+        {/* Country Filter */}
+        <div className="px-6 py-3 border-b border-border/50 flex items-center gap-2">
+          <Globe className="w-4 h-4 text-muted-foreground" />
+          <select
+            value={country}
+            onChange={(e) => setCountry(e.target.value)}
+            className="bg-muted/50 border border-border/50 rounded-lg px-3 py-1.5 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-orange-500/50"
+          >
+            {COUNTRIES.map((c) => (
+              <option key={c.code} value={c.code}>{c.label}</option>
+            ))}
+          </select>
         </div>
 
         {/* Content */}
@@ -90,10 +155,12 @@ export default function CompetitorIntelPanel({ industry, onClose, onInjectGap }:
           {isLoading ? (
             <div className="flex flex-col items-center justify-center py-20 space-y-4">
               <Loader2 className="w-8 h-8 text-orange-400 animate-spin" />
-              <p className="text-sm text-zinc-500 font-tactical tracking-wider">ANALYZING AD LIBRARIES...</p>
+              <p className="text-sm text-muted-foreground font-tactical tracking-wider">
+                {source === 'facebook' ? 'QUERYING AD LIBRARY...' : 'ANALYZING AD LIBRARIES...'}
+              </p>
             </div>
           ) : !intel ? (
-            <div className="text-center py-20 text-zinc-500">
+            <div className="text-center py-20 text-muted-foreground">
               <AlertTriangle className="w-12 h-12 mx-auto mb-4 opacity-20" />
               <p>No competitor data available for this industry.</p>
             </div>
@@ -101,25 +168,32 @@ export default function CompetitorIntelPanel({ industry, onClose, onInjectGap }:
             <>
               {/* Top Ads */}
               <div className="space-y-4">
-                <h3 className="text-sm font-semibold text-zinc-400 uppercase tracking-wider flex items-center gap-2">
+                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
                   <Flame className="w-4 h-4 text-orange-400" />
                   Top Performing Competitor Ads
                 </h3>
                 <div className="grid gap-3">
                   {intel.topAds.map((ad) => (
-                    <div key={ad.id} className="p-4 rounded-xl border border-zinc-800/80 bg-zinc-900/30">
+                    <div key={ad.id} className="p-4 rounded-xl border border-border/80 bg-card/30">
                       <div className="flex items-center justify-between mb-3">
-                        <span className="text-sm font-bold text-white bg-zinc-800 px-2 py-1 rounded-md">{ad.brand}</span>
+                        <span className="text-sm font-bold text-foreground bg-muted px-2 py-1 rounded-md">{ad.brand}</span>
                         <div className="flex items-center gap-2 text-[10px] font-mono">
-                          <span className="flex items-center gap-1 text-emerald-400 bg-emerald-500/10 px-2 py-1 rounded">
+                          <span className="flex items-center gap-1 text-success bg-success/10 px-2 py-1 rounded">
                             <Activity className="w-3 h-3" /> {ad.engagement} Engagement
                           </span>
-                          <span className="text-zinc-500 bg-zinc-800/50 px-2 py-1 rounded">Run Time: {ad.runTime}</span>
+                          <span className="text-muted-foreground bg-muted/50 px-2 py-1 rounded">Run Time: {ad.runTime}</span>
                         </div>
                       </div>
-                      <p className="text-sm text-zinc-300 italic border-l-2 border-orange-500/30 pl-3 py-1">"{ad.hook}"</p>
-                      <div className="mt-3 text-xs text-zinc-500 flex items-center gap-2">
-                        Format: <span className="text-zinc-300">{ad.detectedFormat}</span>
+                      <p className="text-sm text-muted-foreground italic border-l-2 border-orange-500/30 pl-3 py-1">&ldquo;{ad.hook}&rdquo;</p>
+                      <div className="mt-3 text-xs text-muted-foreground flex items-center gap-3">
+                        <span>Format: {ad.detectedFormat}</span>
+                        {ad.platforms && ad.platforms.length > 0 && (
+                          <span className="flex items-center gap-1">
+                            {ad.platforms.map((p) => (
+                              <span key={p} title={p} className="text-sm">{PLATFORM_ICONS[p] || '📢'}</span>
+                            ))}
+                          </span>
+                        )}
                       </div>
                     </div>
                   ))}
@@ -128,8 +202,8 @@ export default function CompetitorIntelPanel({ industry, onClose, onInjectGap }:
 
               {/* Market Gaps */}
               <div className="space-y-4">
-                <h3 className="text-sm font-semibold text-zinc-400 uppercase tracking-wider flex items-center gap-2">
-                  <Shield className="w-4 h-4 text-emerald-400" />
+                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
+                  <Shield className="w-4 h-4 text-success" />
                   Market Gaps (Opportunities)
                 </h3>
                 <div className="grid grid-cols-1 gap-2">
@@ -140,10 +214,10 @@ export default function CompetitorIntelPanel({ industry, onClose, onInjectGap }:
                         onInjectGap(`Position the brand against competitors by focusing on this market gap: "${gap}"`);
                         onClose();
                       }}
-                      className="w-full text-left p-3 rounded-xl border border-zinc-800 bg-zinc-900/50 hover:bg-emerald-500/10 hover:border-emerald-500/30 hover:text-emerald-400 transition-all text-sm text-zinc-300 group flex justify-between items-center"
+                      className="w-full text-left p-3 rounded-xl border border-border bg-card/50 hover:bg-success/10 hover:border-success hover:text-success transition-all text-sm text-muted-foreground group flex justify-between items-center"
                     >
                       <span>{gap}</span>
-                      <span className="text-[10px] font-mono text-emerald-500/0 group-hover:text-emerald-500/70 transition-all uppercase tracking-wider">
+                      <span className="text-[10px] font-mono text-success/0 group-hover:text-success/70 transition-all uppercase tracking-wider">
                         Inject into Strategy →
                       </span>
                     </button>
@@ -155,5 +229,34 @@ export default function CompetitorIntelPanel({ industry, onClose, onInjectGap }:
         </div>
       </motion.div>
     </motion.div>
+  );
+}
+
+// ============================================================================
+// SOURCE BADGE
+// ============================================================================
+
+function SourceBadge({ source, cachedUntil }: { source: string; cachedUntil?: string }) {
+  if (source === 'facebook') {
+    return (
+      <span className="text-[10px] px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-mono tracking-widest border border-emerald-500/30">
+        LIVE · Facebook Ad Library
+      </span>
+    );
+  }
+  if (source === 'cache') {
+    const timeLeft = cachedUntil
+      ? `${Math.max(0, Math.round((new Date(cachedUntil).getTime() - Date.now()) / (1000 * 60 * 60)))}h left`
+      : '';
+    return (
+      <span className="text-[10px] px-2 py-0.5 rounded bg-blue-500/20 text-blue-400 font-mono tracking-widest border border-blue-500/30">
+        CACHED {timeLeft && `· ${timeLeft}`}
+      </span>
+    );
+  }
+  return (
+    <span className="text-[10px] px-2 py-0.5 rounded bg-muted/80 text-muted-foreground font-mono tracking-widest border border-border">
+      DEMO DATA
+    </span>
   );
 }

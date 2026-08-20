@@ -1,16 +1,40 @@
+/**
+ * Avoir — Competitor Intelligence API
+ *
+ * GET /api/competitors — Fetch competitor intelligence for an industry
+ *
+ * Query params:
+ *   industry (required) — Industry keyword
+ *   country  (optional) — ISO country code or 'ALL' (default: 'ALL')
+ *   pageIds  (optional) — Comma-separated Facebook page IDs for specific competitors
+ *   fresh    (optional) — 'true' to bypass cache and force fresh fetch
+ */
+
 import { NextResponse } from 'next/server';
 import { fetchCompetitorIntel } from '@/lib/db/competitors';
 import { isDemoMode, MOCK_COMPETITOR_INTEL } from '@/lib/mockShield';
+import { requireUser, authErrorResponse } from '@/lib/auth/requireUser';
+import { logger } from '@/lib/logger';
+
+export const dynamic = 'force-dynamic';
 
 export async function GET(req: Request) {
   // Demo Mock Shield
   if (isDemoMode()) {
-    return NextResponse.json({ intel: MOCK_COMPETITOR_INTEL });
+    return NextResponse.json({
+      intel: MOCK_COMPETITOR_INTEL,
+      source: 'mock',
+    });
   }
 
   try {
+    await requireUser(req);
+
     const { searchParams } = new URL(req.url);
     const industry = searchParams.get('industry');
+    const country = searchParams.get('country') || 'ALL';
+    const pageIdsRaw = searchParams.get('pageIds');
+    const fresh = searchParams.get('fresh') === 'true';
 
     if (!industry) {
       return NextResponse.json(
@@ -19,17 +43,43 @@ export async function GET(req: Request) {
       );
     }
 
-    const intel = await fetchCompetitorIntel(industry);
-
-    if (!intel) {
-      return NextResponse.json({ intel: null, message: 'No competitor data found for this industry.' });
+    // Validate country (ISO 3166-1 alpha-2 or ALL)
+    if (country !== 'ALL' && !/^[A-Z]{2}$/.test(country)) {
+      return NextResponse.json(
+        { error: 'Invalid country code. Use ISO 3166-1 alpha-2 (e.g., "US", "GB") or "ALL".' },
+        { status: 400 }
+      );
     }
 
-    return NextResponse.json({ intel });
-  } catch (error: any) {
-    console.error('[Competitors API] GET error:', error);
+    const pageIds = pageIdsRaw
+      ? pageIdsRaw.split(',').map((id) => id.trim()).filter(Boolean).slice(0, 10)
+      : undefined;
+
+    const intel = await fetchCompetitorIntel(industry, {
+      country,
+      pageIds,
+      fresh,
+    });
+
+    if (!intel) {
+      return NextResponse.json({
+        intel: null,
+        source: 'none',
+        message: 'No competitor data found for this industry.',
+      });
+    }
+
+    return NextResponse.json({
+      intel,
+      source: intel.source,
+      cachedUntil: intel.cachedUntil || null,
+    });
+  } catch (error: unknown) {
+    const authErr = authErrorResponse(error);
+    if (authErr) return authErr;
+    logger.error('competitors', 'GET failed', { error: error as Error });
     return NextResponse.json(
-      { error: error.message || 'Failed to fetch competitor intel' },
+      { error: 'Failed to fetch competitor intel' },
       { status: 500 }
     );
   }
