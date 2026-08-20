@@ -191,7 +191,7 @@ export async function fetchIndustryTrends(
     if (cached) {
       return {
         industry: cached.industry || normalized,
-        topTrends: cached.topTrends || [],
+        topTrends: (cached.topTrends || []) as TrendTopic[],
         viralHooks: cached.viralHooks || [],
         lastUpdated: cached.lastUpdated,
         source: 'cache',

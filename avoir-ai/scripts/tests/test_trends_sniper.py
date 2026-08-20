@@ -192,13 +192,22 @@ class TestSerpAPIClient:
             ]
         }
 
+        from trends_sniper import _serpapi_breaker
+        _serpapi_breaker.state = "closed"
+        _serpapi_breaker.consecutive_failures = 0
+
+        mock_retry = AsyncMock(return_value=mock_response)
         with patch.dict(os.environ, {"SERPAPI_KEY": "test-key"}):
-            with patch("httpx.AsyncClient.get", new_callable=AsyncMock, return_value=mock_response):
-                result = await _fetch_serpapi_trends(["fashion trends"], country="us")
-                assert result is not None
-                assert len(result.top_trends) == 2
-                assert result.source == TrendSource.SERPAPI.value
-                assert result.top_trends[0].keyword == "sustainable fashion brands"
+            with patch("trends_sniper.SERPAPI_KEY", "test-key"):
+                with patch(
+                    "trends_sniper._retry_with_backoff",
+                    new=mock_retry,
+                ):
+                    result = await _fetch_serpapi_trends(["fashion trends"], country="us")
+                    assert result is not None
+                    assert len(result.top_trends) == 2
+                    assert result.source == TrendSource.SERPAPI.value
+                    assert result.top_trends[0].keyword == "sustainable fashion brands"
 
     @pytest.mark.asyncio
     async def test_handles_rate_limit(self):
@@ -210,9 +219,14 @@ class TestSerpAPIClient:
         ))
 
         with patch.dict(os.environ, {"SERPAPI_KEY": "test-key"}):
-            with patch("httpx.AsyncClient.get", new_callable=AsyncMock, return_value=mock_response):
-                result = await _fetch_serpapi_trends(["fashion"])
-                assert result is None  # Falls through to next provider
+            with patch("trends_sniper.SERPAPI_KEY", "test-key"):
+                with patch(
+                    "trends_sniper._retry_with_backoff",
+                    new_callable=AsyncMock,
+                    return_value=mock_response,
+                ):
+                    result = await _fetch_serpapi_trends(["fashion"])
+                    assert result is None  # Falls through to next provider
 
 
 # ============================================================================
