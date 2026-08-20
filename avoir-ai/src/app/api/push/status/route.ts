@@ -51,7 +51,7 @@ export async function GET(req: Request) {
   } catch (error) {
     const mapped = authErrorResponse(error);
     if (mapped) return mapped;
-    logger.error('[push/status] GET error', error);
+    logger.error('[push/status]', 'GET handler failed', { error: error as Error });
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

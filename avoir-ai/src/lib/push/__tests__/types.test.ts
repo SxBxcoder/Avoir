@@ -1,10 +1,13 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
+import type {
+  NotificationPayload,
+  PushSubscriptionRecord,
+  SendNotificationRequest,
+  PushStatusResponse,
+} from '@/lib/push/types';
 
 describe('TestPushTypes', () => {
-  it('notification payload has required fields', async () => {
-    const { NotificationPayload } = await import('@/lib/push/types');
-
-    // Type-level check: NotificationPayload should be assignable
+  it('notification payload has required fields', () => {
     const payload: NotificationPayload = {
       title: 'Test',
       body: 'Hello',
@@ -13,9 +16,7 @@ describe('TestPushTypes', () => {
     expect(payload.body).toBe('Hello');
   });
 
-  it('push subscription record has all required fields', async () => {
-    const { PushSubscriptionRecord } = await import('@/lib/push/types');
-
+  it('push subscription record has all required fields', () => {
     const sub: PushSubscriptionRecord = {
       userId: 'user-1',
       endpoint: 'https://example.com/push',
@@ -26,9 +27,7 @@ describe('TestPushTypes', () => {
     expect(sub.keys.p256dh).toBe('key');
   });
 
-  it('send notification request accepts userId or teamId', async () => {
-    const { SendNotificationRequest } = await import('@/lib/push/types');
-
+  it('send notification request accepts userId or teamId', () => {
     const byUser: SendNotificationRequest = {
       userId: 'user-1',
       payload: { title: 'Hi', body: 'There' },
@@ -41,9 +40,7 @@ describe('TestPushTypes', () => {
     expect(byTeam.teamId).toBe('team-1');
   });
 
-  it('push status response shape', async () => {
-    const { PushStatusResponse } = await import('@/lib/push/types');
-
+  it('push status response shape', () => {
     const status: PushStatusResponse = {
       subscribed: true,
       permission: 'granted',
@@ -52,4 +49,37 @@ describe('TestPushTypes', () => {
     expect(status.subscribed).toBe(true);
     expect(status.subscriptionCount).toBe(2);
   });
+
+  it('notification payload supports optional fields', () => {
+    const full: NotificationPayload = {
+      title: 'Campaign Complete',
+      body: 'Your campaign is ready',
+      icon: '/icon.png',
+      badge: '/badge.png',
+      image: '/preview.png',
+      tag: 'campaign-123',
+      url: '/dashboard/campaigns/123',
+      data: { campaignId: '123', type: 'campaign.complete' },
+    };
+    expect(full.tag).toBe('campaign-123');
+    expect(full.data?.campaignId).toBe('123');
+  });
+
+  it('notification type union covers all event categories', () => {
+    // Type-level validation: these should all compile
+    const types: NotificationType[] = [
+      'campaign.complete',
+      'campaign.failed',
+      'invitation.received',
+      'invitation.accepted',
+      'member.joined',
+      'member.removed',
+      'team.updated',
+      'billing.payment_failed',
+      'system.maintenance',
+    ];
+    expect(types).toHaveLength(9);
+  });
 });
+
+import type { NotificationType } from '@/lib/push/types';

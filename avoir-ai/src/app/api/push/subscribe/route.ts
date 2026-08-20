@@ -64,7 +64,7 @@ export async function POST(req: Request) {
   } catch (error) {
     const mapped = authErrorResponse(error);
     if (mapped) return mapped;
-    logger.error('[push/subscribe] POST error', error);
+    logger.error('[push/subscribe]', 'POST handler failed', { error: error as Error });
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
@@ -101,7 +101,7 @@ export async function DELETE(req: Request) {
   } catch (error) {
     const mapped = authErrorResponse(error);
     if (mapped) return mapped;
-    logger.error('[push/subscribe] DELETE error', error);
+    logger.error('[push/subscribe]', 'DELETE handler failed', { error: error as Error });
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

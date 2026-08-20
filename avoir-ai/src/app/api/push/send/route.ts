@@ -117,7 +117,7 @@ export async function POST(req: Request) {
   } catch (error) {
     const mapped = authErrorResponse(error);
     if (mapped) return mapped;
-    logger.error('[push/send] POST error', error);
+    logger.error('[push/send]', 'POST handler failed', { error: error as Error });
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

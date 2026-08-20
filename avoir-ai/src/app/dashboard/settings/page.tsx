@@ -501,7 +501,7 @@ function PushNotificationsSection() {
             userVisibleOnly: true,
             applicationServerKey: urlBase64ToUint8Array(
               process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || ''
-            ),
+            ) as BufferSource,
           });
 
           await fetch('/api/push/subscribe', {

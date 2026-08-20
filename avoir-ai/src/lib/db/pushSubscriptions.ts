@@ -46,7 +46,7 @@ export async function saveSubscription(sub: PushSubscriptionRecord): Promise<voi
     })
   );
 
-  logger.info('[push-subscriptions] Saved subscription', {
+  logger.info('[push-subscriptions]', 'Saved subscription', {
     userId: sub.userId,
     teamId: sub.teamId,
   });
@@ -176,7 +176,7 @@ export async function deleteSubscription(
     })
   );
 
-  logger.info('[push-subscriptions] Deleted subscription', { userId });
+  logger.info('[push-subscriptions]', 'Deleted subscription', { userId });
 }
 
 /**
@@ -195,7 +195,7 @@ export async function deleteAllUserSubscriptions(userId: string): Promise<number
     );
   }
 
-  logger.info('[push-subscriptions] Deleted all subscriptions', {
+  logger.info('[push-subscriptions]', 'Deleted all subscriptions', {
     userId,
     count: subs.length,
   });
@@ -212,5 +212,5 @@ export async function deleteStaleSubscription(
   endpoint: string
 ): Promise<void> {
   await deleteSubscription(userId, endpoint);
-  logger.info('[push-subscriptions] Removed stale subscription', { userId });
+  logger.info('[push-subscriptions]', 'Removed stale subscription', { userId });
 }
