@@ -25,14 +25,14 @@ const DEMO_TEAMS = [
 ];
 
 /** GET /api/teams — List teams the current user belongs to */
-export const GET = withTeamAuth(async (req) => {
+export const GET = withTeamAuth(async (_req, ctx) => {
   if (isDemoMode()) {
     return NextResponse.json({ teams: DEMO_TEAMS, count: DEMO_TEAMS.length });
   }
 
   try {
     const { listUserTeams } = await import('@/lib/db/teams');
-    const teams = await listUserTeams(req.headers.get('x-user-id') || '');
+    const teams = await listUserTeams(ctx.userId);
     return NextResponse.json({ teams, count: teams.length });
   } catch (err) {
     logger.error('api.teams', 'Failed to list teams', { err });

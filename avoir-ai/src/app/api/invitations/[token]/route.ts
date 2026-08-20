@@ -4,13 +4,15 @@
  * GET  /api/invitations/[token]           → Validate invitation token
  * POST /api/invitations/[token]/accept     → Accept invitation
  *
- * These routes are PUBLIC (no auth required for validate).
- * Accept requires a userId in the body.
+ * Validate is public (no auth required).
+ * Accept requires authenticated user — userId is derived from the Cognito JWT,
+ * never from the request body.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { isDemoMode } from '@/lib/mockShield';
 import { logger } from '@/lib/logger';
+import { requireUser, authErrorResponse } from '@/lib/auth/requireUser';
 
 export const dynamic = 'force-dynamic';
 
@@ -68,12 +70,7 @@ export async function POST(
   const { token } = params;
 
   try {
-    const body = await req.json();
-    const { userId } = body;
-
-    if (!userId) {
-      return NextResponse.json({ error: 'userId is required to accept invitation' }, { status: 400 });
-    }
+    const { userId } = await requireUser(req);
 
     if (isDemoMode()) {
       return NextResponse.json({
@@ -101,6 +98,8 @@ export async function POST(
       message: 'Welcome to the team!',
     });
   } catch (err) {
+    const mapped = authErrorResponse(err);
+    if (mapped) return mapped;
     logger.error('api.invitations', 'Failed to accept invitation', { token, err });
     return NextResponse.json(
       { error: 'Failed to accept invitation' },
