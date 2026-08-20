@@ -318,7 +318,15 @@ export function analyzeMarketGaps(ads: CompetitorAd[]): string[] {
     gaps.push(`Explore ${missingFormats[2]} creative style for differentiation`);
   }
 
-  // 2. Platform coverage
+  // 2. Copy length analysis (moved up so it's always included)
+  const avgLength = ads.reduce((sum, a) => sum + a.hook.length, 0) / ads.length;
+  if (avgLength > 100) {
+    gaps.push('Try ultra-short punchy copy — market is saturated with long text');
+  } else {
+    gaps.push('Go long-form with detailed storytelling — market only has short hooks');
+  }
+
+  // 3. Platform coverage
   const allPlatforms = new Set<string>();
   ads.forEach((a) => (a.platforms || []).forEach((p) => allPlatforms.add(p)));
   const missingPlatforms = ['INSTAGRAM', 'FACEBOOK', 'AUDIENCE_NETWORK'].filter((p) => !allPlatforms.has(p));
@@ -326,7 +334,7 @@ export function analyzeMarketGaps(ads: CompetitorAd[]): string[] {
     gaps.push(`Expand to ${missingPlatforms[0].toLowerCase()} — underserved platform`);
   }
 
-  // 3. Messaging gaps
+  // 4. Messaging gaps
   const hasUrgency = ads.some((a) => a.hook.toLowerCase().includes('limited') || a.hook.toLowerCase().includes('hurry'));
   const hasSocialProof = ads.some((a) => a.hook.toLowerCase().includes('million') || a.hook.toLowerCase().includes('trusted'));
   const hasFreeOffer = ads.some((a) => a.hook.toLowerCase().includes('free'));
@@ -334,14 +342,6 @@ export function analyzeMarketGaps(ads: CompetitorAd[]): string[] {
   if (!hasUrgency) gaps.push('Add urgency-driven copy — no competitor uses time pressure');
   if (!hasSocialProof) gaps.push('Lead with social proof — no competitor shows traction numbers');
   if (!hasFreeOffer) gaps.push('Test a free trial or freemium hook — gap in the market');
-
-  // 4. Copy length analysis
-  const avgLength = ads.reduce((sum, a) => sum + a.hook.length, 0) / ads.length;
-  if (avgLength > 100) {
-    gaps.push('Try ultra-short punchy copy — market is saturated with long text');
-  } else {
-    gaps.push('Go long-form with detailed storytelling — market only has short hooks');
-  }
 
   return gaps.slice(0, 5); // Max 5 gaps
 }
