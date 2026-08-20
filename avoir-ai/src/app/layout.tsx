@@ -4,6 +4,7 @@ import "./globals.css";
 import { AuthProvider } from "@/lib/auth/provider";
 import { TeamProvider } from "@/lib/teams/TeamContext";
 import { ThemeProvider } from "@/components/ThemeProvider";
+import { ServiceWorkerRegistrar } from "@/components/ServiceWorkerRegistrar";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -60,7 +61,10 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <AuthProvider><TeamProvider>{children}</TeamProvider></AuthProvider>
+          <AuthProvider><TeamProvider>
+            <ServiceWorkerRegistrar />
+            {children}
+          </TeamProvider></AuthProvider>
         </ThemeProvider>
       </body>
     </html>

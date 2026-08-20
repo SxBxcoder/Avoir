@@ -3,7 +3,7 @@ import withPWAInit from 'next-pwa';
 
 const withPWA = withPWAInit({
   dest: 'public',
-  disable: true, // Temporarily disabled due to Windows path mismatch (Prachar.ai vs Avoir) causing clean-webpack-plugin to crash
+  disable: true, // Using custom sw.js for push notifications — next-pwa would overwrite it at build time
   register: true,
   skipWaiting: true,
 });

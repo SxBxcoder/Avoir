@@ -9,6 +9,7 @@ import {
   Phone,
   Shield,
   Bell,
+  BellOff,
   Check,
   AlertCircle,
   Loader2,
@@ -420,22 +421,10 @@ function NotificationsTab() {
     localStorage.setItem('avoir_notifications', JSON.stringify(next));
   };
 
-  const Toggle = ({ enabled, onToggle }: { enabled: boolean; onToggle: () => void }) => (
-    <button
-      onClick={onToggle}
-      className={`relative w-10 h-5.5 rounded-full transition-colors ${enabled ? 'bg-indigo-500' : 'bg-zinc-700'}`}
-      style={{ height: 22 }}
-    >
-      <motion.div
-        animate={{ x: enabled ? 20 : 2 }}
-        transition={{ type: 'spring', stiffness: 500, damping: 30 }}
-        className="absolute top-[2px] w-[18px] h-[18px] rounded-full bg-white shadow-sm"
-      />
-    </button>
-  );
-
   return (
     <div className="space-y-6">
+      <PushNotificationsSection />
+
       <div className="glass-card rounded-2xl p-6">
         <h3 className="text-sm font-tactical font-bold text-muted-foreground tracking-widest mb-4">NOTIFICATION PREFERENCES</h3>
         <div className="space-y-4">
@@ -457,6 +446,177 @@ function NotificationsTab() {
       </div>
     </div>
   );
+}
+
+// ============================================================================
+// PUSH NOTIFICATIONS SECTION
+// ============================================================================
+function PushNotificationsSection() {
+  const [permission, setPermission] = useState<NotificationPermission>('default');
+  const [isSubscribed, setIsSubscribed] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isToggling, setIsToggling] = useState(false);
+  const [supported, setSupported] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !('Notification' in window)) {
+      setIsLoading(false);
+      return;
+    }
+    setSupported(true);
+    setPermission(Notification.permission);
+
+    // Check server-side subscription status
+    fetch('/api/push/status')
+      .then((r) => r.json())
+      .then((data) => {
+        setIsSubscribed(data.subscribed || false);
+      })
+      .catch(() => { /* ignore */ })
+      .finally(() => setIsLoading(false));
+  }, []);
+
+  const handleToggle = async () => {
+    if (isToggling) return;
+    setIsToggling(true);
+
+    try {
+      if (isSubscribed) {
+        // Unsubscribe
+        await fetch('/api/push/subscribe', {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ all: true }),
+        });
+        setIsSubscribed(false);
+      } else {
+        // Request permission then subscribe
+        const result = await Notification.requestPermission();
+        setPermission(result);
+
+        if (result === 'granted') {
+          // Register SW and subscribe
+          const reg = await navigator.serviceWorker.ready;
+          const sub = await reg.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: urlBase64ToUint8Array(
+              process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || ''
+            ),
+          });
+
+          await fetch('/api/push/subscribe', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              endpoint: sub.endpoint,
+              keys: {
+                p256dh: sub.toJSON().keys?.p256dh || '',
+                auth: sub.toJSON().keys?.auth || '',
+              },
+            }),
+          });
+
+          setIsSubscribed(true);
+        }
+      }
+    } catch (err) {
+      console.error('[push] Toggle failed:', err);
+    } finally {
+      setIsToggling(false);
+    }
+  };
+
+  if (!supported) return null;
+
+  const isGranted = permission === 'granted';
+  const isBlocked = permission === 'denied';
+
+  return (
+    <div className="glass-card rounded-2xl p-6">
+      <div className="flex items-center gap-3 mb-4">
+        <div className={`p-2 rounded-xl ${isSubscribed ? 'bg-emerald-500/10' : 'bg-zinc-500/10'}`}>
+          {isSubscribed ? <Bell className="w-5 h-5 text-emerald-400" /> : <BellOff className="w-5 h-5 text-zinc-400" />}
+        </div>
+        <div>
+          <h3 className="text-sm font-tactical font-bold text-muted-foreground tracking-widest">PUSH NOTIFICATIONS</h3>
+          <p className="text-xs text-muted-foreground mt-0.5">Real-time alerts for campaigns, team updates, and more</p>
+        </div>
+      </div>
+
+      {isLoading ? (
+        <div className="flex items-center gap-2 text-sm text-muted-foreground py-3">
+          <Loader2 className="w-4 h-4 animate-spin" />
+          Loading notification status...
+        </div>
+      ) : isBlocked ? (
+        <div className="flex items-center gap-3 p-4 rounded-xl bg-red-500/10 border border-red-500/20">
+          <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0" />
+          <div>
+            <p className="text-sm font-medium text-red-400">Notifications blocked</p>
+            <p className="text-xs text-red-400/70 mt-0.5">
+              Enable notifications in your browser settings to receive push alerts.
+            </p>
+          </div>
+        </div>
+      ) : (
+        <div className="flex items-center justify-between p-4 rounded-xl bg-card/50 border border-border/50">
+          <div>
+            <p className="text-sm font-medium text-foreground">
+              {isSubscribed ? 'Push notifications enabled' : 'Push notifications disabled'}
+            </p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              {isSubscribed
+                ? 'You will receive push alerts for campaign updates and team activity'
+                : 'Turn on to get real-time push alerts'}
+            </p>
+          </div>
+          <button
+            onClick={handleToggle}
+            disabled={isToggling}
+            className={`relative w-10 rounded-full transition-colors ${isSubscribed ? 'bg-indigo-500' : 'bg-zinc-700'}`}
+            style={{ height: 22 }}
+          >
+            {isToggling ? (
+              <Loader2 className="w-4 h-4 animate-spin text-white absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2" />
+            ) : (
+              <motion.div
+                animate={{ x: isSubscribed ? 20 : 2 }}
+                transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+                className="absolute top-[2px] w-[18px] h-[18px] rounded-full bg-white shadow-sm"
+              />
+            )}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Toggle({ enabled, onToggle }: { enabled: boolean; onToggle: () => void }) {
+  return (
+    <button
+      onClick={onToggle}
+      className={`relative w-10 rounded-full transition-colors ${enabled ? 'bg-indigo-500' : 'bg-zinc-700'}`}
+      style={{ height: 22 }}
+    >
+      <motion.div
+        animate={{ x: enabled ? 20 : 2 }}
+        transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+        className="absolute top-[2px] w-[18px] h-[18px] rounded-full bg-white shadow-sm"
+      />
+    </button>
+  );
+}
+
+function urlBase64ToUint8Array(base64String: string): Uint8Array {
+  const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const rawData = window.atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+  for (let i = 0; i < rawData.length; ++i) {
+    outputArray[i] = rawData.charCodeAt(i);
+  }
+  return outputArray;
 }
 
 // ============================================================================
