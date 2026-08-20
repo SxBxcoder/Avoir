@@ -658,7 +658,9 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             goal = 'College Fest Campaign'  # Default goal for testing
         
         # Extract optional fields
-        user_id = payload.get('user_id', 'anonymous')
+        # SECURITY: Never trust client-provided user_id. Only accept it from
+        # verified Cognito JWT claims (via get_user_context below). The body
+        # user_id is ignored — if no JWT is present, we use 'anonymous'.
         brand_context = payload.get('brand_context', '')
         messages = payload.get('messages', [])  # Extract conversation history
         
@@ -674,11 +676,16 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                 language = detected
                 logger.info(f"Auto-detected language: {language}")
         
-        # Extract user context from Cognito if available
+        # Extract user context from Cognito JWT (required for team operations)
         user_context = get_user_context(event)
         if user_context and user_context.get('user_id'):
             user_id = user_context['user_id']
             logger.info(f"User authenticated via Cognito: {user_id}")
+        else:
+            # No verified identity — use anonymous. Team operations will
+            # reject this since they require authenticated membership.
+            user_id = 'anonymous'
+            logger.warning("No Cognito identity in request — using anonymous")
         
         logger.info(f"Processing campaign request - User: {user_id}, Goal: {goal}")
         
