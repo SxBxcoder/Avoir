@@ -1,9 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { Shield, Eye, Flame, AlertTriangle, Target, Activity, Loader2, X, Globe, RefreshCw } from 'lucide-react';
-import { useAuth } from '@/lib/auth/provider';
 import { clientLog } from '@/lib/logClient';
 
 interface CompetitorAd {
@@ -54,20 +53,31 @@ const PLATFORM_ICONS: Record<string, string> = {
 };
 
 export default function CompetitorIntelPanel({ industry, onClose, onInjectGap }: CompetitorIntelPanelProps) {
-  const { accessToken } = useAuth();
   const [intel, setIntel] = useState<CompetitorIntel | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [country, setCountry] = useState('ALL');
   const [source, setSource] = useState<string>('mock');
 
-  const fetchIntel = async (fresh = false) => {
+  const getAccessToken = useCallback((): string | null => {
+    try {
+      const raw = localStorage.getItem('avoir_auth');
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      return parsed?.accessToken ?? parsed?.token ?? null;
+    } catch {
+      return null;
+    }
+  }, []);
+
+  const fetchIntel = useCallback(async (fresh = false) => {
     setIsLoading(true);
     try {
       const params = new URLSearchParams({ industry, country });
       if (fresh) params.set('fresh', 'true');
 
+      const token = getAccessToken();
       const res = await fetch(`/api/competitors?${params}`, {
-        headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
       if (res.ok) {
         const data = await res.json();
@@ -81,13 +91,11 @@ export default function CompetitorIntelPanel({ industry, onClose, onInjectGap }:
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [industry, country, getAccessToken]);
 
   useEffect(() => {
-    let mounted = true;
     fetchIntel();
-    return () => { mounted = false; };
-  }, [industry, country, accessToken]);
+  }, [fetchIntel]);
 
   const handleRefresh = () => fetchIntel(true);
 
