@@ -178,6 +178,22 @@ export async function updateTeam(teamId: string, updates: Partial<Team>): Promis
   }
 }
 
+export async function deleteTeam(teamId: string): Promise<void> {
+  const client = getDynamoClient();
+
+  try {
+    await client.send(
+      new DeleteCommand({
+        TableName: TABLES.TEAMS,
+        Key: { teamId },
+      })
+    );
+  } catch (err) {
+    logger.error('db.teams', 'Failed to delete team', { teamId, err });
+    throw err;
+  }
+}
+
 // ============================================================================
 // TEAM MEMBERS
 // ============================================================================
