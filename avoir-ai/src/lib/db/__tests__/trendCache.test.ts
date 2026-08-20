@@ -27,16 +27,15 @@ describe('TestTrendCache', () => {
     const { getCachedTrendData } = await import('@/lib/db/trendCache');
     const result = await getCachedTrendData('fashion');
     expect(result).toBeNull();
-    expect(mockSend).toHaveBeenCalledWith(
-      expect.objectContaining({
-        TableName: 'avoir-trends',
-        Key: { industry: 'fashion', cacheKey: 'default' },
-      })
-    );
+
+    // Check the command's input property
+    const command = mockSend.mock.calls[0][0];
+    expect(command.input.TableName).toBe('avoir-trends');
+    expect(command.input.Key).toEqual({ industry: 'fashion', cacheKey: 'default' });
   });
 
   it('returns cached data on cache hit', async () => {
-    const futureEpoch = Math.floor(Date.now() / 1000) + 86400; // 24h from now
+    const futureEpoch = Math.floor(Date.now() / 1000) + 86400;
     const mockItem = {
       industry: 'fashion',
       cacheKey: 'default',
@@ -64,7 +63,7 @@ describe('TestTrendCache', () => {
   });
 
   it('returns null for expired cache', async () => {
-    const pastEpoch = Math.floor(Date.now() / 1000) - 100; // expired
+    const pastEpoch = Math.floor(Date.now() / 1000) - 100;
     const mockItem = {
       industry: 'fashion',
       cacheKey: 'default',
@@ -90,11 +89,9 @@ describe('TestTrendCache', () => {
 
     const { getCachedTrendData } = await import('@/lib/db/trendCache');
     await getCachedTrendData('fashion', 'GB');
-    expect(mockSend).toHaveBeenCalledWith(
-      expect.objectContaining({
-        Key: { industry: 'fashion', cacheKey: 'country:GB' },
-      })
-    );
+
+    const command = mockSend.mock.calls[0][0];
+    expect(command.input.Key).toEqual({ industry: 'fashion', cacheKey: 'country:GB' });
   });
 
   it('returns null on DynamoDB read failure', async () => {
@@ -123,17 +120,12 @@ describe('TestTrendCache', () => {
 
     await saveTrendData('tech', trends, 'serpapi', 'US');
 
-    expect(mockSend).toHaveBeenCalledWith(
-      expect.objectContaining({
-        TableName: 'avoir-trends',
-        Item: expect.objectContaining({
-          industry: 'tech',
-          cacheKey: 'country:US',
-          source: 'serpapi',
-          expiresAt: expect.any(Number),
-        }),
-      })
-    );
+    const command = mockSend.mock.calls[0][0];
+    expect(command.input.TableName).toBe('avoir-trends');
+    expect(command.input.Item.industry).toBe('tech');
+    expect(command.input.Item.cacheKey).toBe('country:US');
+    expect(command.input.Item.source).toBe('serpapi');
+    expect(command.input.Item.expiresAt).toBeGreaterThan(Math.floor(Date.now() / 1000));
   });
 
   it('does not throw on DynamoDB write failure', async () => {
@@ -144,7 +136,6 @@ describe('TestTrendCache', () => {
     const { saveTrendData } = await import('@/lib/db/trendCache');
     const trends = { industry: 'tech', topTrends: [], viralHooks: [], lastUpdated: '', source: 'mock' };
 
-    // Should not throw
     await expect(saveTrendData('tech', trends, 'mock')).resolves.toBeUndefined();
   });
 });
