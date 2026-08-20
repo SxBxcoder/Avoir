@@ -3,6 +3,9 @@
  *
  * POST  /api/push/subscribe — Save a push subscription for the authenticated user
  * DELETE /api/push/subscribe — Remove a push subscription (unsubscribe)
+ *
+ * If a teamId is provided in the body, membership is verified before saving.
+ * Users cannot associate their subscription with a team they don't belong to.
  */
 
 import { NextResponse } from 'next/server';
@@ -11,6 +14,37 @@ import { saveSubscription, deleteSubscription, deleteAllUserSubscriptions } from
 import type { PushSubscriptionRecord } from '@/lib/push/types';
 import { isDemoMode } from '@/lib/mockShield';
 import { logger } from '@/lib/logger';
+
+// ============================================================================
+// TEAM MEMBERSHIP VERIFICATION
+// ============================================================================
+
+async function verifyTeamMembership(userId: string, teamId: string): Promise<boolean> {
+  // Fast path: Redis cache
+  try {
+    const { Redis } = await import('@upstash/redis');
+    const url = process.env.UPSTASH_REDIS_REST_URL;
+    const token = process.env.UPSTASH_REDIS_REST_TOKEN;
+    if (url && token) {
+      const redis = new Redis({ url, token });
+      const cached = await redis.get(`team:member:${teamId}:${userId}`);
+      if (cached) return true;
+    }
+  } catch { /* Redis unavailable */ }
+
+  // Fallback: DynamoDB
+  try {
+    const { getDynamoClient, TABLES } = await import('@/lib/db/dynamodb');
+    const { GetCommand } = await import('@aws-sdk/lib-dynamodb');
+    const client = getDynamoClient();
+    const result = await client.send(
+      new GetCommand({ TableName: TABLES.TEAM_MEMBERS, Key: { teamId, userId } })
+    );
+    return !!result.Item?.role;
+  } catch { /* DynamoDB unavailable */ }
+
+  return false;
+}
 
 // ============================================================================
 // POST — Subscribe
@@ -36,6 +70,25 @@ export async function POST(req: Request) {
       );
     }
 
+    // Verify team membership before associating subscription with a team
+    let verifiedTeamId: string | undefined;
+    if (teamId) {
+      if (typeof teamId !== 'string') {
+        return NextResponse.json(
+          { error: 'Invalid teamId' },
+          { status: 400 }
+        );
+      }
+      const isMember = await verifyTeamMembership(userId, teamId);
+      if (!isMember) {
+        return NextResponse.json(
+          { error: 'You are not a member of this team.' },
+          { status: 403 }
+        );
+      }
+      verifiedTeamId = teamId;
+    }
+
     if (isDemoMode()) {
       return NextResponse.json({
         ok: true,
@@ -44,7 +97,7 @@ export async function POST(req: Request) {
           endpoint,
           keys,
           createdAt: new Date().toISOString(),
-          teamId,
+          teamId: verifiedTeamId,
         },
       });
     }
@@ -54,7 +107,7 @@ export async function POST(req: Request) {
       endpoint,
       keys,
       createdAt: new Date().toISOString(),
-      teamId: teamId || undefined,
+      teamId: verifiedTeamId,
       userAgent: req.headers.get('user-agent') || undefined,
     };
 

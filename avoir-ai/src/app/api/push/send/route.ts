@@ -3,8 +3,8 @@
  *
  * POST /api/push/send — Send a push notification to a user or team
  *
- * Requires authentication. For team broadcasts, requires 'member.invite' permission
- * (reusing existing RBAC — team-level send).
+ * Requires authentication. For team broadcasts, verifies team membership
+ * and enforces 'campaign.create' permission (owner/admin only).
  *
  * Sends via web-push library with VAPID authentication.
  * Gracefully handles stale subscriptions (404/410) by removing them.
@@ -13,6 +13,7 @@
 import { NextResponse } from 'next/server';
 import webPush from 'web-push';
 import { requireUser, authErrorResponse } from '@/lib/auth/requireUser';
+import { hasPermission } from '@/lib/api/withTeamAuth';
 import { getVapidKeys } from '@/lib/push/vapid';
 import {
   listUserSubscriptions,
@@ -20,8 +21,40 @@ import {
   deleteStaleSubscription,
 } from '@/lib/db/pushSubscriptions';
 import type { NotificationPayload } from '@/lib/push/types';
+import type { TeamRole } from '@/lib/teams/types';
 import { isDemoMode } from '@/lib/mockShield';
 import { logger } from '@/lib/logger';
+
+// ============================================================================
+// TEAM MEMBERSHIP VERIFICATION (inline — avoids HOF coupling)
+// ============================================================================
+
+async function verifyTeamMembership(userId: string, teamId: string): Promise<TeamRole | null> {
+  // Fast path: Redis cache
+  try {
+    const { Redis } = await import('@upstash/redis');
+    const url = process.env.UPSTASH_REDIS_REST_URL;
+    const token = process.env.UPSTASH_REDIS_REST_TOKEN;
+    if (url && token) {
+      const redis = new Redis({ url, token });
+      const cached = await redis.get(`team:member:${teamId}:${userId}`) as string | null;
+      if (cached) return cached as TeamRole;
+    }
+  } catch { /* Redis unavailable */ }
+
+  // Fallback: DynamoDB
+  try {
+    const { getDynamoClient, TABLES } = await import('@/lib/db/dynamodb');
+    const { GetCommand } = await import('@aws-sdk/lib-dynamodb');
+    const client = getDynamoClient();
+    const result = await client.send(
+      new GetCommand({ TableName: TABLES.TEAM_MEMBERS, Key: { teamId, userId } })
+    );
+    if (result.Item?.role) return result.Item.role as TeamRole;
+  } catch { /* DynamoDB unavailable */ }
+
+  return null;
+}
 
 // ============================================================================
 // POST — Send notification
@@ -53,6 +86,31 @@ export async function POST(req: Request) {
 
     if (isDemoMode()) {
       return NextResponse.json({ ok: true, sent: 0, failed: 0, demo: true });
+    }
+
+    // Team broadcast: verify membership + permission
+    if (teamId) {
+      const role = await verifyTeamMembership(senderId, teamId);
+      if (!role) {
+        return NextResponse.json(
+          { error: 'You are not a member of this team.' },
+          { status: 403 }
+        );
+      }
+      if (!hasPermission(role, 'campaign.create')) {
+        return NextResponse.json(
+          { error: 'Insufficient permissions to send team notifications.' },
+          { status: 403 }
+        );
+      }
+    }
+
+    // Self-targeting: sender can only send to themselves
+    if (targetUserId && targetUserId !== senderId) {
+      return NextResponse.json(
+        { error: 'You can only send notifications to yourself.' },
+        { status: 403 }
+      );
     }
 
     const vapidKeys = getVapidKeys();
