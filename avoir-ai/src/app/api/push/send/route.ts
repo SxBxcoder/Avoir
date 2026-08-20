@@ -21,6 +21,7 @@ import {
 } from '@/lib/db/pushSubscriptions';
 import type { NotificationPayload } from '@/lib/push/types';
 import { isDemoMode } from '@/lib/mockShield';
+import { logger } from '@/lib/logger';
 
 // ============================================================================
 // POST — Send notification
@@ -116,7 +117,7 @@ export async function POST(req: Request) {
   } catch (error) {
     const mapped = authErrorResponse(error);
     if (mapped) return mapped;
-    console.error('[push/send] POST error:', error);
+    logger.error('[push/send] POST error', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

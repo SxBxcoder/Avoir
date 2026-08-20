@@ -12,9 +12,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   UserPlus,
   Trash2,
-  Shield,
-  ShieldCheck,
-  ShieldAlert,
   Loader2,
   ArrowLeft,
   Search,
@@ -37,7 +34,7 @@ const staggerItem = {
 
 export default function TeamMembersPage() {
   const router = useRouter();
-  const { currentTeam, members, userRole, refreshTeam, isLoading } = useTeam();
+  const { currentTeam, members, refreshTeam, isLoading } = useTeam();
   const canInvite = useTeamPermission('member.invite');
   const canRemove = useTeamPermission('member.remove');
   const canChangeRole = useTeamPermission('member.update_role');

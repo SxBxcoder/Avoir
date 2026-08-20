@@ -11,6 +11,7 @@ import { requireUser, authErrorResponse } from '@/lib/auth/requireUser';
 import { countUserSubscriptions, listUserSubscriptions } from '@/lib/db/pushSubscriptions';
 import { isDemoMode } from '@/lib/mockShield';
 import type { PushStatusResponse } from '@/lib/push/types';
+import { logger } from '@/lib/logger';
 
 // ============================================================================
 // GET — Check status
@@ -50,7 +51,7 @@ export async function GET(req: Request) {
   } catch (error) {
     const mapped = authErrorResponse(error);
     if (mapped) return mapped;
-    console.error('[push/status] GET error:', error);
+    logger.error('[push/status] GET error', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

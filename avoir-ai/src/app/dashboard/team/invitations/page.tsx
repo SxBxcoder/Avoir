@@ -11,7 +11,6 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Mail,
-  Link2,
   Copy,
   Check,
   Trash2,
@@ -32,14 +31,6 @@ const staggerItem = {
   hidden: { opacity: 0, y: 16 },
   show: { opacity: 1, y: 0, transition: springSmooth },
 };
-
-function timeAgo(dateStr: string): string {
-  const diff = Date.now() - new Date(dateStr).getTime();
-  const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-  if (days === 0) return 'today';
-  if (days === 1) return 'yesterday';
-  return `${days}d ago`;
-}
 
 function expiresIn(dateStr: string): string {
   const diff = new Date(dateStr).getTime() - Date.now();

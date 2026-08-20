@@ -18,7 +18,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { requireUser, UnauthorizedError, authErrorResponse } from '@/lib/auth/requireUser';
+import { requireUser, authErrorResponse } from '@/lib/auth/requireUser';
 import { isDemoMode } from '@/lib/mockShield';
 import { logger } from '@/lib/logger';
 

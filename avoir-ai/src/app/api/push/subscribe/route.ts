@@ -10,6 +10,7 @@ import { requireUser, authErrorResponse } from '@/lib/auth/requireUser';
 import { saveSubscription, deleteSubscription, deleteAllUserSubscriptions } from '@/lib/db/pushSubscriptions';
 import type { PushSubscriptionRecord } from '@/lib/push/types';
 import { isDemoMode } from '@/lib/mockShield';
+import { logger } from '@/lib/logger';
 
 // ============================================================================
 // POST — Subscribe
@@ -63,7 +64,7 @@ export async function POST(req: Request) {
   } catch (error) {
     const mapped = authErrorResponse(error);
     if (mapped) return mapped;
-    console.error('[push/subscribe] POST error:', error);
+    logger.error('[push/subscribe] POST error', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
@@ -100,7 +101,7 @@ export async function DELETE(req: Request) {
   } catch (error) {
     const mapped = authErrorResponse(error);
     if (mapped) return mapped;
-    console.error('[push/subscribe] DELETE error:', error);
+    logger.error('[push/subscribe] DELETE error', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

@@ -6,7 +6,7 @@
  * DELETE /api/teams/[teamId]   → Delete team (owner only)
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { withTeamAuth } from '@/lib/api/withTeamAuth';
 import { isDemoMode } from '@/lib/mockShield';
 import { logger } from '@/lib/logger';

@@ -6,7 +6,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { hasPermission, type TeamRole } from '@/lib/api/withTeamAuth';
+import { hasPermission } from '@/lib/api/withTeamAuth';
 
 describe('RBAC Permission Matrix', () => {
   const ownerPermissions = [

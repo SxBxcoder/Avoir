@@ -10,8 +10,6 @@
 import { useState, useEffect } from 'react';
 import { useTeam } from '@/lib/teams/TeamContext';
 import { isDemoMode } from '@/lib/mockShield';
-import { logger } from '@/lib/logger';
-import type { TeamMembership } from '@/lib/teams/types';
 
 interface OnlineMember {
   userId: string;

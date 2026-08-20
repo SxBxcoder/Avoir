@@ -519,8 +519,8 @@ function PushNotificationsSection() {
           setIsSubscribed(true);
         }
       }
-    } catch (err) {
-      console.error('[push] Toggle failed:', err);
+    } catch {
+      // Push toggle failed — user will see the toggle remain in its previous state
     } finally {
       setIsToggling(false);
     }

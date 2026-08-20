@@ -5,7 +5,7 @@
  * POST /api/teams/[teamId]/invitations       → Create an invitation
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { withTeamAuth, type TeamContext } from '@/lib/api/withTeamAuth';
 import { isDemoMode } from '@/lib/mockShield';
 import { logger } from '@/lib/logger';

@@ -11,6 +11,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { logger } from '@/lib/logger';
 
 // ============================================================================
 // URL-BASE64 → Uint8ARRAY (VAPID key decoding)
@@ -125,8 +126,7 @@ export function usePushSubscription(): UsePushSubscriptionResult {
 
       setSubscription(sub);
       return true;
-    } catch (err) {
-      console.error('[push] Subscribe failed:', err);
+    } catch {
       return false;
     }
   }, []);
@@ -146,8 +146,7 @@ export function usePushSubscription(): UsePushSubscriptionResult {
 
       setSubscription(null);
       return true;
-    } catch (err) {
-      console.error('[push] Unsubscribe failed:', err);
+    } catch {
       return false;
     }
   }, [subscription]);
@@ -174,10 +173,9 @@ export async function registerServiceWorker(): Promise<ServiceWorkerRegistration
 
   try {
     const reg = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
-    console.log('[push] Service worker registered:', reg.scope);
+    logger.info('[push] Service worker registered', { scope: reg.scope });
     return reg;
-  } catch (err) {
-    console.warn('[push] Service worker registration failed:', err);
+  } catch {
     return null;
   }
 }

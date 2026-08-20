@@ -117,7 +117,7 @@ export default function TeamAuditLogPage() {
     } finally {
       setLoadingLog(false);
     }
-  }, [currentTeam?.teamId]);
+  }, [currentTeam]);
 
   useEffect(() => {
     fetchLog();

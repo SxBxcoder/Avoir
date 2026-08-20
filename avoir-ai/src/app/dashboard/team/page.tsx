@@ -7,11 +7,10 @@
  * Route: /dashboard/team
  */
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { motion } from 'framer-motion';
 import {
   Users,
-  Megaphone,
   CreditCard,
   Activity,
   ArrowRight,
@@ -38,7 +37,6 @@ export default function TeamDashboardPage() {
   const router = useRouter();
   const { currentTeam, userRole, members, pendingInvitations, isLoading, hasNoTeams, createTeam } = useTeam();
   const canViewAudit = useTeamPermission('team.view_audit');
-  const canManageBilling = useTeamPermission('team.manage_billing');
   const [creating, setCreating] = useState(false);
   const [newName, setNewName] = useState('');
 
