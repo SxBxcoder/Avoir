@@ -31,6 +31,7 @@ export const TABLES = {
   TEAMS: process.env.DYNAMODB_TEAMS_TABLE || 'avoir-teams',
   TEAM_MEMBERS: process.env.DYNAMODB_TEAM_MEMBERS_TABLE || 'avoir-team-members',
   INVITATIONS: process.env.DYNAMODB_INVITATIONS_TABLE || 'avoir-invitations',
+  PUSH_SUBSCRIPTIONS: process.env.DYNAMODB_PUSH_SUBSCRIPTIONS_TABLE || 'avoir-push-subscriptions',
 } as const;
 
 // ============================================================================
