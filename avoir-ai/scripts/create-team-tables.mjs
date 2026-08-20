@@ -11,6 +11,8 @@
  *   3. avoir-invitations   — Pending invitations (PK: token)
  *                            GSI: teamId-index (PK: teamId) for "list invitations for a team"
  *                            TTL attribute: expiresAt
+ *   4. avoir-push-subscriptions — Push notification subscriptions (PK: userId, SK: endpoint)
+ *                                 GSI: teamId-index (PK: teamId) for team-wide broadcast
  *
  * GSIs added to existing tables:
  *   - avoir-campaigns: teamId-createdAt-index (PK: teamId, SK: createdAt)
@@ -72,6 +74,28 @@ const TEAM_TABLES = [
     ],
     AttributeDefinitions: [
       { AttributeName: 'token', AttributeType: 'S' },
+      { AttributeName: 'teamId', AttributeType: 'S' },
+    ],
+    GlobalSecondaryIndexes: [
+      {
+        IndexName: 'teamId-index',
+        KeySchema: [
+          { AttributeName: 'teamId', KeyType: 'HASH' },
+        ],
+        Projection: { ProjectionType: 'ALL' },
+      },
+    ],
+    BillingMode: 'PAY_PER_REQUEST',
+  },
+  {
+    TableName: 'avoir-push-subscriptions',
+    KeySchema: [
+      { AttributeName: 'userId', KeyType: 'HASH' },
+      { AttributeName: 'endpoint', KeyType: 'RANGE' },
+    ],
+    AttributeDefinitions: [
+      { AttributeName: 'userId', AttributeType: 'S' },
+      { AttributeName: 'endpoint', AttributeType: 'S' },
       { AttributeName: 'teamId', AttributeType: 'S' },
     ],
     GlobalSecondaryIndexes: [
@@ -228,6 +252,7 @@ async function main() {
   console.log('   DYNAMODB_TEAMS_TABLE=avoir-teams');
   console.log('   DYNAMODB_TEAM_MEMBERS_TABLE=avoir-team-members');
   console.log('   DYNAMODB_INVITATIONS_TABLE=avoir-invitations');
+  console.log('   DYNAMODB_PUSH_SUBSCRIPTIONS_TABLE=avoir-push-subscriptions');
 }
 
 main().catch(console.error);
