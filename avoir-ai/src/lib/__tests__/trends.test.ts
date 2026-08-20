@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { synthesizeTrendContext, type IndustryTrends, type TrendTopic } from '@/lib/trends';
 
 function makeTrend(overrides: Partial<TrendTopic> = {}): TrendTopic {
