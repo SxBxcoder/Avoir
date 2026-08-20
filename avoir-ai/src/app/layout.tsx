@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/lib/auth/provider";
+import { TeamProvider } from "@/lib/teams/TeamContext";
 import { ThemeProvider } from "@/components/ThemeProvider";
 
 const inter = Inter({
@@ -59,7 +60,7 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <AuthProvider>{children}</AuthProvider>
+          <AuthProvider><TeamProvider>{children}</TeamProvider></AuthProvider>
         </ThemeProvider>
       </body>
     </html>

@@ -13,6 +13,7 @@ import {
   Flame,
   Zap,
 } from 'lucide-react';
+import TeamSwitcher from '@/components/teams/TeamSwitcher';
 
 const NAV_ITEMS = [
   { label: 'Overview', icon: LayoutDashboard, href: '/dashboard' },
@@ -80,6 +81,13 @@ export default function DashboardSidebar({
           </motion.div>
         </button>
       </div>
+
+      {/* Team Switcher */}
+      {!collapsed && (
+        <div className="px-3 pb-2">
+          <TeamSwitcher />
+        </div>
+      )}
 
       {/* Navigation */}
       <nav className="flex-1 p-3 space-y-1">
