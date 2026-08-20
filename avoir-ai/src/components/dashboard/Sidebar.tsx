@@ -12,11 +12,14 @@ import {
   ChevronLeft,
   Flame,
   Zap,
+  Users,
 } from 'lucide-react';
+import TeamSwitcher from '@/components/teams/TeamSwitcher';
 
 const NAV_ITEMS = [
   { label: 'Overview', icon: LayoutDashboard, href: '/dashboard' },
   { label: 'Campaigns', icon: Megaphone, href: '/dashboard/campaigns' },
+  { label: 'Team', icon: Users, href: '/dashboard/team' },
   { label: 'OmniDeck', icon: Server, href: '/omnideck' },
   { label: 'Pricing', icon: CreditCard, href: '/pricing' },
   { label: 'Settings', icon: Settings, href: '/dashboard/settings' },
@@ -80,6 +83,13 @@ export default function DashboardSidebar({
           </motion.div>
         </button>
       </div>
+
+      {/* Team Switcher */}
+      {!collapsed && (
+        <div className="px-3 pb-2">
+          <TeamSwitcher />
+        </div>
+      )}
 
       {/* Navigation */}
       <nav className="flex-1 p-3 space-y-1">

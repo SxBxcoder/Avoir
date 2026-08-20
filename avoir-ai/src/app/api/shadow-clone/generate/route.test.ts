@@ -110,7 +110,8 @@ describe('POST /api/shadow-clone/generate', () => {
     expect(res.status).toBe(200);
     expect(deductCredits).toHaveBeenCalledWith('user-1', 50);
     expect(runShadowClonePipeline).toHaveBeenCalledWith(
-      expect.objectContaining({ userId: 'user-1', script: 'Test script' })
+      expect.objectContaining({ userId: 'user-1', script: 'Test script' }),
+      expect.any(AbortSignal)
     );
   });
 
