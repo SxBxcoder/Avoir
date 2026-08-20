@@ -25,6 +25,7 @@ export const TABLES = {
   PERFORMANCE: process.env.DYNAMODB_PERFORMANCE_TABLE || 'avoir-performance',
   INTELLIGENCE: process.env.DYNAMODB_INTELLIGENCE_TABLE || 'avoir-intelligence',
   COMPETITORS: process.env.DYNAMODB_COMPETITORS_TABLE || 'avoir-competitors',
+  TRENDS: process.env.DYNAMODB_TRENDS_TABLE || 'avoir-trends',
 } as const;
 
 // ============================================================================

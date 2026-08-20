@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Radar, TrendingUp, TrendingDown, Activity, ChevronRight, Sparkles, Loader2, Minimize2, Maximize2 } from 'lucide-react';
+import { Radar, TrendingUp, TrendingDown, Activity, ChevronRight, Sparkles, Loader2, Minimize2, Maximize2, RefreshCw } from 'lucide-react';
 
 interface TrendTopic {
   keyword: string;
@@ -23,34 +23,37 @@ export default function TrendRadar({ industry, onInjectTrend }: TrendRadarProps)
   const [isLoading, setIsLoading] = useState(true);
   const [isMinimized, setIsMinimized] = useState(false);
   const [hoveredTrend, setHoveredTrend] = useState<string | null>(null);
+  const [source, setSource] = useState<string>('mock');
+  const [cachedUntil, setCachedUntil] = useState<string | undefined>();
+
+  const fetchTrends = useCallback(async (fresh = false) => {
+    setIsLoading(true);
+    try {
+      const params = new URLSearchParams({ industry });
+      if (fresh) params.set('fresh', 'true');
+
+      const res = await fetch(`/api/trends?${params}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.trends) {
+          setTrends(data.trends.topTrends || []);
+          setViralHooks(data.trends.viralHooks || []);
+          setSource(data.source || data.trends.source || 'mock');
+          setCachedUntil(data.trends.cachedUntil || data.cachedUntil);
+        }
+      }
+    } catch (err) {
+      console.error('Failed to fetch trends:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [industry]);
 
   useEffect(() => {
-    let mounted = true;
-    
-    const fetchTrends = async () => {
-      setIsLoading(true);
-      try {
-        const res = await fetch(`/api/trends?industry=${encodeURIComponent(industry)}`);
-        if (res.ok) {
-          const data = await res.json();
-          if (data.trends && mounted) {
-            setTrends(data.trends.topTrends);
-            setViralHooks(data.trends.viralHooks);
-          }
-        }
-      } catch (err) {
-        console.error('Failed to fetch trends:', err);
-      } finally {
-        if (mounted) setIsLoading(false);
-      }
-    };
-
     fetchTrends();
+  }, [fetchTrends]);
 
-    return () => {
-      mounted = false;
-    };
-  }, [industry]);
+  const handleRefresh = () => fetchTrends(true);
 
   if (isMinimized) {
     return (
@@ -81,13 +84,26 @@ export default function TrendRadar({ industry, onInjectTrend }: TrendRadarProps)
             <div className="absolute inset-0 bg-rose-500/20 blur-md rounded-full" />
           </div>
           <div>
-            <h3 className="text-xs font-bold font-tactical tracking-widest text-rose-400">TREND RADAR</h3>
+            <div className="flex items-center gap-2">
+              <h3 className="text-xs font-bold font-tactical tracking-widest text-rose-400">TREND RADAR</h3>
+              <SourceBadge source={source} cachedUntil={cachedUntil} />
+            </div>
             <p className="text-[10px] text-zinc-500 uppercase">Live: {industry}</p>
           </div>
         </div>
-        <button onClick={() => setIsMinimized(true)} className="p-1.5 hover:bg-zinc-800 rounded-lg transition-colors">
-          <Minimize2 className="w-4 h-4 text-zinc-500" />
-        </button>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={handleRefresh}
+            disabled={isLoading}
+            className="p-1.5 hover:bg-zinc-800 rounded-lg transition-colors"
+            title="Force refresh trends"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 text-zinc-500 ${isLoading ? 'animate-spin' : ''}`} />
+          </button>
+          <button onClick={() => setIsMinimized(true)} className="p-1.5 hover:bg-zinc-800 rounded-lg transition-colors">
+            <Minimize2 className="w-4 h-4 text-zinc-500" />
+          </button>
+        </div>
       </div>
 
       {/* Content */}
@@ -174,7 +190,7 @@ export default function TrendRadar({ industry, onInjectTrend }: TrendRadarProps)
                     onClick={() => onInjectTrend(`Use this viral hook format: "${hook}"`)}
                     className="w-full flex items-center justify-between p-2.5 rounded-lg border border-zinc-800 hover:border-rose-500/30 hover:bg-rose-500/5 text-left group transition-all"
                   >
-                    <span className="text-xs text-zinc-300 font-medium truncate pr-2">"{hook}"</span>
+                    <span className="text-xs text-zinc-300 font-medium truncate pr-2">&ldquo;{hook}&rdquo;</span>
                     <ChevronRight className="w-3.5 h-3.5 text-zinc-600 group-hover:text-rose-400 transition-colors flex-shrink-0" />
                   </button>
                 ))}
@@ -184,5 +200,41 @@ export default function TrendRadar({ industry, onInjectTrend }: TrendRadarProps)
         )}
       </div>
     </motion.div>
+  );
+}
+
+// ============================================================================
+// SOURCE BADGE
+// ============================================================================
+
+function SourceBadge({ source, cachedUntil }: { source: string; cachedUntil?: string }) {
+  if (source === 'serpapi' || source === 'pytrends') {
+    return (
+      <span className="text-[10px] px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-mono tracking-widest border border-emerald-500/30">
+        LIVE
+      </span>
+    );
+  }
+  if (source === 'reddit') {
+    return (
+      <span className="text-[10px] px-2 py-0.5 rounded bg-orange-500/20 text-orange-400 font-mono tracking-widest border border-orange-500/30">
+        LIVE · Reddit
+      </span>
+    );
+  }
+  if (source === 'cache') {
+    const timeLeft = cachedUntil
+      ? `${Math.max(0, Math.round((new Date(cachedUntil).getTime() - Date.now()) / (1000 * 60 * 60)))}h left`
+      : '';
+    return (
+      <span className="text-[10px] px-2 py-0.5 rounded bg-blue-500/20 text-blue-400 font-mono tracking-widest border border-blue-500/30">
+        CACHED {timeLeft && `· ${timeLeft}`}
+      </span>
+    );
+  }
+  return (
+    <span className="text-[10px] px-2 py-0.5 rounded bg-muted/80 text-muted-foreground font-mono tracking-widest border border-border">
+      DEMO
+    </span>
   );
 }

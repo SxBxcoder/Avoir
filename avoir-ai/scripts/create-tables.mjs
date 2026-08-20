@@ -55,6 +55,18 @@ const TABLES = [
     ],
     BillingMode: 'PAY_PER_REQUEST',
   },
+  {
+    TableName: 'avoir-trends',
+    KeySchema: [
+      { AttributeName: 'industry', KeyType: 'HASH' },
+      { AttributeName: 'cacheKey', KeyType: 'RANGE' },
+    ],
+    AttributeDefinitions: [
+      { AttributeName: 'industry', AttributeType: 'S' },
+      { AttributeName: 'cacheKey', AttributeType: 'S' },
+    ],
+    BillingMode: 'PAY_PER_REQUEST',
+  },
 ];
 
 async function tableExists(tableName) {
@@ -94,6 +106,7 @@ async function main() {
   console.log('   DYNAMODB_USERS_TABLE=avoir-users');
   console.log('   DYNAMODB_CAMPAIGNS_TABLE=avoir-campaigns');
   console.log('   DYNAMODB_AUDIT_TABLE=avoir-audit');
+  console.log('   DYNAMODB_TRENDS_TABLE=avoir-trends');
 }
 
 main().catch(console.error);

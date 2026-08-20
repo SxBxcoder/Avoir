@@ -1,22 +1,38 @@
 /**
  * Avoir — Real-Time Trends API
- * 
- * GET /api/trends?industry=fashion
+ *
+ * GET /api/trends — Fetch real-time trend data for an industry
+ *
+ * Query params:
+ *   industry (required) — Industry keyword
+ *   country  (optional) — ISO country code (default: 'us')
+ *   fresh    (optional) — 'true' to bypass cache
  */
 
 import { NextResponse } from 'next/server';
 import { fetchIndustryTrends } from '@/lib/trends';
 import { isDemoMode, MOCK_TRENDS } from '@/lib/mockShield';
+import { requireUser, authErrorResponse } from '@/lib/auth/requireUser';
+import { logger } from '@/lib/logger';
+
+export const dynamic = 'force-dynamic';
 
 export async function GET(req: Request) {
   // Demo Mock Shield
   if (isDemoMode()) {
-    return NextResponse.json({ trends: MOCK_TRENDS });
+    return NextResponse.json({
+      trends: MOCK_TRENDS,
+      source: 'mock',
+    });
   }
 
   try {
+    await requireUser(req);
+
     const { searchParams } = new URL(req.url);
     const industry = searchParams.get('industry');
+    const country = searchParams.get('country') || 'us';
+    const fresh = searchParams.get('fresh') === 'true';
 
     if (!industry) {
       return NextResponse.json(
@@ -25,17 +41,26 @@ export async function GET(req: Request) {
       );
     }
 
-    const trends = await fetchIndustryTrends(industry);
+    const trends = await fetchIndustryTrends(industry, {
+      country,
+      fresh,
+    });
 
     if (!trends) {
       return NextResponse.json({ trends: null, message: 'No trends found for this industry.' });
     }
 
-    return NextResponse.json({ trends });
-  } catch (error: any) {
-    console.error('[Trends API] GET error:', error);
+    return NextResponse.json({
+      trends,
+      source: trends.source,
+      cachedUntil: trends.cachedUntil || null,
+    });
+  } catch (error: unknown) {
+    const authErr = authErrorResponse(error);
+    if (authErr) return authErr;
+    logger.error('trends', 'GET failed', { error: error as Error });
     return NextResponse.json(
-      { error: error.message || 'Failed to fetch trends' },
+      { error: 'Failed to fetch trends' },
       { status: 500 }
     );
   }
