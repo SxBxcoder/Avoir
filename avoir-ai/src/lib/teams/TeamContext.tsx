@@ -124,7 +124,7 @@ export function TeamProvider({ children }: { children: ReactNode }) {
     if (accessToken) h['Authorization'] = `Bearer ${accessToken}`;
     if (currentTeam) h['x-team-id'] = currentTeam.teamId;
     return h;
-  }, [accessToken, currentTeam?.teamId]);
+  }, [accessToken, currentTeam]);
 
   const refreshTeams = useCallback(async () => {
     if (!user) {
@@ -184,7 +184,7 @@ export function TeamProvider({ children }: { children: ReactNode }) {
     } catch (err) {
       logger.error('TeamContext', 'Failed to fetch team details', { teamId: currentTeam.teamId, err });
     }
-  }, [currentTeam?.teamId, headers]);
+  }, [currentTeam, headers]);
 
   const switchTeam = useCallback((teamId: string) => {
     const team = teams.find(t => t.teamId === teamId);
