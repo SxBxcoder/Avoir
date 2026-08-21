@@ -6,9 +6,14 @@
  *
  * Table: avoir-competitors
  *   PK: industry (string)     — "fashion", "tech", "saas", etc.
- *   SK: cacheKey (string)     — "latest" for current data
+ *   SK: cacheKey (string)     — "latest:{country}" for current data
+ *                                (e.g. "latest:US", "latest:ALL")
  *
  * TTL attribute: `ttl` (epoch seconds) — DynamoDB auto-deletes stale entries.
+ *
+ * Backward compat: entries written before country-scoped keys used the bare
+ * SK "latest". Reads fall back to that legacy item when the scoped key misses,
+ * so a deploy doesn't wipe warm cache entries.
  */
 
 import { GetCommand, PutCommand } from '@aws-sdk/lib-dynamodb';
@@ -23,7 +28,7 @@ import type { CompetitorAd } from './competitors';
 export interface CompetitorCacheEntry {
   /** Industry keyword (PK) */
   industry: string;
-  /** Cache key — usually "latest" (SK) */
+  /** Cache key — "latest:{country}" (SK) */
   cacheKey: string;
   /** Transformed competitor ads */
   ads: CompetitorAd[];
@@ -46,41 +51,76 @@ export interface CompetitorCacheEntry {
 // ============================================================================
 
 const CACHE_TTL_SECONDS = 24 * 60 * 60; // 24 hours
-const CACHE_KEY = 'latest';
+const CACHE_KEY_PREFIX = 'latest';
+/** SK used before country-scoped keys existed — kept for warm-cache fallback. */
+const LEGACY_CACHE_KEY = 'latest';
+
+/**
+ * Cache key is scoped by country so a "fashion" fetch for the US never
+ * serves as the answer for GB queries. pageIds-specific results are never
+ * cached under these keys (see competitors.ts).
+ */
+function cacheKeyFor(country: string): string {
+  return `${CACHE_KEY_PREFIX}:${country}`;
+}
 
 // ============================================================================
 // READ — Get cached competitor data
 // ============================================================================
 
 /**
- * Returns cached competitor data for an industry, or null if cache miss/expired.
+ * Fetches a single cache entry and enforces TTL locally.
+ * DynamoDB TTL deletion is eventual (~24-48h delay), so expired items can
+ * still be returned by GetItem — we must check `ttl` ourselves.
+ */
+async function readEntry(
+  industry: string,
+  cacheKey: string
+): Promise<CompetitorCacheEntry | null> {
+  const client = getDynamoClient();
+  const result = await client.send(
+    new GetCommand({
+      TableName: TABLES.COMPETITORS,
+      Key: { industry, cacheKey },
+    })
+  );
+
+  if (!result.Item) return null;
+
+  const entry = result.Item as CompetitorCacheEntry;
+
+  if (entry.ttl && Date.now() / 1000 > entry.ttl) {
+    logger.info('[competitor-cache]', 'Cache entry expired', { industry, cacheKey });
+    return null;
+  }
+
+  return entry;
+}
+
+/**
+ * Returns cached competitor data for an industry + country,
+ * or null on cache miss / expiry / read failure.
  */
 export async function getCachedCompetitorData(
-  industry: string
+  industry: string,
+  country: string = 'ALL'
 ): Promise<CompetitorCacheEntry | null> {
+  const normalized = normalizeIndustry(industry);
   try {
-    const client = getDynamoClient();
-    const result = await client.send(
-      new GetCommand({
-        TableName: TABLES.COMPETITORS,
-        Key: {
-          industry: normalizeIndustry(industry),
-          cacheKey: CACHE_KEY,
-        },
-      })
-    );
+    const scoped = await readEntry(normalized, cacheKeyFor(country));
+    if (scoped) return scoped;
 
-    if (!result.Item) return null;
-
-    const entry = result.Item as CompetitorCacheEntry;
-
-    // Double-check TTL (DynamoDB TTL deletion is eventual, ~24-48h delay)
-    if (entry.ttl && Date.now() / 1000 > entry.ttl) {
-      logger.info('[competitor-cache]', 'Cache entry expired', { industry });
-      return null;
+    // Legacy fallback — entries written before country-scoped keys used the
+    // bare SK "latest". Only serve them when the stored country matches the
+    // request (or no market was requested), otherwise one market's data
+    // would leak into another's query.
+    const legacy = await readEntry(normalized, LEGACY_CACHE_KEY);
+    if (legacy && (country === 'ALL' || !legacy.country || legacy.country === country)) {
+      logger.info('[competitor-cache]', 'Serving legacy cache entry', { industry });
+      return legacy;
     }
 
-    return entry;
+    return null;
   } catch (err) {
     logger.warn('[competitor-cache]', 'Failed to read cache', { industry, error: err as Error });
     return null;
@@ -109,7 +149,7 @@ export async function saveCompetitorData(
 
     const entry: CompetitorCacheEntry = {
       industry: normalizeIndustry(industry),
-      cacheKey: CACHE_KEY,
+      cacheKey: cacheKeyFor(country),
       ads,
       marketGaps,
       source,
@@ -128,6 +168,7 @@ export async function saveCompetitorData(
 
     logger.info('[competitor-cache]', 'Saved competitor data', {
       industry: entry.industry,
+      cacheKey: entry.cacheKey,
       source,
       adCount: ads.length,
     });

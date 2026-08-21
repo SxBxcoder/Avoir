@@ -77,7 +77,7 @@ export async function fetchCompetitorIntel(
 
   // 1. Check cache (unless force-refresh)
   if (!options.fresh) {
-    const cached = await getCachedCompetitorData(normalized);
+    const cached = await getCachedCompetitorData(normalized, country);
     if (cached) {
       return {
         industry: normalized,
@@ -98,15 +98,20 @@ export async function fetchCompetitorIntel(
       if (ads.length > 0) {
         const marketGaps = analyzeMarketGaps(ads);
 
-        // 3. Cache the results
-        await saveCompetitorData(
-          normalized,
-          ads,
-          marketGaps,
-          'facebook',
-          options.pageIds ? `pageIds:${options.pageIds.join(',')}` : industry,
-          country
-        );
+        // 3. Cache the results — but only industry-wide fetches. A
+        // pageIds-specific result describes a handful of chosen brands, not
+        // the market; caching it under the general key would poison every
+        // other query for this industry for 24h.
+        if (!options.pageIds || options.pageIds.length === 0) {
+          await saveCompetitorData(
+            normalized,
+            ads,
+            marketGaps,
+            'facebook',
+            industry,
+            country
+          );
+        }
 
         return {
           industry: normalized,
