@@ -1,22 +1,21 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { signIn, signInWithRedirect } from 'aws-amplify/auth';
-import { configureAuth } from '@/lib/auth';
+import { signInWithRedirect, useMockAuth } from '@/lib/authBridge';
+import { useAuth } from '@/lib/auth/provider';
+import { GuestOnly, getSafeRedirectPath } from '@/components/auth/guards';
 import { motion } from 'framer-motion';
 import { ArrowLeft, ArrowRight, Eye, EyeOff, Mail, Lock } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
-
-// Call synchronously outside component
-configureAuth();
 
 const springSmooth = { type: 'spring' as const, stiffness: 100, damping: 30 };
 const springBouncy = { type: 'spring' as const, stiffness: 400, damping: 25 };
 
 export default function LoginPage() {
   const router = useRouter();
+  const { login } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -29,25 +28,28 @@ export default function LoginPage() {
     setError('');
 
     try {
-      if (!process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID) {
-        throw new Error('Deployment Error: Cognito User Pool ID is missing. The AWS Amplify build did not inject the environment variables.');
-      }
-
-      const { isSignedIn } = await signIn({ username: email, password });
-      if (isSignedIn) router.push('/');
+      await login(email, password);
+      const next = getSafeRedirectPath(new URLSearchParams(window.location.search).get('next'));
+      router.push(next);
     } catch (err: any) {
-      setError(err.message || 'Login failed');
+      if (err.name === 'UserAlreadyAuthenticatedException' || err.message?.includes('already a signed in user')) {
+        const next = getSafeRedirectPath(new URLSearchParams(window.location.search).get('next'));
+        router.push(next);
+      } else {
+        setError(err.message || 'Login failed');
+      }
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-black text-white flex" style={{ fontFamily: "'Inter', sans-serif" }}>
+    <GuestOnly>
+    <div className="min-h-screen bg-background text-foreground flex" style={{ fontFamily: "'Inter', sans-serif" }}>
       {/* Left Panel — Branding */}
       <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden">
         {/* Background gradient */}
-        <div className="absolute inset-0 bg-gradient-to-br from-indigo-600/20 via-purple-600/10 to-black" />
+        <div className="absolute inset-0 bg-gradient-to-br from-indigo-600/20 via-purple-600/10 to-background" />
         <motion.div
           animate={{ x: [0, 30, 0], y: [0, -20, 0] }}
           transition={{ duration: 10, repeat: Infinity, ease: 'easeInOut' }}
@@ -71,7 +73,7 @@ export default function LoginPage() {
               Welcome back,<br />
               <span className="fluid-text-hero">Commander.</span>
             </h1>
-            <p className="text-lg text-zinc-400 max-w-md leading-relaxed">
+            <p className="text-lg text-muted-foreground max-w-md leading-relaxed">
               Sign in to build high-converting campaigns and deploy them across platforms, all on complete autopilot.
             </p>
 
@@ -79,10 +81,10 @@ export default function LoginPage() {
             <div className="flex items-center gap-6 mt-12">
               <div className="flex -space-x-2">
                 {[...Array(4)].map((_, i) => (
-                  <div key={i} className="w-8 h-8 rounded-full border-2 border-black bg-gradient-to-br from-indigo-400 to-purple-500" style={{ zIndex: 4 - i }} />
+                  <div key={i} className="w-8 h-8 rounded-full border-2 border-background bg-gradient-to-br from-indigo-400 to-purple-500" style={{ zIndex: 4 - i }} />
                 ))}
               </div>
-              <p className="text-sm text-zinc-500">1,000+ creators already inside</p>
+              <p className="text-sm text-muted-foreground">1,000+ creators already inside</p>
             </div>
           </motion.div>
         </div>
@@ -104,15 +106,22 @@ export default function LoginPage() {
             <span className="text-lg font-bold">Avoir<span className="text-indigo-400">.ai</span></span>
           </div>
 
-          <Link href="/" className="inline-flex items-center gap-2 text-zinc-500 hover:text-white mb-8 transition-colors group">
+          <Link href="/" className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground mb-8 transition-colors group">
             <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
             <span className="text-sm">Back to Home</span>
           </Link>
 
           <div className="mb-8">
             <h2 className="text-3xl font-bold tracking-tight mb-2">Sign in</h2>
-            <p className="text-zinc-500">Enter your credentials to continue</p>
+            <p className="text-muted-foreground">Enter your credentials to continue</p>
           </div>
+
+          {useMockAuth && (
+            <div className="mb-6 p-3 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-xs leading-relaxed">
+              <span className="font-bold uppercase tracking-wider text-indigo-400">Local Demo Mode</span> — auth runs
+              in your browser (no AWS). Register an account first, or click <span className="font-semibold">Continue with Google</span> to sign in instantly.
+            </div>
+          )}
 
           <motion.button
             type="button"
@@ -121,7 +130,7 @@ export default function LoginPage() {
                 await signInWithRedirect({ provider: 'Google' });
               } catch (err: any) {
                 if (err.name === 'UserAlreadyAuthenticatedException' || err.message?.includes('already a signed in user')) {
-                  router.push('/');
+                  router.push('/dashboard');
                 } else {
                   setError(err.message || 'SSO Login failed');
                 }
@@ -129,7 +138,7 @@ export default function LoginPage() {
             }}
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
-            className="w-full bg-white/5 border border-white/10 text-white font-medium py-3.5 rounded-xl transition-all flex items-center justify-center gap-3 hover:bg-white/10 hover:border-white/20 shadow-lg shadow-black/20 mb-6"
+            className="w-full bg-card border border-border text-foreground font-medium py-3.5 rounded-xl transition-all flex items-center justify-center gap-3 hover:bg-muted hover:border-muted-foreground/50 shadow-lg shadow-black/20 dark:shadow-black/20 mb-6"
           >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
@@ -141,9 +150,9 @@ export default function LoginPage() {
           </motion.button>
 
           <div className="flex items-center gap-4 mb-6">
-            <div className="h-px bg-white/10 flex-1"></div>
-            <span className="text-xs text-zinc-500 font-medium uppercase tracking-wider">or sign in with email</span>
-            <div className="h-px bg-white/10 flex-1"></div>
+            <div className="h-px bg-border flex-1"></div>
+            <span className="text-xs text-muted-foreground font-medium uppercase tracking-wider">or sign in with email</span>
+            <div className="h-px bg-border flex-1"></div>
           </div>
 
           {error && (
@@ -158,36 +167,36 @@ export default function LoginPage() {
 
           <form onSubmit={handleLogin} className="space-y-5">
             <div>
-              <label className="text-xs font-medium text-zinc-400 uppercase tracking-wider block mb-2">Email</label>
+              <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider block mb-2">Email</label>
               <div className="relative">
-                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <input
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="you@example.com"
                   required
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3.5 pl-11 text-white placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/30 transition-all"
+                  className="w-full bg-card border border-border rounded-xl px-4 py-3.5 pl-11 text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/30 transition-all"
                 />
               </div>
             </div>
 
             <div>
-              <label className="text-xs font-medium text-zinc-400 uppercase tracking-wider block mb-2">Password</label>
+              <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider block mb-2">Password</label>
               <div className="relative">
-                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <input
                   type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Enter your password"
                   required
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3.5 pl-11 pr-11 text-white placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/30 transition-all"
+                  className="w-full bg-card border border-border rounded-xl px-4 py-3.5 pl-11 pr-11 text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/30 transition-all"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-white transition-colors"
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                 >
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
@@ -195,7 +204,7 @@ export default function LoginPage() {
             </div>
 
             <div className="flex justify-end">
-              <Link href="/forgot-password" className="text-xs text-zinc-500 hover:text-indigo-400 transition-colors">
+              <Link href="/forgot-password" className="text-xs text-muted-foreground hover:text-indigo-400 transition-colors">
                 Forgot Password?
               </Link>
             </div>
@@ -205,11 +214,11 @@ export default function LoginPage() {
               disabled={loading}
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
-              className="w-full bg-white text-black font-bold py-4 rounded-xl transition-all flex items-center justify-center gap-2 hover:bg-zinc-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-white/5"
+              className="w-full bg-foreground text-background font-bold py-4 rounded-xl transition-all flex items-center justify-center gap-2 hover:bg-foreground/90 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-foreground/5"
             >
               {loading ? (
                 <div className="flex items-center gap-2">
-                  <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }} className="w-4 h-4 border-2 border-black/20 border-t-black rounded-full" />
+                  <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }} className="w-4 h-4 border-2 border-background/20 border-t-background rounded-full" />
                   Signing in...
                 </div>
               ) : (
@@ -221,14 +230,15 @@ export default function LoginPage() {
             </motion.button>
           </form>
 
-          <div className="mt-8 text-center text-sm text-zinc-500">
+          <div className="mt-8 text-center text-sm text-muted-foreground">
             Don't have an account?{' '}
-            <Link href="/register" className="text-white font-medium hover:text-indigo-400 transition-colors">
+            <Link href="/register" className="text-foreground font-medium hover:text-indigo-400 transition-colors">
               Create Account
             </Link>
           </div>
         </motion.div>
       </div>
     </div>
+    </GuestOnly>
   );
 }

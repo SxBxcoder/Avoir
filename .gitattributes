@@ -1,0 +1,17 @@
+# Enforce LF line endings for all text files
+* text=auto eol=lf
+
+# Source code — explicit UTF-8 encoding to prevent corruption
+*.{ts,tsx,js,jsx,mjs} working-tree-encoding=UTF-8
+*.json working-tree-encoding=UTF-8
+*.md working-tree-encoding=UTF-8
+*.css working-tree-encoding=UTF-8
+
+# Binary files — no conversion
+*.png binary
+*.jpg binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.eot binary

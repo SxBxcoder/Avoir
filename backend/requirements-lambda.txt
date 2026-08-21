@@ -1,18 +1,7 @@
-# AWS Lambda Requirements for Prachar.ai Backend
-# Install these dependencies in your Lambda deployment package
+# AWS Lambda Deployment Dependencies
+#
+# boto3/botocore are provided by the AWS Lambda Python runtime — do not bundle.
+# strands-sdk is only used by dev/test tooling (check_env.py, test_*.py),
+# not by runtime code — do not bundle.
 
-# Strands SDK for agentic AI orchestration
-strands-sdk>=0.1.0
-
-# AWS SDK (boto3 is included in Lambda runtime, but specify for local testing)
-boto3>=1.34.0
-botocore>=1.34.0
-
-# Note: The following are included in AWS Lambda Python 3.11 runtime:
-# - json (built-in)
-# - os (built-in)
-# - logging (built-in)
-# - base64 (built-in)
-# - uuid (built-in)
-# - datetime (built-in)
-# - typing (built-in)
+requests>=2.31.0

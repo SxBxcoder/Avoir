@@ -5,9 +5,11 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Check, Zap, Star, Shield, ArrowLeft, Sparkles, Crown, Users, ArrowRight, X } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { getStripe, PLANS, type PlanTier } from '@/lib/stripe';
-import { isAuthenticated, getUser } from '@/lib/authHelpers';
+import { useAuth } from '@/lib/auth/provider';
 import Link from 'next/link';
 import Image from 'next/image';
+import { clientLog } from '@/lib/logClient';
+import { ThemeToggle } from '@/components/ThemeToggle';
 
 const springSmooth = { type: 'spring' as const, stiffness: 100, damping: 30 };
 const springBouncy = { type: 'spring' as const, stiffness: 400, damping: 25 };
@@ -23,7 +25,7 @@ const staggerItem = {
 
 export default function PricingPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-black" />}>
+    <Suspense fallback={<div className="min-h-screen bg-background" />}>
       <PricingContent />
     </Suspense>
   );
@@ -33,6 +35,7 @@ function PricingContent() {
   const [loading, setLoading] = useState<string | null>(null);
   const [isAnnual, setIsAnnual] = useState(false);
   const router = useRouter();
+  const { isAuthenticated, user, idToken } = useAuth();
   const searchParams = useSearchParams();
   const canceled = searchParams.get('canceled');
 
@@ -74,20 +77,18 @@ function PricingContent() {
 
     setLoading(priceId);
     try {
-      const isAuth = await isAuthenticated();
-      if (!isAuth) {
+      if (!isAuthenticated) {
         router.push('/login');
         return;
       }
 
-      const user = await getUser();
-      const userEmail = user?.signInDetails?.loginId || '';
-      const userId = user?.userId || '';
-
       const response = await fetch('/api/stripe/checkout', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ priceId, email: userEmail, userId }),
+        headers: {
+          'Content-Type': 'application/json',
+          ...(idToken ? { 'Authorization': `Bearer ${idToken}` } : {}),
+        },
+        body: JSON.stringify({ priceId }),
       });
 
       if (!response.ok) {
@@ -103,7 +104,7 @@ function PricingContent() {
         if (error) throw error;
       }
     } catch (error: any) {
-      console.error('Subscription error:', error);
+      clientLog.error('Subscription error:', error);
       alert(error.message || 'Subscription failed. Please try again.');
     } finally {
       setLoading(null);
@@ -111,7 +112,7 @@ function PricingContent() {
   };
 
   return (
-    <div className="min-h-screen bg-black text-white overflow-hidden" style={{ fontFamily: "'Inter', sans-serif" }}>
+    <div className="min-h-screen bg-background text-foreground overflow-hidden" style={{ fontFamily: "'Inter', sans-serif" }}>
       {/* Background effects */}
       <div className="fixed inset-0 pointer-events-none">
         <motion.div
@@ -127,7 +128,7 @@ function PricingContent() {
       </div>
 
       {/* Navbar */}
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-black/60 backdrop-blur-2xl border-b border-white/5">
+      <nav className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-2xl border-b border-foreground/10">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-3 group">
             <motion.div whileHover={{ rotate: 12, scale: 1.1 }} transition={springBouncy}>
@@ -139,12 +140,13 @@ function PricingContent() {
           </Link>
 
           <div className="flex items-center gap-3">
-            <Link href="/login" className="text-sm text-zinc-400 hover:text-white transition-colors px-4 py-2">Sign In</Link>
+            <Link href="/login" className="text-sm text-muted-foreground hover:text-foreground transition-colors px-4 py-2">Sign In</Link>
             <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-              <Link href="/register" className="text-sm font-semibold bg-white text-black px-5 py-2.5 rounded-full hover:bg-zinc-200 transition-colors">
+              <Link href="/register" className="text-sm font-semibold bg-foreground text-background px-5 py-2.5 rounded-full hover:bg-zinc-200 dark:hover:bg-zinc-800 transition-colors">
                 Get Started Free
               </Link>
             </motion.div>
+            <ThemeToggle />
           </div>
         </div>
       </nav>
@@ -166,7 +168,7 @@ function PricingContent() {
               Power that scales with{' '}
               <span className="fluid-text-hero">your ambition</span>
             </h1>
-            <p className="text-lg text-zinc-400 max-w-xl mx-auto">
+            <p className="text-lg text-muted-foreground max-w-xl mx-auto">
               Start free. Upgrade when your campaigns demand the full force of the Diamond Cascade AI.
             </p>
           </motion.div>
@@ -194,7 +196,7 @@ function PricingContent() {
             transition={{ delay: 0.3 }}
             className="flex items-center justify-center gap-4 mb-16"
           >
-            <span className={`text-sm font-medium transition-colors ${!isAnnual ? 'text-white' : 'text-zinc-500'}`}>Monthly</span>
+            <span className={`text-sm font-medium transition-colors ${!isAnnual ? 'text-foreground' : 'text-muted-foreground'}`}>Monthly</span>
             <motion.button
               onClick={() => setIsAnnual(!isAnnual)}
               className={`relative w-14 h-7 rounded-full transition-colors ${isAnnual ? 'bg-indigo-600' : 'bg-zinc-700'}`}
@@ -206,7 +208,7 @@ function PricingContent() {
                 className="absolute top-0.5 w-6 h-6 bg-white rounded-full shadow-lg"
               />
             </motion.button>
-            <span className={`text-sm font-medium transition-colors flex items-center gap-2 ${isAnnual ? 'text-white' : 'text-zinc-500'}`}>
+            <span className={`text-sm font-medium transition-colors flex items-center gap-2 ${isAnnual ? 'text-foreground' : 'text-muted-foreground'}`}>
               Annual
               {isAnnual && (
                 <motion.span
@@ -287,7 +289,7 @@ function PricingContent() {
                           {displayPrice}
                         </motion.span>
                       </AnimatePresence>
-                      {!isFree && <span className="text-zinc-400 text-base">/ month</span>}
+                      {!isFree && <span className="text-muted-foreground text-base">/ month</span>}
                     </div>
                     {isAnnual && item.annualSavings && (
                       <motion.span
@@ -313,11 +315,11 @@ function PricingContent() {
                         <div className={`mt-0.5 p-0.5 rounded-full flex-shrink-0 ${
                           isPro ? 'bg-indigo-500/20 text-indigo-400' :
                           isEnterprise ? 'bg-amber-500/20 text-amber-400' :
-                          'bg-zinc-700 text-zinc-400'
+                          'bg-muted text-muted-foreground'
                         }`}>
                           <Check className="w-3.5 h-3.5" />
                         </div>
-                        <span className="text-sm text-zinc-300 leading-relaxed">{feature}</span>
+                        <span className="text-sm text-muted-foreground leading-relaxed">{feature}</span>
                       </motion.li>
                     ))}
                   </ul>
@@ -333,7 +335,7 @@ function PricingContent() {
                         ? 'bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white shadow-lg shadow-indigo-500/20'
                         : isEnterprise
                         ? 'bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white shadow-lg shadow-amber-500/20'
-                        : 'bg-white/5 hover:bg-white/10 text-zinc-200 border border-white/10 hover:border-white/20'
+                        : 'bg-card hover:bg-muted text-foreground border border-border hover:border-muted-foreground/50'
                     }`}
                   >
                     {loading === priceId ? (
@@ -366,7 +368,7 @@ function PricingContent() {
             transition={{ delay: 0.8 }}
             className="mt-20 text-center"
           >
-            <div className="flex items-center justify-center gap-8 flex-wrap text-zinc-500 text-sm">
+            <div className="flex items-center justify-center gap-8 flex-wrap text-muted-foreground text-sm">
               <div className="flex items-center gap-2">
                 <Shield className="w-4 h-4" />
                 <span>256-bit SSL</span>
@@ -385,13 +387,13 @@ function PricingContent() {
       </div>
 
       {/* Footer */}
-      <footer className="border-t border-white/5 py-8">
+      <footer className="border-t border-border py-8">
         <div className="max-w-6xl mx-auto px-6 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Image src="/logo.png" alt="Avoir" width={24} height={24} className="rounded-md" />
-            <span className="text-xs text-zinc-500">© 2026 Avoir</span>
+            <span className="text-xs text-muted-foreground">© 2026 Avoir</span>
           </div>
-          <Link href="/" className="text-xs text-zinc-500 hover:text-white transition-colors">Back to Home</Link>
+          <Link href="/" className="text-xs text-muted-foreground hover:text-foreground transition-colors">Back to Home</Link>
         </div>
       </footer>
     </div>

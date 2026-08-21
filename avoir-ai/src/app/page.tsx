@@ -4,17 +4,11 @@ import { useState, useEffect, useRef } from 'react';
 import { motion, useScroll, useTransform, useSpring, useInView, AnimatePresence } from 'framer-motion';
 import { Sparkles, Layers, Zap, ArrowRight, Play, ChevronDown, Globe, BarChart3, Palette, MessageSquare, Shield, Star, Users, CheckCircle2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { configureAuth } from '@/lib/auth';
-import { isAuthenticated, getUser, logout, getAccessToken } from '@/lib/authHelpers';
-import { Hub } from 'aws-amplify/utils';
-import { fetchUserAttributes, fetchAuthSession } from 'aws-amplify/auth';
+import { useAuth } from '@/lib/auth/provider';
 import Link from 'next/link';
 import Image from 'next/image';
-import CampaignDashboard from '@/components/CampaignDashboard';
 import TechGeometryCanvas from '@/components/TechGeometryCanvas';
-
-// Call this synchronously outside the component so Amplify's internal OAuth listener works reliably
-configureAuth();
+import { ThemeToggle } from '@/components/ThemeToggle';
 
 // ============================================================================
 // SPRING CONFIGS
@@ -99,7 +93,7 @@ function Navbar() {
       transition={springSmooth}
       className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
         scrolled
-          ? 'bg-black/60 backdrop-blur-2xl border-b border-white/5 shadow-2xl shadow-black/50'
+          ? 'bg-background/80 backdrop-blur-2xl border-b border-border shadow-md dark:shadow-black/50'
           : 'bg-transparent'
       }`}
     >
@@ -115,37 +109,39 @@ function Navbar() {
 
         {/* Desktop Links */}
         <div className="hidden md:flex items-center gap-8">
-          <Link href="#features" className="text-sm text-zinc-400 hover:text-white transition-colors">Features</Link>
-          <Link href="#how-it-works" className="text-sm text-zinc-400 hover:text-white transition-colors">How It Works</Link>
-          <Link href="/pricing" className="text-sm text-zinc-400 hover:text-white transition-colors">Pricing</Link>
+          <Link href="#features" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Features</Link>
+          <Link href="#how-it-works" className="text-sm text-muted-foreground hover:text-foreground transition-colors">How It Works</Link>
+          <Link href="/pricing" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Pricing</Link>
         </div>
 
         {/* Desktop Auth */}
         <div className="hidden sm:flex items-center gap-3">
-          <Link href="/login" className="text-sm text-zinc-400 hover:text-white transition-colors px-4 py-2">
+          <Link href="/login" className="text-sm text-muted-foreground hover:text-foreground transition-colors px-4 py-2">
             Sign In
           </Link>
           <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
             <Link
               href="/register"
-              className="text-sm font-semibold bg-white text-black px-5 py-2.5 rounded-full hover:bg-zinc-200 transition-colors"
+              className="text-sm font-semibold bg-foreground text-background px-5 py-2.5 rounded-full hover:bg-zinc-200 dark:hover:bg-zinc-800 transition-colors"
             >
               Get Started Free
             </Link>
           </motion.div>
+          <ThemeToggle />
         </div>
 
         {/* Mobile Auth (Simplified) */}
         <div className="flex sm:hidden items-center gap-2">
-          <Link href="/login" className="text-xs font-medium text-zinc-300 hover:text-white px-3 py-2">
+          <Link href="/login" className="text-xs font-medium text-muted-foreground hover:text-foreground px-3 py-2">
             Sign In
           </Link>
           <Link
             href="/register"
-            className="text-xs font-semibold bg-white text-black px-4 py-2 rounded-full"
+            className="text-xs font-semibold bg-foreground text-background px-4 py-2 rounded-full"
           >
             Start
           </Link>
+          <ThemeToggle />
         </div>
       </div>
     </motion.nav>
@@ -158,10 +154,10 @@ function Navbar() {
 export default function Home() {
   const router = useRouter();
 
-  // Auth States
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [userEmail, setUserEmail] = useState('');
-  const [accessToken, setAccessToken] = useState('');
+  // Auth state is centralized in the AuthProvider. In demo mode the provider
+  // bootstraps a real mock session for ?demo=true, so no page-level bypass is
+  // needed here.
+  const { isAuthenticated, email, accessToken: authToken, logout, isLoading, refresh } = useAuth();
 
   // Scroll-based parallax (global scroll, no ref — avoids hydration errors with conditional rendering)
   const { scrollY } = useScroll();
@@ -169,81 +165,49 @@ export default function Home() {
   const heroOpacity = useTransform(scrollY, [0, 400], [1, 0]);
   const heroScale = useTransform(scrollY, [0, 400], [1, 0.95]);
 
+  // Returning from OAuth: the token exchange happens asynchronously inside
+  // aws-amplify, so poll the provider session a few times, then clean the URL.
   useEffect(() => {
-    // Helper to check auth and update state
-    const verifyAuth = async () => {
-      // Demo Mock Shield Bypass
-      if (typeof window !== 'undefined' && window.location.search.includes('demo=true')) {
-        setIsLoggedIn(true);
-        setUserEmail('commander@avoir.ai');
-        setAccessToken('mock-token');
-        return true;
-      }
-
-      const authenticated = await isAuthenticated();
-      if (authenticated) {
-        setIsLoggedIn(true);
-        
-        // The most foolproof way to get the email (especially for OAuth users)
-        // is to read the claims directly from the ID token.
-        try {
-          const session = await fetchAuthSession();
-          const email = session.tokens?.idToken?.payload?.email as string;
-          
-          if (email) {
-            setUserEmail(email);
-          } else {
-            // Fallback to fetchUserAttributes or basic username if ID token doesn't have email claim
-            const attributes = await fetchUserAttributes();
-            if (attributes.email) {
-              setUserEmail(attributes.email);
-            } else {
-              const user = await getUser();
-              setUserEmail(user?.signInDetails?.loginId || user?.username || 'Commander');
-            }
-          }
-        } catch {
-          const user = await getUser();
-          setUserEmail(user?.signInDetails?.loginId || user?.username || 'Commander');
-        }
-        
-        const token = await getAccessToken();
-        setAccessToken(token || '');
-        return true;
-      }
-      return false;
-    };
-
-    // Initial check
-    verifyAuth();
-
-    // If we are returning from OAuth, the token exchange happens asynchronously.
-    // Instead of a brittle Hub listener, we just poll a few times.
     if (typeof window !== 'undefined' && window.location.search.includes('code=')) {
       let attempts = 0;
       const interval = setInterval(async () => {
         attempts++;
-        const success = await verifyAuth();
-        if (success || attempts >= 10) { // stop polling after 10 attempts (5 seconds)
+        const success = await refresh();
+        if (success || attempts >= 10) {
           clearInterval(interval);
-          // Clean the URL to remove the code= parameter for a cleaner experience
           if (success) window.history.replaceState({}, document.title, window.location.pathname);
         }
       }, 500);
       return () => clearInterval(interval);
     }
-  }, []);
+  }, [refresh]);
+
+  const isLoggedIn = isAuthenticated;
+  const userEmail = email;
+  const resolvedAccessToken = authToken;
 
   const handleLogout = async () => {
     await logout();
-    setIsLoggedIn(false);
-    setUserEmail('');
-    setAccessToken('');
   };
 
-  // Authenticated: Show Dashboard
+  // While the initial session restore is in flight, show a loader instead of
+  // flashing the landing page at authenticated users.
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="w-10 h-10 border-2 border-white/20 border-t-indigo-500 rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  // Authenticated: Redirect to Dashboard Hub
   if (isLoggedIn) {
-    return <CampaignDashboard accessToken={accessToken} userEmail={userEmail} onLogout={handleLogout} />;
+    router.replace('/dashboard');
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="w-10 h-10 border-2 border-white/20 border-t-indigo-500 rounded-full animate-spin" />
+      </div>
+    );
   }
 
   // ========================================================================
@@ -308,7 +272,7 @@ export default function Home() {
   ];
 
   return (
-    <div className="min-h-screen bg-transparent text-white overflow-x-hidden relative" style={{ fontFamily: "'Inter', sans-serif" }}>
+    <div className="min-h-screen bg-transparent text-foreground overflow-x-hidden relative" style={{ fontFamily: "'Inter', sans-serif" }}>
       <TechGeometryCanvas />
       
       <div className="relative z-10">
@@ -339,7 +303,7 @@ export default function Home() {
 
         {/* Subtle grid */}
         <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:60px_60px]" />
-        <div className="absolute bottom-0 left-0 right-0 h-48 bg-gradient-to-t from-black to-transparent" />
+        <div className="absolute bottom-0 left-0 right-0 h-48 bg-gradient-to-t from-background to-transparent" />
 
         <motion.div
           style={{ y: heroY, opacity: heroOpacity, scale: heroScale }}
@@ -350,13 +314,13 @@ export default function Home() {
             initial={{ opacity: 0, y: 20, scale: 0.9 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             transition={{ ...springSmooth, delay: 0.2 }}
-            className="inline-flex items-center gap-2.5 px-4 py-2 rounded-full bg-white/5 border border-white/10 backdrop-blur-xl mb-8"
+            className="inline-flex items-center gap-2.5 px-4 py-2 rounded-full bg-card border border-border backdrop-blur-xl mb-8"
           >
             <span className="relative flex h-2 w-2">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
               <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500" />
             </span>
-            <span className="text-xs font-medium text-zinc-400">Now in Public Beta — 1,000+ creators onboard</span>
+            <span className="text-xs font-medium text-muted-foreground">Now in Public Beta — 1,000+ creators onboard</span>
           </motion.div>
 
           {/* Logo + Brand */}
@@ -384,10 +348,10 @@ export default function Home() {
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ ...springSmooth, delay: 0.6 }}
-            className="text-lg md:text-xl text-zinc-400 max-w-2xl mx-auto mb-10 leading-relaxed"
+            className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mb-10 leading-relaxed"
           >
             Execute high-frequency strategies, algorithmic risk modeling, and predictive market analytics in milliseconds.
-            <span className="text-zinc-300 font-medium"> Built for institutional capital.</span>
+            <span className="text-foreground font-medium"> Built for institutional capital.</span>
           </motion.p>
 
           {/* CTA buttons */}
@@ -400,7 +364,7 @@ export default function Home() {
             <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.97 }}>
               <Link
                 href="/register"
-                className="group relative inline-flex items-center gap-2 bg-white text-black font-semibold px-8 py-4 rounded-full text-base overflow-hidden shadow-xl shadow-white/10 hover:shadow-white/20 transition-shadow"
+                className="group relative inline-flex items-center gap-2 bg-foreground text-background font-semibold px-8 py-4 rounded-full text-base overflow-hidden shadow-xl shadow-foreground/10 hover:shadow-foreground/20 transition-shadow"
               >
                 <Sparkles className="w-5 h-5" />
                 Initialize Engine — Free
@@ -411,7 +375,7 @@ export default function Home() {
             <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.97 }}>
               <Link
                 href="/pricing"
-                className="inline-flex items-center gap-2 bg-white/5 backdrop-blur-xl border border-white/10 text-white font-medium px-8 py-4 rounded-full text-base hover:bg-white/10 hover:border-white/20 transition-all"
+                className="inline-flex items-center gap-2 bg-card backdrop-blur-xl border border-border text-foreground font-medium px-8 py-4 rounded-full text-base hover:bg-muted hover:border-muted-foreground/50 transition-all"
               >
                 View Pricing
               </Link>
@@ -429,7 +393,7 @@ export default function Home() {
               {[...Array(5)].map((_, i) => (
                 <div
                   key={i}
-                  className="w-10 h-10 rounded-full border-2 border-black bg-gradient-to-br from-indigo-400 to-purple-500"
+                  className="w-10 h-10 rounded-full border-2 border-background bg-gradient-to-br from-indigo-400 to-purple-500"
                   style={{ zIndex: 5 - i }}
                 />
               ))}
@@ -440,7 +404,7 @@ export default function Home() {
                   <Star key={i} className="w-4 h-4 text-yellow-400 fill-yellow-400" />
                 ))}
               </div>
-              <p className="text-xs text-zinc-500 mt-0.5">Trusted by $100M+ Institutional Capital</p>
+              <p className="text-xs text-muted-foreground mt-0.5">Trusted by $100M+ Institutional Capital</p>
             </div>
           </motion.div>
         </motion.div>
@@ -453,7 +417,7 @@ export default function Home() {
           className="absolute bottom-8 left-1/2 -translate-x-1/2"
         >
           <motion.div animate={{ y: [0, 8, 0] }} transition={{ duration: 2, repeat: Infinity }}>
-            <ChevronDown className="w-5 h-5 text-zinc-600" />
+            <ChevronDown className="w-5 h-5 text-muted-foreground" />
           </motion.div>
         </motion.div>
       </section>
@@ -461,7 +425,7 @@ export default function Home() {
       {/* ================================================================
           STATS BAR
           ================================================================ */}
-      <section className="relative py-16 border-y border-white/5">
+      <section className="relative py-16 border-y border-border">
         <div className="max-w-6xl mx-auto px-6">
           <motion.div
             initial="hidden"
@@ -477,10 +441,10 @@ export default function Home() {
               { value: 98, suffix: '%', label: 'Win Rate' },
             ].map((stat) => (
               <motion.div key={stat.label} variants={staggerItem} className="text-center">
-                <div className="text-3xl md:text-4xl font-bold tracking-tight text-white">
+                <div className="text-3xl md:text-4xl font-bold tracking-tight text-foreground">
                   <AnimatedCounter target={stat.value} suffix={stat.suffix} />
                 </div>
-                <p className="text-sm text-zinc-500 mt-1">{stat.label}</p>
+                <p className="text-sm text-muted-foreground mt-1">{stat.label}</p>
               </motion.div>
             ))}
           </motion.div>
@@ -509,7 +473,7 @@ export default function Home() {
               Everything you need to{' '}
               <span className="fluid-text-hero">dominate the market</span>
             </h2>
-            <p className="text-lg text-zinc-400 max-w-xl mx-auto">
+            <p className="text-lg text-muted-foreground max-w-xl mx-auto">
               From signal generation to execution — Avoir handles the entire quantitative pipeline.
             </p>
           </motion.div>
@@ -531,8 +495,8 @@ export default function Home() {
                 <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${feature.gradient} flex items-center justify-center mb-5 border ${feature.borderColor} ${feature.iconColor}`}>
                   {feature.icon}
                 </div>
-                <h3 className="text-lg font-bold text-white mb-2">{feature.title}</h3>
-                <p className="text-sm text-zinc-400 leading-relaxed">{feature.description}</p>
+                <h3 className="text-lg font-bold text-foreground mb-2">{feature.title}</h3>
+                <p className="text-sm text-muted-foreground leading-relaxed">{feature.description}</p>
               </motion.div>
             ))}
           </motion.div>
@@ -588,8 +552,8 @@ export default function Home() {
                   )}
                 </div>
                 <div className="pt-3">
-                  <h3 className="text-xl font-bold text-white mb-2">{step.title}</h3>
-                  <p className="text-zinc-400 leading-relaxed max-w-lg">{step.description}</p>
+                  <h3 className="text-xl font-bold text-foreground mb-2">{step.title}</h3>
+                  <p className="text-muted-foreground leading-relaxed max-w-lg">{step.description}</p>
                 </div>
               </motion.div>
             ))}
@@ -616,14 +580,14 @@ export default function Home() {
               Ready to stop guessing and{' '}
               <span className="fluid-text-hero">dominate the market?</span>
             </h2>
-            <p className="text-lg text-zinc-400 max-w-xl mx-auto mb-10">
+            <p className="text-lg text-muted-foreground max-w-xl mx-auto mb-10">
               Join the elite institutional funds using Avoir to generate campaigns that dictate market trends.
             </p>
 
             <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.97 }}>
               <Link
                 href="/register"
-                className="group inline-flex items-center gap-2 bg-white text-black font-semibold px-10 py-5 rounded-full text-lg shadow-xl shadow-white/10 hover:shadow-white/20 transition-shadow"
+                className="group inline-flex items-center gap-2 bg-foreground text-background font-semibold px-10 py-5 rounded-full text-lg shadow-xl shadow-foreground/10 hover:shadow-foreground/20 transition-shadow"
               >
                 <Sparkles className="w-5 h-5" />
                 Get Started — It's Free
@@ -637,7 +601,7 @@ export default function Home() {
       {/* ================================================================
           FOOTER
           ================================================================ */}
-      <footer className="border-t border-white/5 py-12">
+      <footer className="border-t border-border py-12">
         <div className="max-w-6xl mx-auto px-6">
           <div className="flex flex-col md:flex-row items-center justify-between gap-6">
             <div className="flex items-center gap-3">
@@ -647,17 +611,17 @@ export default function Home() {
               </span>
             </div>
             
-            <div className="flex items-center gap-4 sm:gap-6 text-sm text-zinc-500 flex-wrap justify-center">
-              <Link href="/pricing" className="hover:text-white transition-colors">Pricing</Link>
-              <Link href="/login" className="hover:text-white transition-colors">Sign In</Link>
-              <Link href="/register" className="hover:text-white transition-colors">Get Started</Link>
-              <span className="hidden sm:inline text-zinc-700">|</span>
-              <Link href="/privacy" className="hover:text-white transition-colors">Privacy Policy</Link>
-              <Link href="/terms" className="hover:text-white transition-colors">Terms of Service</Link>
+            <div className="flex items-center gap-4 sm:gap-6 text-sm text-muted-foreground flex-wrap justify-center">
+              <Link href="/pricing" className="hover:text-foreground transition-colors">Pricing</Link>
+              <Link href="/login" className="hover:text-foreground transition-colors">Sign In</Link>
+              <Link href="/register" className="hover:text-foreground transition-colors">Get Started</Link>
+              <span className="hidden sm:inline text-muted-foreground/50">|</span>
+              <Link href="/privacy" className="hover:text-foreground transition-colors">Privacy Policy</Link>
+              <Link href="/terms" className="hover:text-foreground transition-colors">Terms of Service</Link>
             </div>
 
             {/* Coded with precision by Avoir */}
-            <p className="text-zinc-500 text-sm mt-12 font-tactical tracking-widest text-center">
+            <p className="text-muted-foreground text-sm mt-12 font-tactical tracking-widest text-center">
               © 2026 AVOIR // ALL SYSTEMS NOMINAL
             </p>
           </div>

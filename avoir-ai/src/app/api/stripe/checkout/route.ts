@@ -8,25 +8,54 @@
  *   - userId attached as metadata for webhook correlation
  *   - Proper success/cancel URLs
  *   - Idempotency-safe design
+ * 
+ * The customer email comes from the verified Cognito ID token claim
+ * (`email_verified === true`) — it is never taken from the request body, so a
+ * caller cannot create a Stripe customer under someone else's email.
  */
 
 import { NextResponse } from 'next/server';
 import { getStripeServer } from '@/lib/stripe';
+import { isDemoMode } from '@/lib/mockShield';
+import { requireUserEmail, authErrorResponse } from '@/lib/auth/requireUser';
+import { logger } from '@/lib/logger';
+import { z } from 'zod';
+import { parseJsonBody } from '@/lib/validate';
+
+// Only the server-configured price IDs are purchasable — a client can't pass
+// an arbitrary Stripe price (e.g. a discounted or one-time product). Keep the
+// fallbacks in sync with PRICE_TO_TIER in the webhook route.
+const ALLOWED_PRICE_IDS = new Set([
+  process.env.NEXT_PUBLIC_STRIPE_PRO_MONTHLY_PRICE_ID || 'price_pro_monthly',
+  process.env.NEXT_PUBLIC_STRIPE_PRO_ANNUAL_PRICE_ID || 'price_pro_annual',
+  process.env.NEXT_PUBLIC_STRIPE_ENT_MONTHLY_PRICE_ID || 'price_ent_monthly',
+  process.env.NEXT_PUBLIC_STRIPE_ENT_ANNUAL_PRICE_ID || 'price_ent_annual',
+]);
+
+const checkoutSchema = z.object({
+  priceId: z
+    .string()
+    .min(1)
+    .refine((id) => ALLOWED_PRICE_IDS.has(id), { message: 'Unsupported priceId' }),
+});
 
 export async function POST(req: Request) {
-  try {
-    const { priceId, email, userId } = await req.json();
+  // Demo Mock Shield: never create live Stripe customers or checkout sessions
+  // with the synthetic demo identity.
+  if (isDemoMode()) {
+    return NextResponse.json({ sessionId: 'cs_demo_checkout' });
+  }
 
-    // Input validation
-    if (!priceId) {
-      return NextResponse.json({ error: 'Missing priceId' }, { status: 400 });
+  try {
+    // Authenticate FIRST so a malformed body can't mask a 401/403, and so the
+    // email for the Stripe customer is always the verified account email.
+    const { userId, email } = await requireUserEmail(req);
+
+    const parsed = await parseJsonBody(req, checkoutSchema);
+    if (!parsed.ok) {
+      return NextResponse.json({ error: 'Invalid request body', issues: parsed.issues }, { status: 400 });
     }
-    if (!userId) {
-      return NextResponse.json({ error: 'Missing userId' }, { status: 400 });
-    }
-    if (!email) {
-      return NextResponse.json({ error: 'Missing email' }, { status: 400 });
-    }
+    const { priceId } = parsed.data;
 
     const stripe = getStripeServer();
     const origin = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
@@ -44,14 +73,14 @@ export async function POST(req: Request) {
 
     if (existingCustomers.data.length > 0) {
       customerId = existingCustomers.data[0].id;
-      console.log(`[Checkout] Reusing existing Stripe customer: ${customerId}`);
+      logger.debug('checkout', 'Reusing existing Stripe customer', { customerId });
     } else {
       const newCustomer = await stripe.customers.create({
         email: email,
         metadata: { cognitoUserId: userId },
       });
       customerId = newCustomer.id;
-      console.log(`[Checkout] Created new Stripe customer: ${customerId}`);
+      logger.debug('checkout', 'Created new Stripe customer', { customerId });
     }
 
     // ========================================================================
@@ -75,11 +104,13 @@ export async function POST(req: Request) {
       cancel_url: `${origin}/pricing?canceled=true`,
     });
 
-    console.log(`[Checkout] Session created: ${session.id} for user: ${userId}`);
+    logger.info('checkout', 'Checkout session created', { sessionId: session.id });
 
     return NextResponse.json({ sessionId: session.id });
   } catch (err: any) {
-    console.error('[Checkout] Error creating checkout session:', err);
+    const authErr = authErrorResponse(err);
+    if (authErr) return authErr;
+    logger.error('checkout', 'Failed to create checkout session', { err });
     return NextResponse.json(
       { error: err.message || 'Failed to create checkout session' },
       { status: 500 }

@@ -46,8 +46,11 @@ export async function GET(req: Request) {
       fresh,
     });
 
-    if (!trends) {
-      return NextResponse.json({ trends: null, message: 'No trends found for this industry.' });
+    if (!trends || !trends.topTrends.length) {
+      return NextResponse.json({
+        trends: null,
+        message: 'No trends available. Configure SERPAPI_KEY in backend/.env for real data.',
+      });
     }
 
     return NextResponse.json({

@@ -12,6 +12,8 @@ import {
   getSubscription as dbGetSubscription,
   upsertSubscription as dbUpsertSubscription,
   deductCredits as dbDeductCredits,
+  addCredits as dbAddCredits,
+  type CreditDeductionResult,
 } from '@/lib/db';
 import { PLANS, type UserSubscription } from '@/lib/stripe';
 
@@ -36,9 +38,18 @@ export async function upsertSubscription(
 }
 
 /**
- * Deduct credits atomically.
- * Updates DynamoDB (source of truth).
+ * Add credits atomically.
+ * Used to refund a reservation when a paid operation fails after reserving.
  */
-export async function deductCredits(userId: string, amount: number): Promise<UserSubscription> {
+export async function addCredits(userId: string, amount: number): Promise<UserSubscription> {
+  return await dbAddCredits(userId, amount);
+}
+
+/**
+ * Deduct credits atomically.
+ * Updates DynamoDB (source of truth). The deduction is conditional on the
+ * balance covering `amount` — `success` is false when it doesn't.
+ */
+export async function deductCredits(userId: string, amount: number): Promise<CreditDeductionResult> {
   return await dbDeductCredits(userId, amount);
 }

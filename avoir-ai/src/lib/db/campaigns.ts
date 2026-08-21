@@ -13,6 +13,7 @@
 import { PutCommand, QueryCommand, GetCommand, DeleteCommand } from '@aws-sdk/lib-dynamodb';
 import { getDynamoClient, TABLES } from './dynamodb';
 import { v4 as uuidv4 } from 'uuid';
+import { logger } from '@/lib/logger';
 
 // ============================================================================
 // TYPES
@@ -30,9 +31,21 @@ export interface Campaign {
   captions: string[];
   imageUrl: string;
   messages: Array<{ role: string; content: string; displayContent?: string }>;
+  language?: string;  // Campaign language (e.g. 'en', 'hi', 'hi-en', 'es')
   tier: string;       // Which Diamond Cascade tier was used
   status: string;     // 'completed' | 'failed' | 'pending'
   isWinner?: boolean; // P1: Campaign Memory Flywheel flag
+  /** External ad platform IDs for webhook performance tracking. */
+  externalIds?: {
+    metaCampaignId?: string;
+    googleCampaignId?: string;
+    adSetId?: string;
+    adId?: string;
+  };
+  /** Timestamp of the last webhook-synced performance update. */
+  lastPerformanceUpdate?: string;
+  /** Whether performance data was auto-synced from a webhook or manually reported. */
+  performanceSource?: 'manual' | 'webhook';
   createdAt: string;
   updatedAt: string;
 }
@@ -64,7 +77,7 @@ export async function createCampaign(
       })
     );
   } catch (err: any) {
-    console.error(`[DB] Campaign create failed: ${err.message}`);
+    logger.error('db.campaigns', 'Create failed', { err });
   }
 
   return campaign;
@@ -90,7 +103,7 @@ export async function getCampaign(
 
     return (result.Item as Campaign) || null;
   } catch (err: any) {
-    console.error(`[DB] Campaign get failed: ${err.message}`);
+    logger.error('db.campaigns', 'Get failed', { err });
     return null;
   }
 }
@@ -124,7 +137,7 @@ export async function listCampaigns(
       lastKey: result.LastEvaluatedKey,
     };
   } catch (err: any) {
-    console.error(`[DB] Campaign list failed: ${err.message}`);
+    logger.error('db.campaigns', 'List failed', { err });
     return { campaigns: [] };
   }
 }
@@ -159,7 +172,7 @@ export async function updateCampaignScore(
     );
     return true;
   } catch (err: any) {
-    console.error(`[DB] Campaign update failed: ${err.message}`);
+    logger.error('db.campaigns', 'Update failed', { err });
     return false;
   }
 }
@@ -180,7 +193,86 @@ export async function deleteCampaign(userId: string, campaignId: string): Promis
     );
     return true;
   } catch (err: any) {
-    console.error(`[DB] Campaign delete failed: ${err.message}`);
+    logger.error('db.campaigns', 'Delete failed', { err });
+    return false;
+  }
+}
+
+// ============================================================================
+// EXTERNAL AD ID LOOKUP — For webhook performance tracking
+// ============================================================================
+
+/**
+ * Queries a user's campaigns to find one matching an external ad platform ID.
+ * Uses QueryCommand (PK: userId) instead of ScanCommand to avoid full-table scans.
+ * Paginates through all results (DynamoDB 1MB limit) to find the match.
+ */
+export async function findCampaignByExternalId(
+  userId: string,
+  platform: 'meta' | 'google',
+  externalId: string
+): Promise<Campaign | null> {
+  const client = getDynamoClient();
+  const field = platform === 'meta' ? 'metaCampaignId' : 'googleCampaignId';
+
+  try {
+    let lastKey: Record<string, any> | undefined;
+
+    do {
+      const result = await client.send(
+        new QueryCommand({
+          TableName: TABLES.CAMPAIGNS,
+          KeyConditionExpression: '#uid = :uid',
+          ExpressionAttributeNames: { '#uid': 'userId' },
+          ExpressionAttributeValues: { ':uid': userId },
+          ExclusiveStartKey: lastKey,
+        })
+      );
+
+      const match = (result.Items as Campaign[] | undefined)?.find(
+        (c) => c.externalIds?.[field] === externalId
+      );
+      if (match) return match;
+
+      lastKey = result.LastEvaluatedKey;
+    } while (lastKey);
+
+    return null;
+  } catch (err: any) {
+    logger.error('db.campaigns', 'External ID lookup failed', { err });
+    return null;
+  }
+}
+
+/**
+ * Links external ad platform IDs to a campaign and marks it as webhook-tracked.
+ */
+export async function updateCampaignExternalIds(
+  userId: string,
+  campaignId: string,
+  externalIds: NonNullable<Campaign['externalIds']>
+): Promise<boolean> {
+  const client = getDynamoClient();
+  const now = new Date().toISOString();
+
+  try {
+    const campaign = await getCampaign(userId, campaignId);
+    if (!campaign) return false;
+
+    campaign.externalIds = { ...campaign.externalIds, ...externalIds };
+    campaign.performanceSource = 'webhook';
+    campaign.lastPerformanceUpdate = now;
+    campaign.updatedAt = now;
+
+    await client.send(
+      new PutCommand({
+        TableName: TABLES.CAMPAIGNS,
+        Item: campaign,
+      })
+    );
+    return true;
+  } catch (err: any) {
+    logger.error('db.campaigns', 'External ID update failed', { err });
     return false;
   }
 }

@@ -99,7 +99,7 @@ class AuthorityDefender:
             else:
                 # REAL GEMINI AI INTEGRATION
                 print(f"[AuthorityDefender] 🎯 Firing Gemini AI for comment: {text}")
-                url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
+                url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent"
                 
                 payload = {
                     "contents": [{"parts": [{"text": user_prompt}]}],
@@ -109,7 +109,7 @@ class AuthorityDefender:
                         "responseMimeType": "application/json"
                     }
                 }
-                resp = requests.post(url, json=payload, timeout=10)
+                resp = requests.post(url, json=payload, headers={"x-goog-api-key": GEMINI_API_KEY}, timeout=10)
                 resp.raise_for_status()
                 data = resp.json()
                 raw_text = data['candidates'][0]['content']['parts'][0]['text']

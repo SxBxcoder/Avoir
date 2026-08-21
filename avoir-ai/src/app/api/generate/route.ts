@@ -15,11 +15,29 @@
  */
 
 import { NextResponse } from 'next/server';
-import { getSubscription, deductCredits } from '@/lib/services/subscription';
-import { canGenerateCampaign, PLANS } from '@/lib/stripe';
+import { addCredits, deductCredits } from '@/lib/services/subscription';
 import { createCampaign } from '@/lib/db/campaigns';
 import { checkRateLimit } from '@/lib/db/cache';
 import { isDemoMode, MOCK_CAMPAIGNS } from '@/lib/mockShield';
+import { parseCampaignRequest } from '@/lib/generation';
+import { requireUser, authErrorResponse } from '@/lib/auth/requireUser';
+import { logger } from '@/lib/logger';
+import { z } from 'zod';
+import { parseJsonBody } from '@/lib/validate';
+
+const campaignMessageSchema = z.object({
+  role: z.string(),
+  content: z.string(),
+  displayContent: z.string().optional(),
+});
+
+const generateSchema = z.object({
+  business: z.string().optional(),
+  topic: z.string().optional(),
+  goal: z.string().optional(),
+  messages: z.array(campaignMessageSchema).optional(),
+  language: z.string().optional(),
+});
 
 export async function POST(req: Request) {
   // Demo Mock Shield
@@ -28,24 +46,29 @@ export async function POST(req: Request) {
   }
 
   try {
-    const body = await req.json();
-    const { business, topic, goal, messages } = body;
+    // Identity comes from the verified Cognito JWT — never trust client input.
+    const { userId } = await requireUser(req);
 
-    // Support both old format (business + topic) and new format (goal + messages)
-    const campaignGoal = goal || `Create a campaign for a ${business} focusing on ${topic}`;
-    const conversationMessages = messages || [];
+    const parsed = await parseJsonBody(req, generateSchema);
+    if (!parsed.ok) {
+      return NextResponse.json({ error: 'Invalid request body', issues: parsed.issues }, { status: 400 });
+    }
 
-    // Extract the JWT token sent from your frontend page.tsx
-    const authHeader = req.headers.get('Authorization');
+    // Validate BEFORE any paid work: an empty/malformed body must never reach
+    // the credit reservation or the paid Lambda.
+    const parsedRequest = parseCampaignRequest(parsed.data);
+    if (!parsedRequest) {
+      return NextResponse.json(
+        { error: 'Invalid request: provide a goal, or both business and topic' },
+        { status: 400 }
+      );
+    }
+    const { goal: campaignGoal, messages: conversationMessages } = parsedRequest;
+    const campaignLanguage = parsed.data.language || 'en';
 
-    // ========================================================================
-    // RATE LIMITING (Redis-backed — DDoS protection)
-    // ========================================================================
-    const userId = body.userId || body.user_id || 'anonymous';
-    
     const rateLimit = await checkRateLimit(userId, 10, 60); // 10 requests per minute
     if (!rateLimit.allowed) {
-      console.log(`[Generate] ⚡ Rate limited: ${userId}. Reset in ${rateLimit.resetIn}s`);
+      logger.warn('generate', 'Rate limited', { resetInSeconds: rateLimit.resetIn, userId });
       return NextResponse.json(
         {
           error: 'Rate limit exceeded',
@@ -63,20 +86,21 @@ export async function POST(req: Request) {
     }
 
     // ========================================================================
-    // SERVER-SIDE QUOTA ENFORCEMENT (DynamoDB-backed)
-    // This runs on the server — users CANNOT bypass this from the browser.
+    // SERVER-SIDE QUOTA ENFORCEMENT (Atomic reserve BEFORE any paid compute)
+    // The credit is reserved up-front via a conditional decrement, so no paid
+    // AI work can start unless the balance really covers it. Concurrent
+    // requests cannot overdraw — only `balance` of them can ever reserve.
     // ========================================================================
 
-    const sub = await getSubscription(userId);
+    const deduction = await deductCredits(userId, 1);
 
-    if (!canGenerateCampaign(sub)) {
-      console.log(`[Generate] 🚫 User ${userId} blocked. Insufficient credits: ${sub.credits}.`);
+    if (!deduction.success) {
       return NextResponse.json(
-        { 
+        {
           error: 'Insufficient Credits',
           message: `You don't have enough credits to run this operation (Cost: 1 Credit). Please upgrade to Pro or Enterprise.`,
           upgradeRequired: true,
-          currentCredits: sub.credits,
+          currentCredits: deduction.subscription.credits,
           cost: 1,
         },
         { status: 402 } // Payment Required
@@ -90,41 +114,52 @@ export async function POST(req: Request) {
     const apiUrl = process.env.NEXT_PUBLIC_API_URL;
 
     if (!apiUrl) {
+      // Refund the reservation — nothing was generated.
+      await addCredits(userId, 1);
       throw new Error("NEXT_PUBLIC_API_URL is missing from .env.local");
     }
 
-    console.log(`[Generate] 🚀 User ${userId} (${sub.tier}) — ${sub.credits} credits remaining`);
-    console.log(`[Generate] Firing payload to AWS Lambda: ${apiUrl}`);
+    let parsedData: any;
+    try {
+      // CALL THE LIVE AWS LAMBDA AGENT with stateful messages. A 60s timeout
+      // prevents a hung invocation from holding the reservation and the
+      // request forever; the catch path below refunds on abort.
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': req.headers.get('Authorization') || '',
+        },
+        signal: AbortSignal.timeout(60_000),
+        body: JSON.stringify({
+          goal: campaignGoal,
+          messages: conversationMessages,
+          user_id: userId,
+          language: campaignLanguage,
+        }),
+      });
 
-    // CALL THE LIVE AWS LAMBDA AGENT with stateful messages
-    const response = await fetch(apiUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': authHeader || '', // Securely pass the Cognito JWT
-      },
-      body: JSON.stringify({
-        goal: campaignGoal,
-        messages: conversationMessages,
-        user_id: userId,
-      }),
-    });
+      if (!response.ok) {
+        const errorText = await response.text();
+        logger.error('generate', 'Lambda error', { response: errorText });
+        throw new Error(`AWS Lambda Error: ${response.status}`);
+      }
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error("[Generate] Lambda Error:", errorText);
-      throw new Error(`AWS Lambda Error: ${response.status}`);
-    }
+      const data = await response.json();
 
-    const data = await response.json();
-
-    // Lambda Function URLs often wrap the response in a "body" string.
-    // This safely extracts it whether it's wrapped or raw.
-    let parsedData = data;
-    if (data.body && typeof data.body === 'string') {
-      parsedData = JSON.parse(data.body);
-    } else if (data.body && typeof data.body === 'object') {
-      parsedData = data.body;
+      // Lambda Function URLs often wrap the response in a "body" string.
+      // This safely extracts it whether it's wrapped or raw.
+      parsedData = data;
+      if (data.body && typeof data.body === 'string') {
+        parsedData = JSON.parse(data.body);
+      } else if (data.body && typeof data.body === 'object') {
+        parsedData = data.body;
+      }
+    } catch (error: any) {
+      // Refund the reservation — the user should not pay for a campaign that
+      // was never generated.
+      await addCredits(userId, 1);
+      throw error;
     }
 
     // ========================================================================
@@ -132,6 +167,7 @@ export async function POST(req: Request) {
     // ========================================================================
     const campaign = await createCampaign(userId, {
       goal: campaignGoal,
+      language: campaignLanguage,
       plan: {
         hook: parsedData.plan?.hook || parsedData.hook || '',
         offer: parsedData.plan?.offer || parsedData.offer || '',
@@ -144,12 +180,6 @@ export async function POST(req: Request) {
       status: parsedData.status || 'completed',
     });
 
-    // ========================================================================
-    // DEDUCT 1 CREDIT (Atomic — DynamoDB)
-    // ========================================================================
-    await deductCredits(userId, 1);
-    console.log(`[Generate] ✅ Campaign ${campaign.campaignId} generated for ${userId}. Persisted to DynamoDB. Deducted 1 Credit.`);
-
     // Map Python Agent response back to your Next.js UI format
     return NextResponse.json({
       hook: parsedData.plan?.hook || parsedData.hook || "Hook generation pending...",
@@ -159,11 +189,14 @@ export async function POST(req: Request) {
       imageUrl: parsedData.image_url || parsedData.imageUrl || "",
       messages: parsedData.messages || conversationMessages,
       campaignId: campaign.campaignId,
+      language: campaignLanguage,
       status: parsedData.status || 'completed',
     });
 
   } catch (error: any) {
-    console.error("[Generate] Error:", error);
+    const authErr = authErrorResponse(error);
+    if (authErr) return authErr;
+    logger.error('generate', 'Generation failed', { err: error });
     return NextResponse.json(
       { error: error.message || 'Failed to generate campaign via Strands Agent' },
       { status: 500 }

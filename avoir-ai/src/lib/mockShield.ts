@@ -7,6 +7,8 @@
  * This lets you record a flawless demo video without any external APIs configured.
  */
 
+import type { AlphaBrief } from '@/lib/alphaBrief';
+
 // ============================================================================
 // DEMO MODE CHECK
 // ============================================================================
@@ -143,6 +145,33 @@ export const MOCK_CAMPAIGNS = [
     updatedAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
   },
 ];
+
+// ============================================================================
+// MOCK DAILY ALPHA BRIEF (for Demo Mode)
+// ============================================================================
+
+export const MOCK_ALPHA_BRIEF: AlphaBrief = {
+  date: new Date().toISOString().slice(0, 10),
+  trend: {
+    title: 'AI Micro-Agents',
+    description: 'Explosive growth in single-purpose AI agents replacing complex SaaS.',
+    momentum: 'peaking',
+  },
+  brief: {
+    plan: {
+      hook: '🔥 The era of bloated SaaS is dead. Say hello to Micro-Agents.',
+      offer: 'Deploy 5 highly-specialized AI agents for the cost of 1 generic tool.',
+      cta: 'Start building your automated army today 🚀',
+    },
+    captions: [
+      'One tool, one job, zero bloat. Micro-agents are eating SaaS alive.',
+      'Your SaaS stack is overpaying for 80% of features you never open.',
+      '5 specialists beat 1 bloated suite, every single time.',
+    ],
+  },
+  generated_by: 'mock',
+  generated_at: new Date().toISOString(),
+};
 
 // ============================================================================
 // MOCK INTELLIGENCE BRIEF
@@ -389,13 +418,16 @@ export function createMockShadowCloneStream(): ReadableStream {
         { step: 2, message: 'Generating avatar mesh from brand assets...' },
         { step: 3, message: 'Synthesizing voice profile with ElevenLabs...' },
         { step: 4, message: 'Rendering video with HeyGen pipeline...' },
-        { step: 5, message: '✅ Shadow Clone ready for deployment' },
       ];
 
       for (const s of steps) {
-        controller.enqueue(encoder.encode(`data: ${JSON.stringify(s)}\n\n`));
+        controller.enqueue(encoder.encode(`event: status\ndata: ${JSON.stringify(s)}\n\n`));
         await new Promise(r => setTimeout(r, 2000));
       }
+
+      // Final video event — mock URL for demo mode
+      const videoEvent = { video_url: 'https://storage.googleapis.com/avoir-demo/shadow-clone-demo.mp4' };
+      controller.enqueue(encoder.encode(`event: video\ndata: ${JSON.stringify(videoEvent)}\n\n`));
       controller.close();
     },
   });

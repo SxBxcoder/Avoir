@@ -11,11 +11,34 @@ import {
   getPerformanceHistory,
   getPerformanceInsights,
   getTopPerformingCampaigns,
-  type Platform,
   type PerformanceMetrics,
-  type CampaignSnapshot,
 } from '@/lib/db/performance';
 import { isDemoMode, MOCK_PERFORMANCE_HISTORY, MOCK_PERFORMANCE_INSIGHTS } from '@/lib/mockShield';
+import { requireUser, authErrorResponse } from '@/lib/auth/requireUser';
+import { logger } from '@/lib/logger';
+import { z } from 'zod';
+import { parseJsonBody } from '@/lib/validate';
+
+const performanceSchema = z.object({
+  campaignId: z.string().min(1),
+  platform: z.enum(['instagram', 'facebook', 'linkedin', 'tiktok', 'google_ads', 'email']),
+  metrics: z.object({
+    impressions: z.number().min(0),
+    clicks: z.number().min(0),
+    ctr: z.number(),
+    engagementRate: z.number(),
+    conversions: z.number().min(0),
+    costPerClick: z.number(),
+    roas: z.number(),
+  }),
+  campaignSnapshot: z.object({
+    hook: z.string(),
+    offer: z.string(),
+    cta: z.string(),
+    genome_type: z.string().optional(),
+  }),
+  tags: z.array(z.string()).optional(),
+});
 
 export async function POST(req: Request) {
   // Demo Mock Shield
@@ -28,29 +51,21 @@ export async function POST(req: Request) {
   }
 
   try {
-    const body = await req.json();
-    const {
+    // Identity comes from the verified Cognito JWT, not the request body.
+    const { userId } = await requireUser(req);
+
+    const parsed = await parseJsonBody(req, performanceSchema);
+    if (!parsed.ok) {
+      return NextResponse.json({ error: 'Invalid request body', issues: parsed.issues }, { status: 400 });
+    }
+    const { campaignId, platform, metrics, campaignSnapshot, tags } = parsed.data;
+
+    const record = await reportPerformance(
       userId,
       campaignId,
       platform,
       metrics,
       campaignSnapshot,
-      tags,
-    } = body;
-
-    if (!userId || !campaignId || !platform || !metrics) {
-      return NextResponse.json(
-        { error: 'Missing required fields: userId, campaignId, platform, metrics' },
-        { status: 400 }
-      );
-    }
-
-    const record = await reportPerformance(
-      userId,
-      campaignId,
-      platform as Platform,
-      metrics as PerformanceMetrics,
-      campaignSnapshot as CampaignSnapshot,
       tags || []
     );
 
@@ -60,7 +75,9 @@ export async function POST(req: Request) {
       message: 'Performance data recorded. Your AI is now smarter.',
     });
   } catch (error: any) {
-    console.error('[Performance API] POST error:', error);
+    const authErr = authErrorResponse(error);
+    if (authErr) return authErr;
+    logger.error('performance', 'POST failed', { err: error });
     return NextResponse.json(
       { error: error.message || 'Failed to record performance' },
       { status: 500 }
@@ -80,15 +97,10 @@ export async function GET(req: Request) {
 
   try {
     const { searchParams } = new URL(req.url);
-    const userId = searchParams.get('userId');
     const action = searchParams.get('action') || 'history';
 
-    if (!userId) {
-      return NextResponse.json(
-        { error: 'Missing userId parameter' },
-        { status: 400 }
-      );
-    }
+    // Identity comes from the verified Cognito JWT, not the query string.
+    const { userId } = await requireUser(req);
 
     if (action === 'insights') {
       const insights = await getPerformanceInsights(userId);
@@ -113,7 +125,9 @@ export async function GET(req: Request) {
       totalReported: history.length,
     });
   } catch (error: any) {
-    console.error('[Performance API] GET error:', error);
+    const authErr = authErrorResponse(error);
+    if (authErr) return authErr;
+    logger.error('performance', 'GET failed', { err: error });
     return NextResponse.json(
       { error: error.message || 'Failed to fetch performance data' },
       { status: 500 }

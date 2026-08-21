@@ -4,6 +4,8 @@ import { useEffect, useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CheckCircle2, XCircle, Loader2, Send, Bot, User } from 'lucide-react';
 import { useParams } from 'next/navigation';
+import { clientLog } from '@/lib/logClient';
+import { ThemeToggle } from '@/components/ThemeToggle';
 
 export default function ClientApprovalPage() {
   const params = useParams();
@@ -18,7 +20,8 @@ export default function ClientApprovalPage() {
   const chatEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    fetch(`http://localhost:8000/api/public/campaign/${id}`)
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+    fetch(`${apiUrl}/api/public/campaign/${id}`)
       .then(res => res.json())
       .then(data => {
         if (data.campaign) {
@@ -55,7 +58,8 @@ export default function ClientApprovalPage() {
     setStatus('REVISING');
 
     try {
-      const res = await fetch('http://localhost:8000/api/campaigns/revise', {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+      const res = await fetch(`${apiUrl}/api/campaigns/revise`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -71,7 +75,7 @@ export default function ClientApprovalPage() {
         }
       }
     } catch (err) {
-      console.error('Failed to revise', err);
+      clientLog.error('Failed to revise', err);
     } finally {
       setStatus('PENDING');
     }
@@ -79,32 +83,35 @@ export default function ClientApprovalPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-zinc-950 flex flex-col items-center justify-center text-white">
+      <div className="min-h-screen bg-zinc-950 flex flex-col items-center justify-center text-foreground">
         <Loader2 className="w-8 h-8 animate-spin text-indigo-500 mb-4" />
-        <p className="text-gray-400">Loading Campaign Proposal...</p>
+        <p className="text-muted-foreground">Loading Campaign Proposal...</p>
       </div>
     );
   }
 
   if (error || !campaign) {
     return (
-      <div className="min-h-screen bg-zinc-950 flex items-center justify-center text-white">
+      <div className="min-h-screen bg-background flex items-center justify-center text-foreground">
         <p className="text-red-400">{error}</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-white selection:bg-indigo-500/30 flex flex-col lg:flex-row">
+    <div className="min-h-screen bg-background text-foreground selection:bg-indigo-500/30 flex flex-col lg:flex-row">
       
       {/* Left Panel: The Campaign */}
       <div className="flex-1 p-6 md:p-12 overflow-y-auto">
-        <header className="flex items-center justify-between mb-8 border-b border-white/10 pb-6">
-          <h1 className="text-2xl font-light tracking-wide text-gray-200">
-            Campaign Proposal <span className="font-bold text-white">Review</span>
+        <header className="flex items-center justify-between mb-8 border-b border-border pb-6">
+          <h1 className="text-2xl font-light tracking-wide text-muted-foreground">
+            Campaign Proposal <span className="font-bold text-foreground">Review</span>
           </h1>
-          <div className="px-4 py-1.5 rounded-full bg-white/5 border border-white/10 text-sm text-gray-400">
-            ID: {id}
+          <div className="flex items-center gap-4">
+            <div className="px-4 py-1.5 rounded-full bg-white/5 border border-border text-sm text-zinc-500 dark:text-muted-foreground">
+              ID: {id}
+            </div>
+            <ThemeToggle />
           </div>
         </header>
 
@@ -116,7 +123,7 @@ export default function ClientApprovalPage() {
             exit={{ opacity: 0, y: -10 }}
             className="space-y-8"
           >
-            <div className="p-8 rounded-2xl bg-white/5 border border-white/10 relative overflow-hidden">
+            <div className="p-8 rounded-2xl bg-muted/30 border border-border relative overflow-hidden">
               {status === 'REVISING' && (
                 <div className="absolute inset-0 bg-black/60 backdrop-blur-sm z-10 flex flex-col items-center justify-center">
                   <Loader2 className="w-10 h-10 animate-spin text-indigo-400 mb-4" />
@@ -131,14 +138,14 @@ export default function ClientApprovalPage() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div>
-                  <h3 className="text-xs font-bold text-gray-500 tracking-widest mb-3 uppercase">Primary Offer</h3>
-                  <div className="p-4 bg-black/30 rounded-xl border border-white/5 text-gray-300">
+                  <h3 className="text-xs font-bold text-muted-foreground tracking-widest mb-3 uppercase">Primary Offer</h3>
+                  <div className="p-4 bg-muted/50 rounded-xl border border-border text-foreground/80">
                     {campaign.offer}
                   </div>
                 </div>
                 <div>
-                  <h3 className="text-xs font-bold text-gray-500 tracking-widest mb-3 uppercase">Call to Action</h3>
-                  <div className="p-4 bg-black/30 rounded-xl border border-white/5 text-gray-300">
+                  <h3 className="text-xs font-bold text-muted-foreground tracking-widest mb-3 uppercase">Call to Action</h3>
+                  <div className="p-4 bg-muted/50 rounded-xl border border-border text-foreground/80">
                     {campaign.cta}
                   </div>
                 </div>
@@ -147,22 +154,22 @@ export default function ClientApprovalPage() {
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
               <div className="space-y-4">
-                <h3 className="text-sm font-bold text-gray-400 tracking-wider">GENERATED CAPTIONS</h3>
+                <h3 className="text-sm font-bold text-muted-foreground tracking-wider">GENERATED CAPTIONS</h3>
                 {campaign.captions?.map((cap: string, idx: number) => (
-                  <div key={idx} className="p-5 rounded-xl bg-white/5 border border-white/10 text-gray-300 leading-relaxed text-sm">
+                  <div key={idx} className="p-5 rounded-xl bg-muted/30 border border-border text-foreground/80 leading-relaxed text-sm">
                     {cap}
                   </div>
                 ))}
               </div>
 
               <div className="space-y-4">
-                <h3 className="text-sm font-bold text-gray-400 tracking-wider">VISUAL ASSET</h3>
+                <h3 className="text-sm font-bold text-muted-foreground tracking-wider">VISUAL ASSET</h3>
                 {campaign.image_url ? (
-                  <div className="rounded-xl overflow-hidden border border-white/10 aspect-square relative">
+                  <div className="rounded-xl overflow-hidden border border-border aspect-square relative">
                     <img src={campaign.image_url} alt="Campaign Asset" className="object-cover w-full h-full" />
                   </div>
                 ) : (
-                  <div className="aspect-square rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-gray-500 text-sm">
+                  <div className="aspect-square rounded-xl bg-muted/30 border border-border flex items-center justify-center text-muted-foreground text-sm">
                     No image asset provided.
                   </div>
                 )}
@@ -178,8 +185,8 @@ export default function ClientApprovalPage() {
             className="mt-12 p-8 rounded-2xl bg-green-500/10 border border-green-500/30 text-center"
           >
             <CheckCircle2 className="w-12 h-12 text-green-400 mx-auto mb-4" />
-            <h3 className="text-2xl font-bold text-white mb-2">Campaign Approved!</h3>
-            <p className="text-green-300/80">The agency has been notified and the campaign is ready to deploy.</p>
+            <h3 className="text-2xl font-bold text-foreground mb-2">Campaign Approved!</h3>
+            <p className="text-green-600 dark:text-green-300/80">The agency has been notified and the campaign is ready to deploy.</p>
           </motion.div>
         )}
       </div>
