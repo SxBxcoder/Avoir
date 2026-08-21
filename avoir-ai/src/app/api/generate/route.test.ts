@@ -97,6 +97,31 @@ describe('POST /api/generate quota enforcement', () => {
     expect(addCredits).toHaveBeenCalledWith('user-1', 1);
   });
 
+  it('refunds the reserved credit when campaign persistence fails', async () => {
+    deductCredits.mockResolvedValue({ success: true, subscription: subscription(9) });
+    fetchMock.mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          body: JSON.stringify({
+            plan: { hook: 'H', offer: 'O', cta: 'C' },
+            captions: ['cap1'],
+            tier: 'TIER_1_GEMINI',
+            status: 'completed',
+          }),
+        }),
+        { status: 200 }
+      )
+    );
+    createCampaign.mockRejectedValue(new Error('Simulated DynamoDB failure'));
+
+    const res = await POST(makeRequest({ goal: 'Launch a product' }));
+
+    expect(res.status).toBe(500);
+    // Generation succeeded but the campaign was never saved — the user must
+    // not lose the credit.
+    expect(addCredits).toHaveBeenCalledWith('user-1', 1);
+  });
+
   it('does not reserve credits when rate limited', async () => {
     vi.mocked(checkRateLimit).mockResolvedValue({ allowed: false, remaining: 0, resetIn: 42 });
 
