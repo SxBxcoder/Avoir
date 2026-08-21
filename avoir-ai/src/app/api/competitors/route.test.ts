@@ -7,14 +7,17 @@ const {
   requireUser,
   authErrorResponse,
   isDemoMode,
+  checkRateLimit,
 } = vi.hoisted(() => ({
   fetchCompetitorIntel: vi.fn(),
   requireUser: vi.fn(),
   authErrorResponse: vi.fn(),
   isDemoMode: vi.fn(),
+  checkRateLimit: vi.fn(),
 }));
 
 vi.mock('@/lib/db/competitors', () => ({ fetchCompetitorIntel }));
+vi.mock('@/lib/db/cache', () => ({ checkRateLimit }));
 vi.mock('@/lib/auth/requireUser', () => ({ requireUser, authErrorResponse }));
 vi.mock('@/lib/mockShield', () => ({
   isDemoMode,
@@ -29,6 +32,7 @@ beforeEach(() => {
   isDemoMode.mockReturnValue(false);
   requireUser.mockResolvedValue({ userId: 'user-1' });
   authErrorResponse.mockReturnValue(null);
+  checkRateLimit.mockResolvedValue({ allowed: true, remaining: 10, resetIn: 0 });
 });
 
 describe('GET /api/competitors', () => {
@@ -66,6 +70,28 @@ describe('GET /api/competitors', () => {
 
     expect(res.status).toBe(401);
     expect(fetchCompetitorIntel).not.toHaveBeenCalled();
+  });
+
+  it('returns 429 and skips the Facebook fetch when rate limited', async () => {
+    checkRateLimit.mockResolvedValue({ allowed: false, remaining: 0, resetIn: 42 });
+
+    const res = await GET(makeRequest('?industry=fashion&fresh=true'));
+    const body = await res.json();
+
+    expect(res.status).toBe(429);
+    expect(res.headers.get('Retry-After')).toBe('42');
+    expect(res.headers.get('X-RateLimit-Remaining')).toBe('0');
+    expect(body.error).toContain('Rate limit');
+    expect(checkRateLimit).toHaveBeenCalledWith('user-1', 10, 60);
+    expect(fetchCompetitorIntel).not.toHaveBeenCalled();
+  });
+
+  it('rate limits per verified user, not per client input', async () => {
+    fetchCompetitorIntel.mockResolvedValue(null);
+
+    await GET(makeRequest('?industry=fashion'));
+
+    expect(checkRateLimit).toHaveBeenCalledWith('user-1', 10, 60);
   });
 
   it('fetches intel and forwards validated params', async () => {
