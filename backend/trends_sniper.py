@@ -17,11 +17,13 @@ class TrendSniper:
     def __init__(self):
         self.youtube_api_key = os.environ.get("YOUTUBE_API_KEY")
         self.serpapi_key = os.environ.get("SERPAPI_KEY")
+        self.apify_api_token = os.environ.get("APIFY_API_TOKEN")
+        self.apify_actor = os.environ.get("APIFY_TIKTOK_ACTOR", "clockworks/tiktok-scraper")
 
     def get_trends_for_industry(self, industry: str) -> Dict[str, Any]:
         """
         Returns real-time IndustryTrends for any industry string.
-        Cascade: SerpAPI → YouTube → Gemini → empty (no fake data).
+        Cascade: SerpAPI → YouTube → Apify TikTok → Gemini → empty (no fake data).
         """
         cache_key = industry.lower().strip()
 
@@ -53,7 +55,18 @@ class TrendSniper:
             except Exception as e:
                 logger.warning("YouTube failed for '%s': %s", industry, e)
 
-        # Tier 3: Gemini AI
+        # Tier 3: Apify TikTok hashtag scrape
+        if self.apify_api_token:
+            try:
+                result = self._fetch_apify_tiktok_trends(industry)
+                if result.get("topTrends"):
+                    _TREND_CACHE[cache_key] = (time.time(), result)
+                    logger.info("Apify returned %d trends for '%s'", len(result["topTrends"]), industry)
+                    return result
+            except Exception as e:
+                logger.warning("Apify failed for '%s': %s", industry, e)
+
+        # Tier 4: Gemini AI
         result = self._generate_ai_trends(industry)
         if result.get("topTrends"):
             _TREND_CACHE[cache_key] = (time.time(), result)
@@ -61,14 +74,18 @@ class TrendSniper:
             return result
 
         # No keys configured — return empty, not fake data
-        logger.warning("No trend sources available for '%s'. Set SERPAPI_KEY, YOUTUBE_API_KEY, or GEMINI_API_KEY.", industry)
+        logger.warning(
+            "No trend sources available for '%s'. Set SERPAPI_KEY, YOUTUBE_API_KEY, "
+            "APIFY_API_TOKEN, or GEMINI_API_KEY.",
+            industry,
+        )
         return {
             "industry": industry,
             "topTrends": [],
             "viralHooks": [],
             "lastUpdated": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
             "source": "none",
-            "error": "No API keys configured. Set SERPAPI_KEY in backend/.env for real trend data.",
+            "error": "No API keys configured. Set SERPAPI_KEY, YOUTUBE_API_KEY, APIFY_API_TOKEN, or GEMINI_API_KEY in backend/.env for real trend data.",
         }
 
     def get_current_trends(self) -> list:
@@ -178,6 +195,80 @@ class TrendSniper:
             "lastUpdated": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
             "source": "youtube",
         }
+
+    # ── Apify TikTok hashtag scrape ─────────────────────────────────────────
+
+    # Actor run latency (scrape ~20 videos) — only reached when SerpAPI and
+    # YouTube are absent or failed, so the slow path is acceptable.
+    APIFY_TIMEOUT_SECONDS = 90
+    APIFY_MAX_RESULTS = 20
+
+    def _fetch_apify_tiktok_trends(self, industry: str) -> Dict[str, Any]:
+        """
+        Scrapes TikTok hashtag feeds via an Apify actor and maps the top
+        videos into the shared trend shape.
+
+        Uses the run-sync-get-dataset-items endpoint: one HTTP call that
+        starts the actor, waits for it to finish, and returns dataset items.
+        """
+        url = f"https://api.apify.com/v2/acts/{self.apify_actor}/run-sync-get-dataset-items"
+        params = {"token": self.apify_api_token}
+        payload = {
+            "hashtags": [self._industry_to_hashtag(industry)],
+            "resultsPerPage": self.APIFY_MAX_RESULTS,
+            "shouldDownloadCovers": False,
+            "shouldDownloadSlideshowImages": False,
+            "shouldDownloadSubtitles": False,
+            "shouldDownloadVideos": False,
+        }
+
+        resp = requests.post(url, params=params, json=payload, timeout=self.APIFY_TIMEOUT_SECONDS)
+        resp.raise_for_status()
+        items = resp.json()
+        if not isinstance(items, list):
+            raise ValueError(f"Unexpected actor output type: {type(items).__name__}")
+
+        videos = [v for v in items if isinstance(v, dict) and v.get("text")]
+        videos.sort(key=lambda v: int(v.get("playCount") or 0), reverse=True)
+
+        top_trends = []
+        viral_hooks = []
+        for video in videos[:6]:
+            caption = str(video["text"]).strip().split("\n")[0][:120]
+            plays = int(video.get("playCount") or 0)
+            author = (video.get("authorMeta") or {}).get("name", "unknown")
+
+            top_trends.append({
+                "keyword": caption,
+                "momentum": "peaking" if plays >= 1_000_000 else "rising",
+                "searchVolume": self._format_plays(plays),
+                "sentiment": "positive",
+                "context": f"TikTok #{self._industry_to_hashtag(industry)} by @{author}",
+            })
+            if len(viral_hooks) < 3:
+                viral_hooks.append(f"POV: {caption}...")
+
+        return {
+            "industry": industry,
+            "topTrends": top_trends,
+            "viralHooks": viral_hooks,
+            "lastUpdated": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+            "source": "apify",
+        }
+
+    @staticmethod
+    def _industry_to_hashtag(industry: str) -> str:
+        """'Home Fitness' → 'homefitness' (TikTok hashtags have no spaces)."""
+        cleaned = "".join(ch for ch in industry.lower() if ch.isalnum())
+        return cleaned or "trending"
+
+    @staticmethod
+    def _format_plays(plays: int) -> str:
+        if plays >= 1_000_000:
+            return f"{plays / 1_000_000:.1f}M plays"
+        if plays >= 1_000:
+            return f"{plays // 1_000}K plays"
+        return f"{plays} plays"
 
     # ── Gemini AI ───────────────────────────────────────────────────────────
 
