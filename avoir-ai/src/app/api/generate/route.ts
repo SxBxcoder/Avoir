@@ -21,6 +21,7 @@ import { checkRateLimit } from '@/lib/db/cache';
 import { isDemoMode, MOCK_CAMPAIGNS } from '@/lib/mockShield';
 import { parseCampaignRequest } from '@/lib/generation';
 import { requireUser, authErrorResponse } from '@/lib/auth/requireUser';
+import { logAuditEvent } from '@/lib/db/teams';
 import { logger } from '@/lib/logger';
 import { z } from 'zod';
 import { parseJsonBody } from '@/lib/validate';
@@ -179,6 +180,17 @@ export async function POST(req: Request) {
       tier: parsedData.tier || 'TIER_1_GEMINI',
       status: parsedData.status || 'completed',
     });
+
+    // Cascade visibility: the primary tier (Gemini key 1) is the happy path;
+    // anything else means the Diamond Cascade transitioned (key rotation,
+    // Groq, OpenRouter, or mock). Audit only transitions to keep the table lean.
+    const servedTier = parsedData.tier || 'TIER_1_GEMINI';
+    if (servedTier !== 'TIER_1_GEMINI') {
+      await logAuditEvent(null, userId, 'cascade.tier_transition', {
+        servedTier,
+        campaignId: campaign.campaignId,
+      });
+    }
 
     // Map Python Agent response back to your Next.js UI format
     return NextResponse.json({

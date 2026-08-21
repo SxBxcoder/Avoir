@@ -29,6 +29,7 @@ import { fetchCompetitorIntel, formatCompetitorContext } from '@/lib/db/competit
 import { fetchIndustryTrends, synthesizeTrendContext } from '@/lib/trends';
 import { parseCampaignRequest } from '@/lib/generation';
 import { requireUser, authErrorResponse } from '@/lib/auth/requireUser';
+import { logAuditEvent } from '@/lib/db/teams';
 import { logger } from '@/lib/logger';
 import { z } from 'zod';
 
@@ -169,6 +170,17 @@ function createSSEStream(
             status: 'completed',
           });
           campaignId = campaign.campaignId;
+        }
+
+        // Cascade visibility: audit only transitions away from the primary
+        // tier (key rotation, Groq, OpenRouter, or mock) to keep the table lean.
+        const servedTier = parsedData.tier || 'TIER_1_GEMINI';
+        if (servedTier !== 'TIER_1_GEMINI') {
+          await logAuditEvent(null, userId, 'cascade.tier_transition', {
+            servedTier,
+            campaignId,
+            genomeMode,
+          });
         }
 
         // The deliverable now exists (a persisted campaign row, or completed
