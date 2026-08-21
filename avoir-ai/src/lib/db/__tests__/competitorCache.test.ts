@@ -46,7 +46,11 @@ function fakeSend(command: unknown): Promise<unknown> {
   return Promise.resolve({});
 }
 
-function makeEntry(overrides: Partial<CompetitorCacheEntry> = {}): CompetitorCacheEntry {
+// Intersection gives the entry an index signature so it can be stored in the
+// Record-typed in-memory DynamoDB item store without casting.
+function makeEntry(
+  overrides: Partial<CompetitorCacheEntry> = {}
+): CompetitorCacheEntry & Record<string, unknown> {
   return {
     industry: 'fashion',
     cacheKey: 'latest:ALL',
