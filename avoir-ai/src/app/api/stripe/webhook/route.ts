@@ -17,6 +17,7 @@ import { NextResponse } from 'next/server';
 import { headers } from 'next/headers';
 import { getStripeServer, type PlanTier } from '@/lib/stripe';
 import { upsertSubscription } from '@/lib/services/subscription';
+import { logAuditEvent } from '@/lib/db/teams';
 import type Stripe from 'stripe';
 import { logger } from '@/lib/logger';
 
@@ -103,6 +104,11 @@ export async function POST(req: Request) {
         });
 
         logger.info('webhook', 'User upgraded', { tier });
+        await logAuditEvent(null, userId, 'billing.checkout_completed', {
+          tier,
+          creditsAdded: creditsToAdd,
+          stripeSubscriptionId: subscriptionId,
+        });
         break;
       }
 
@@ -137,6 +143,11 @@ export async function POST(req: Request) {
             lastResetDate: new Date().toISOString(),
           });
           logger.info('webhook', 'Invoice paid, credits refilled');
+          await logAuditEvent(null, userId, 'billing.payment_succeeded', {
+            tier,
+            creditsRefilled: creditsToAdd,
+            invoiceId: invoice.id,
+          });
         }
         break;
       }
@@ -158,6 +169,10 @@ export async function POST(req: Request) {
         if (userId) {
           await upsertSubscription(userId, { status: 'past_due' });
           logger.warn('webhook', 'Payment failed, subscription past_due');
+          await logAuditEvent(null, userId, 'billing.payment_failed', {
+            invoiceId: invoice.id,
+            stripeSubscriptionId: subscriptionId,
+          });
         }
         break;
       }
@@ -185,6 +200,11 @@ export async function POST(req: Request) {
             cancelAtPeriodEnd: (subscription as any).cancel_at_period_end,
           });
           logger.info('webhook', 'Subscription updated', { tier, cancelAtPeriodEnd: subscription.cancel_at_period_end });
+          await logAuditEvent(null, userId, 'billing.subscription_updated', {
+            tier,
+            status,
+            cancelAtPeriodEnd: subscription.cancel_at_period_end,
+          });
         }
         break;
       }
@@ -208,6 +228,9 @@ export async function POST(req: Request) {
             // We do not strip credits away, they keep what they paid for until they use them
           });
           logger.info('webhook', 'Subscription deleted, downgraded to free');
+          await logAuditEvent(null, userId, 'billing.subscription_deleted', {
+            downgradedTo: 'free',
+          });
         }
         break;
       }
