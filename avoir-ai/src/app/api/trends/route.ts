@@ -11,6 +11,7 @@
 
 import { NextResponse } from 'next/server';
 import { fetchIndustryTrends } from '@/lib/trends';
+import { checkRateLimit } from '@/lib/db/cache';
 import { isDemoMode, MOCK_TRENDS } from '@/lib/mockShield';
 import { requireUser, authErrorResponse } from '@/lib/auth/requireUser';
 import { logger } from '@/lib/logger';
@@ -27,7 +28,8 @@ export async function GET(req: Request) {
   }
 
   try {
-    await requireUser(req);
+    // Identity comes from the verified Cognito JWT — never trust client input.
+    const { userId } = await requireUser(req);
 
     const { searchParams } = new URL(req.url);
     const industry = searchParams.get('industry');
@@ -38,6 +40,28 @@ export async function GET(req: Request) {
       return NextResponse.json(
         { error: 'Missing required parameter: industry' },
         { status: 400 }
+      );
+    }
+
+    // Rate limit BEFORE any external SerpAPI call. `fresh=true` bypasses the
+    // DynamoDB cache, so without this cap a single authenticated user could
+    // hammer the Python backend in a loop and exhaust our SerpAPI paid credits.
+    const rateLimit = await checkRateLimit(userId, 10, 60); // 10 requests per minute
+    if (!rateLimit.allowed) {
+      logger.warn('trends', 'Rate limited', { resetInSeconds: rateLimit.resetIn, userId });
+      return NextResponse.json(
+        {
+          error: 'Rate limit exceeded',
+          message: `Too many requests. Please wait ${rateLimit.resetIn} seconds.`,
+          resetIn: rateLimit.resetIn,
+        },
+        {
+          status: 429,
+          headers: {
+            'Retry-After': String(rateLimit.resetIn),
+            'X-RateLimit-Remaining': String(rateLimit.remaining),
+          },
+        }
       );
     }
 
