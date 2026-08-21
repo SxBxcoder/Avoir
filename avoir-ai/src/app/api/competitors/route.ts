@@ -12,6 +12,7 @@
 
 import { NextResponse } from 'next/server';
 import { fetchCompetitorIntel } from '@/lib/db/competitors';
+import { checkRateLimit } from '@/lib/db/cache';
 import { isDemoMode, MOCK_COMPETITOR_INTEL } from '@/lib/mockShield';
 import { requireUser, authErrorResponse } from '@/lib/auth/requireUser';
 import { logger } from '@/lib/logger';
@@ -29,7 +30,7 @@ export async function GET(req: Request) {
 
   try {
     // Identity comes from the verified Cognito JWT — never trust client input.
-    await requireUser(req);
+    const { userId } = await requireUser(req);
 
     const { searchParams } = new URL(req.url);
     const industry = searchParams.get('industry');
@@ -55,6 +56,29 @@ export async function GET(req: Request) {
     const pageIds = pageIdsRaw
       ? pageIdsRaw.split(',').map((id) => id.trim()).filter(Boolean).slice(0, 10)
       : undefined;
+
+    // Rate limit BEFORE any external Facebook Ad Library call. `fresh=true` and
+    // `pageIds` bypass the DynamoDB cache, so without this cap a single
+    // authenticated user could hammer Meta's API in a loop and exhaust our app
+    // review limits (or get the Avoir app banned for abuse).
+    const rateLimit = await checkRateLimit(userId, 10, 60); // 10 requests per minute
+    if (!rateLimit.allowed) {
+      logger.warn('competitors', 'Rate limited', { resetInSeconds: rateLimit.resetIn, userId });
+      return NextResponse.json(
+        {
+          error: 'Rate limit exceeded',
+          message: `Too many requests. Please wait ${rateLimit.resetIn} seconds.`,
+          resetIn: rateLimit.resetIn,
+        },
+        {
+          status: 429,
+          headers: {
+            'Retry-After': String(rateLimit.resetIn),
+            'X-RateLimit-Remaining': String(rateLimit.remaining),
+          },
+        }
+      );
+    }
 
     const intel = await fetchCompetitorIntel(industry, {
       country,

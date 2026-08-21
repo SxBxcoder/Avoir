@@ -3,29 +3,29 @@ import { GET } from './route';
 import { NextResponse } from 'next/server';
 
 const {
-  fetchCompetitorIntel,
+  fetchIndustryTrends,
   requireUser,
   authErrorResponse,
   isDemoMode,
   checkRateLimit,
 } = vi.hoisted(() => ({
-  fetchCompetitorIntel: vi.fn(),
+  fetchIndustryTrends: vi.fn(),
   requireUser: vi.fn(),
   authErrorResponse: vi.fn(),
   isDemoMode: vi.fn(),
   checkRateLimit: vi.fn(),
 }));
 
-vi.mock('@/lib/db/competitors', () => ({ fetchCompetitorIntel }));
+vi.mock('@/lib/trends', () => ({ fetchIndustryTrends }));
 vi.mock('@/lib/db/cache', () => ({ checkRateLimit }));
 vi.mock('@/lib/auth/requireUser', () => ({ requireUser, authErrorResponse }));
 vi.mock('@/lib/mockShield', () => ({
   isDemoMode,
-  MOCK_COMPETITOR_INTEL: { industry: 'demo', topAds: [], marketGaps: [] },
+  MOCK_TRENDS: { industry: 'demo', topTrends: [], viralHooks: [] },
 }));
 
 function makeRequest(query = ''): Request {
-  return new Request(`http://localhost/api/competitors${query}`);
+  return new Request(`http://localhost/api/trends${query}`);
 }
 
 beforeEach(() => {
@@ -35,8 +35,8 @@ beforeEach(() => {
   checkRateLimit.mockResolvedValue({ allowed: true, remaining: 10, resetIn: 0 });
 });
 
-describe('GET /api/competitors', () => {
-  it('serves mock intel in demo mode without touching auth or DynamoDB', async () => {
+describe('GET /api/trends', () => {
+  it('serves mock trends in demo mode without touching auth or DynamoDB', async () => {
     isDemoMode.mockReturnValue(true);
 
     const res = await GET(makeRequest('?industry=fashion'));
@@ -44,22 +44,14 @@ describe('GET /api/competitors', () => {
 
     expect(body.source).toBe('mock');
     expect(requireUser).not.toHaveBeenCalled();
-    expect(fetchCompetitorIntel).not.toHaveBeenCalled();
+    expect(fetchIndustryTrends).not.toHaveBeenCalled();
   });
 
   it('returns 400 when industry is missing', async () => {
     const res = await GET(makeRequest());
 
     expect(res.status).toBe(400);
-    expect(fetchCompetitorIntel).not.toHaveBeenCalled();
-  });
-
-  it('returns 400 for a non-ISO country code', async () => {
-    const res = await GET(makeRequest('?industry=fashion&country=USA'));
-
-    expect(res.status).toBe(400);
-    const body = await res.json();
-    expect(body.error).toContain('ISO 3166-1');
+    expect(fetchIndustryTrends).not.toHaveBeenCalled();
   });
 
   it('returns 401 when identity verification fails', async () => {
@@ -69,10 +61,12 @@ describe('GET /api/competitors', () => {
     const res = await GET(makeRequest('?industry=fashion'));
 
     expect(res.status).toBe(401);
-    expect(fetchCompetitorIntel).not.toHaveBeenCalled();
+    expect(fetchIndustryTrends).not.toHaveBeenCalled();
   });
 
-  it('returns 429 and skips the Facebook fetch when rate limited', async () => {
+  // Regression guard for PR #51: `fresh=true` bypasses the 48h DynamoDB cache,
+  // so an unthrottled route would let one user drain SerpAPI paid credits.
+  it('returns 429 and skips the SerpAPI fetch when rate limited', async () => {
     checkRateLimit.mockResolvedValue({ allowed: false, remaining: 0, resetIn: 42 });
 
     const res = await GET(makeRequest('?industry=fashion&fresh=true'));
@@ -83,55 +77,65 @@ describe('GET /api/competitors', () => {
     expect(res.headers.get('X-RateLimit-Remaining')).toBe('0');
     expect(body.error).toContain('Rate limit');
     expect(checkRateLimit).toHaveBeenCalledWith('user-1', 10, 60);
-    expect(fetchCompetitorIntel).not.toHaveBeenCalled();
+    expect(fetchIndustryTrends).not.toHaveBeenCalled();
   });
 
   it('rate limits per verified user, not per client input', async () => {
-    fetchCompetitorIntel.mockResolvedValue(null);
+    fetchIndustryTrends.mockResolvedValue(null);
 
     await GET(makeRequest('?industry=fashion'));
 
     expect(checkRateLimit).toHaveBeenCalledWith('user-1', 10, 60);
   });
 
-  it('fetches intel and forwards validated params', async () => {
-    const intel = {
+  it('fetches trends and forwards validated params including fresh', async () => {
+    const trends = {
       industry: 'fashion',
-      topAds: [{ id: 'ad-1' }],
-      marketGaps: ['gap'],
+      topTrends: [{ keyword: 'quiet luxury', momentum: 'rising' }],
+      viralHooks: ['hook'],
       lastUpdated: new Date().toISOString(),
-      source: 'facebook',
+      source: 'serpapi',
+      cachedUntil: new Date(Date.now() + 48 * 3600 * 1000).toISOString(),
     };
-    fetchCompetitorIntel.mockResolvedValue(intel);
+    fetchIndustryTrends.mockResolvedValue(trends);
 
-    const res = await GET(
-      makeRequest('?industry=fashion&country=US&pageIds=123,456,,789&fresh=true')
-    );
+    const res = await GET(makeRequest('?industry=fashion&country=gb&fresh=true'));
     const body = await res.json();
 
     expect(res.status).toBe(200);
-    expect(body.intel).toEqual(intel);
-    expect(body.source).toBe('facebook');
-    expect(fetchCompetitorIntel).toHaveBeenCalledWith('fashion', {
-      country: 'US',
-      pageIds: ['123', '456', '789'],
+    expect(body.trends).toEqual(trends);
+    expect(body.source).toBe('serpapi');
+    expect(body.cachedUntil).toBe(trends.cachedUntil);
+    expect(fetchIndustryTrends).toHaveBeenCalledWith('fashion', {
+      country: 'gb',
       fresh: true,
     });
   });
 
-  it('reports source "none" when no intel exists', async () => {
-    fetchCompetitorIntel.mockResolvedValue(null);
+  it('defaults country to "us" when not supplied', async () => {
+    fetchIndustryTrends.mockResolvedValue(null);
+
+    await GET(makeRequest('?industry=fashion'));
+
+    expect(fetchIndustryTrends).toHaveBeenCalledWith('fashion', {
+      country: 'us',
+      fresh: false,
+    });
+  });
+
+  it('reports null trends when no data exists', async () => {
+    fetchIndustryTrends.mockResolvedValue(null);
 
     const res = await GET(makeRequest('?industry=fashion'));
     const body = await res.json();
 
     expect(res.status).toBe(200);
-    expect(body.intel).toBeNull();
-    expect(body.source).toBe('none');
+    expect(body.trends).toBeNull();
+    expect(body.message).toContain('SERPAPI_KEY');
   });
 
   it('returns 500 on unexpected failures', async () => {
-    fetchCompetitorIntel.mockRejectedValue(new Error('boom'));
+    fetchIndustryTrends.mockRejectedValue(new Error('boom'));
 
     const res = await GET(makeRequest('?industry=fashion'));
 
