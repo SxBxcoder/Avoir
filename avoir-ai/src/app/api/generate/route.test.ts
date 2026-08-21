@@ -26,6 +26,7 @@ vi.mock('@/lib/services/subscription', () => ({ addCredits, deductCredits }));
 vi.mock('@/lib/db/cache', () => ({ checkRateLimit }));
 vi.mock('@/lib/mockShield', () => ({ isDemoMode, MOCK_CAMPAIGNS: [] }));
 vi.mock('@/lib/auth/requireUser', () => ({ requireUser, authErrorResponse }));
+vi.mock('@/lib/db/teams', () => ({ logAuditEvent: vi.fn().mockResolvedValue(undefined) }));
 vi.mock('@/lib/db/campaigns', () => ({ createCampaign }));
 vi.mock('next/server', () => ({
   NextResponse: {

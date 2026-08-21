@@ -70,6 +70,7 @@ vi.mock('@/lib/db/competitors', () => ({
 }));
 vi.mock('@/lib/trends', () => ({ fetchIndustryTrends, synthesizeTrendContext }));
 vi.mock('@/lib/auth/requireUser', () => ({ requireUser, authErrorResponse }));
+vi.mock('@/lib/db/teams', () => ({ logAuditEvent: vi.fn().mockResolvedValue(undefined) }));
 vi.mock('@/lib/mockShield', () => ({ isDemoMode, createMockSSEStream }));
 
 function subscription(credits: number): UserSubscription {
