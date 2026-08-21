@@ -1,9 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { Shield, Eye, Flame, AlertTriangle, Target, Activity, Loader2, X } from 'lucide-react';
-import { useAuth } from '@/lib/auth/provider';
+import { Shield, Eye, Flame, AlertTriangle, Target, Activity, Loader2, X, Globe, RefreshCw } from 'lucide-react';
 import { clientLog } from '@/lib/logClient';
 
 interface CompetitorAd {
@@ -13,6 +12,8 @@ interface CompetitorAd {
   engagement: string;
   runTime: string;
   detectedFormat: string;
+  platforms?: string[];
+  snapshotUrl?: string;
 }
 
 interface CompetitorIntel {
@@ -20,6 +21,8 @@ interface CompetitorIntel {
   topAds: CompetitorAd[];
   marketGaps: string[];
   lastUpdated: string;
+  source: 'facebook' | 'cache' | 'mock';
+  cachedUntil?: string;
 }
 
 interface CompetitorIntelPanelProps {
@@ -28,35 +31,73 @@ interface CompetitorIntelPanelProps {
   onInjectGap: (gap: string) => void;
 }
 
+const COUNTRIES = [
+  { code: 'ALL', label: 'Global' },
+  { code: 'US', label: 'United States' },
+  { code: 'GB', label: 'United Kingdom' },
+  { code: 'DE', label: 'Germany' },
+  { code: 'FR', label: 'France' },
+  { code: 'IN', label: 'India' },
+  { code: 'BR', label: 'Brazil' },
+  { code: 'AU', label: 'Australia' },
+  { code: 'CA', label: 'Canada' },
+];
+
+const PLATFORM_ICONS: Record<string, string> = {
+  FACEBOOK: '📘',
+  INSTAGRAM: '📸',
+  AUDIENCE_NETWORK: '📺',
+  MESSENGER: '💬',
+  WHATSAPP: '📱',
+  THREADS: '🧵',
+};
+
 export default function CompetitorIntelPanel({ industry, onClose, onInjectGap }: CompetitorIntelPanelProps) {
-  const { accessToken } = useAuth();
   const [intel, setIntel] = useState<CompetitorIntel | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [country, setCountry] = useState('ALL');
+  const [source, setSource] = useState<string>('mock');
+
+  const getAccessToken = useCallback((): string | null => {
+    try {
+      const raw = localStorage.getItem('avoir_auth');
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      return parsed?.accessToken ?? parsed?.token ?? null;
+    } catch {
+      return null;
+    }
+  }, []);
+
+  const fetchIntel = useCallback(async (fresh = false) => {
+    setIsLoading(true);
+    try {
+      const params = new URLSearchParams({ industry, country });
+      if (fresh) params.set('fresh', 'true');
+
+      const token = getAccessToken();
+      const res = await fetch(`/api/competitors?${params}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.intel) {
+          setIntel(data.intel);
+          setSource(data.source || 'mock');
+        }
+      }
+    } catch (err) {
+      clientLog.error('Failed to fetch competitor intel:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [industry, country, getAccessToken]);
 
   useEffect(() => {
-    let mounted = true;
-    const fetchIntel = async () => {
-      setIsLoading(true);
-      try {
-        const res = await fetch(`/api/competitors?industry=${encodeURIComponent(industry)}`, {
-          headers: accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {},
-        });
-        if (res.ok) {
-          const data = await res.json();
-          if (data.intel && mounted) {
-            setIntel(data.intel);
-          }
-        }
-      } catch (err) {
-        clientLog.error('Failed to fetch competitor intel:', err);
-      } finally {
-        if (mounted) setIsLoading(false);
-      }
-    };
-
     fetchIntel();
-    return () => { mounted = false; };
-  }, [industry, accessToken]);
+  }, [fetchIntel]);
+
+  const handleRefresh = () => fetchIntel(true);
 
   return (
     <motion.div
@@ -80,17 +121,41 @@ export default function CompetitorIntelPanel({ industry, onClose, onInjectGap }:
             <div>
               <div className="flex items-center gap-3">
                 <h2 className="text-xl font-bold text-foreground font-tactical tracking-wider">COMPETITOR INTEL</h2>
-                <span className="text-[10px] px-2 py-0.5 rounded bg-muted/80 text-muted-foreground font-mono tracking-widest border border-border">SIMULATED DATA</span>
+                <SourceBadge source={source} cachedUntil={intel?.cachedUntil} />
               </div>
               <p className="text-sm text-muted-foreground flex items-center gap-2">
                 <Target className="w-4 h-4 text-orange-500/70" />
-                Live Analysis: <span className="text-orange-400 font-mono">{industry.toUpperCase()}</span>
+                Analysis: <span className="text-orange-400 font-mono">{industry.toUpperCase()}</span>
               </p>
             </div>
           </div>
-          <button onClick={onClose} className="p-2 hover:bg-muted rounded-xl transition-colors">
-            <X className="w-5 h-5 text-muted-foreground" />
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleRefresh}
+              disabled={isLoading}
+              className="p-2 hover:bg-muted rounded-xl transition-colors"
+              title="Force refresh from Facebook Ad Library"
+            >
+              <RefreshCw className={`w-4 h-4 text-muted-foreground ${isLoading ? 'animate-spin' : ''}`} />
+            </button>
+            <button onClick={onClose} className="p-2 hover:bg-muted rounded-xl transition-colors">
+              <X className="w-5 h-5 text-muted-foreground" />
+            </button>
+          </div>
+        </div>
+
+        {/* Country Filter */}
+        <div className="px-6 py-3 border-b border-border/50 flex items-center gap-2">
+          <Globe className="w-4 h-4 text-muted-foreground" />
+          <select
+            value={country}
+            onChange={(e) => setCountry(e.target.value)}
+            className="bg-muted/50 border border-border/50 rounded-lg px-3 py-1.5 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-orange-500/50"
+          >
+            {COUNTRIES.map((c) => (
+              <option key={c.code} value={c.code}>{c.label}</option>
+            ))}
+          </select>
         </div>
 
         {/* Content */}
@@ -98,7 +163,9 @@ export default function CompetitorIntelPanel({ industry, onClose, onInjectGap }:
           {isLoading ? (
             <div className="flex flex-col items-center justify-center py-20 space-y-4">
               <Loader2 className="w-8 h-8 text-orange-400 animate-spin" />
-              <p className="text-sm text-muted-foreground font-tactical tracking-wider">ANALYZING AD LIBRARIES...</p>
+              <p className="text-sm text-muted-foreground font-tactical tracking-wider">
+                {source === 'facebook' ? 'QUERYING AD LIBRARY...' : 'ANALYZING AD LIBRARIES...'}
+              </p>
             </div>
           ) : !intel ? (
             <div className="text-center py-20 text-muted-foreground">
@@ -125,9 +192,16 @@ export default function CompetitorIntelPanel({ industry, onClose, onInjectGap }:
                           <span className="text-muted-foreground bg-muted/50 px-2 py-1 rounded">Run Time: {ad.runTime}</span>
                         </div>
                       </div>
-                      <p className="text-sm text-muted-foreground italic border-l-2 border-orange-500/30 pl-3 py-1">"{ad.hook}"</p>
-                      <div className="mt-3 text-xs text-muted-foreground flex items-center gap-2">
-                        Format: <span className="text-muted-foreground">{ad.detectedFormat}</span>
+                      <p className="text-sm text-muted-foreground italic border-l-2 border-orange-500/30 pl-3 py-1">&ldquo;{ad.hook}&rdquo;</p>
+                      <div className="mt-3 text-xs text-muted-foreground flex items-center gap-3">
+                        <span>Format: {ad.detectedFormat}</span>
+                        {ad.platforms && ad.platforms.length > 0 && (
+                          <span className="flex items-center gap-1">
+                            {ad.platforms.map((p) => (
+                              <span key={p} title={p} className="text-sm">{PLATFORM_ICONS[p] || '📢'}</span>
+                            ))}
+                          </span>
+                        )}
                       </div>
                     </div>
                   ))}
@@ -163,5 +237,34 @@ export default function CompetitorIntelPanel({ industry, onClose, onInjectGap }:
         </div>
       </motion.div>
     </motion.div>
+  );
+}
+
+// ============================================================================
+// SOURCE BADGE
+// ============================================================================
+
+function SourceBadge({ source, cachedUntil }: { source: string; cachedUntil?: string }) {
+  if (source === 'facebook') {
+    return (
+      <span className="text-[10px] px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-mono tracking-widest border border-emerald-500/30">
+        LIVE · Facebook Ad Library
+      </span>
+    );
+  }
+  if (source === 'cache') {
+    const timeLeft = cachedUntil
+      ? `${Math.max(0, Math.round((new Date(cachedUntil).getTime() - Date.now()) / (1000 * 60 * 60)))}h left`
+      : '';
+    return (
+      <span className="text-[10px] px-2 py-0.5 rounded bg-blue-500/20 text-blue-400 font-mono tracking-widest border border-blue-500/30">
+        CACHED {timeLeft && `· ${timeLeft}`}
+      </span>
+    );
+  }
+  return (
+    <span className="text-[10px] px-2 py-0.5 rounded bg-muted/80 text-muted-foreground font-mono tracking-widest border border-border">
+      DEMO DATA
+    </span>
   );
 }

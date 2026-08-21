@@ -5,9 +5,11 @@
  *   node scripts/create-tables.mjs
  * 
  * Tables created:
- *   1. avoir-users     — User subscriptions (PK: userId)
- *   2. avoir-campaigns — Campaign history (PK: userId, SK: campaignId)
- *   3. avoir-audit     — Audit logs (PK: userId, SK: logId)
+ *   1. avoir-users         — User subscriptions (PK: userId)
+ *   2. avoir-campaigns     — Campaign history (PK: userId, SK: campaignId)
+ *   3. avoir-audit         — Audit logs (PK: userId, SK: logId)
+ *   4. avoir-competitors   — Competitor intel cache (PK: industry, SK: cacheKey)
+ *                            TTL attribute: ttl (24h auto-expiry)
  * 
  * Prerequisites:
  *   - AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY in your environment
@@ -55,6 +57,22 @@ const TABLES = [
     ],
     BillingMode: 'PAY_PER_REQUEST',
   },
+  {
+    TableName: 'avoir-competitors',
+    KeySchema: [
+      { AttributeName: 'industry', KeyType: 'HASH' },
+      { AttributeName: 'cacheKey', KeyType: 'RANGE' },
+    ],
+    AttributeDefinitions: [
+      { AttributeName: 'industry', AttributeType: 'S' },
+      { AttributeName: 'cacheKey', AttributeType: 'S' },
+    ],
+    BillingMode: 'PAY_PER_REQUEST',
+    TimeToLiveSpecification: {
+      AttributeName: 'ttl',
+      Enabled: true,
+    },
+  },
 ];
 
 async function tableExists(tableName) {
@@ -94,6 +112,7 @@ async function main() {
   console.log('   DYNAMODB_USERS_TABLE=avoir-users');
   console.log('   DYNAMODB_CAMPAIGNS_TABLE=avoir-campaigns');
   console.log('   DYNAMODB_AUDIT_TABLE=avoir-audit');
+  console.log('   DYNAMODB_COMPETITORS_TABLE=avoir-competitors');
 }
 
 main().catch(console.error);
