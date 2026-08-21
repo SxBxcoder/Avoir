@@ -28,6 +28,7 @@ export async function GET(req: Request) {
   }
 
   try {
+    // Identity comes from the verified Cognito JWT — never trust client input.
     await requireUser(req);
 
     const { searchParams } = new URL(req.url);

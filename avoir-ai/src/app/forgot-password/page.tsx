@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { resetPassword, confirmResetPassword } from 'aws-amplify/auth';
-import { configureAuth } from '@/lib/auth';
+import { resetPassword, confirmResetPassword } from '@/lib/authBridge';
+import { GuestOnly } from '@/components/auth/guards';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, ArrowRight, Mail, Lock, ShieldCheck, KeyRound, Eye, EyeOff, CheckCircle2 } from 'lucide-react';
 import Link from 'next/link';
@@ -25,8 +25,6 @@ export default function ForgotPasswordPage() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
-  useEffect(() => { configureAuth(); }, []);
-
   // Step 1: Send verification code
   const handleSendCode = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -35,10 +33,6 @@ export default function ForgotPasswordPage() {
     setSuccess('');
 
     try {
-      if (!process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID) {
-        throw new Error('Deployment Error: Cognito User Pool ID is missing.');
-      }
-
       await resetPassword({ username: email });
       setSuccess('Verification code sent! Check your email inbox (and spam folder).');
       setStep('code');
@@ -111,10 +105,11 @@ export default function ForgotPasswordPage() {
   const strengthColors = ['', '#ef4444', '#f97316', '#eab308', '#22c55e', '#06b6d4'];
 
   return (
-    <div className="min-h-screen bg-black text-white flex" style={{ fontFamily: "'Inter', sans-serif" }}>
+    <GuestOnly>
+    <div className="min-h-screen bg-background text-foreground flex" style={{ fontFamily: "'Inter', sans-serif" }}>
       {/* Left Panel — Branding */}
       <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-indigo-600/20 via-purple-600/10 to-black" />
+        <div className="absolute inset-0 bg-gradient-to-br from-indigo-600/20 via-purple-600/10 to-background" />
         <motion.div
           animate={{ x: [0, 30, 0], y: [0, -20, 0] }}
           transition={{ duration: 10, repeat: Infinity, ease: 'easeInOut' }}
@@ -138,16 +133,16 @@ export default function ForgotPasswordPage() {
               Forgot your<br />
               <span className="fluid-text-hero">password?</span>
             </h1>
-            <p className="text-lg text-zinc-400 max-w-md leading-relaxed">
+            <p className="text-lg text-muted-foreground max-w-md leading-relaxed">
               No worries. We'll send you a verification code to your email and you'll be back in action in seconds.
             </p>
 
             {/* Security badge */}
-            <div className="flex items-center gap-4 mt-12 p-4 rounded-xl bg-white/5 border border-white/10 max-w-sm">
+            <div className="flex items-center gap-4 mt-12 p-4 rounded-xl bg-card border border-border max-w-sm">
               <ShieldCheck className="w-8 h-8 text-emerald-400 flex-shrink-0" />
               <div>
-                <p className="text-sm font-medium text-white">End-to-end encrypted</p>
-                <p className="text-xs text-zinc-500">Your password reset is secured by AWS Cognito</p>
+                <p className="text-sm font-medium text-foreground">End-to-end encrypted</p>
+                <p className="text-xs text-muted-foreground">Your password reset is secured by AWS Cognito</p>
               </div>
             </div>
           </motion.div>
@@ -170,7 +165,7 @@ export default function ForgotPasswordPage() {
             <span className="text-lg font-bold">Avoir<span className="text-indigo-400">.ai</span></span>
           </div>
 
-          <Link href="/login" className="inline-flex items-center gap-2 text-zinc-500 hover:text-white mb-8 transition-colors group">
+          <Link href="/login" className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground mb-8 transition-colors group">
             <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
             <span className="text-sm">Back to Login</span>
           </Link>
@@ -180,14 +175,14 @@ export default function ForgotPasswordPage() {
             {(['email', 'code', 'success'] as Step[]).map((s, i) => (
               <div key={s} className="flex items-center gap-3">
                 <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300 ${
-                  step === s ? 'bg-white text-black scale-110' : 
+                  step === s ? 'bg-foreground text-background scale-110' : 
                   (['email', 'code', 'success'].indexOf(step) > i) ? 'bg-indigo-500 text-white' : 
-                  'bg-white/10 text-zinc-500'
+                  'bg-muted text-muted-foreground'
                 }`}>
                   {(['email', 'code', 'success'].indexOf(step) > i) ? '✓' : i + 1}
                 </div>
                 {i < 2 && <div className={`w-8 h-px transition-colors duration-300 ${
-                  (['email', 'code', 'success'].indexOf(step) > i) ? 'bg-indigo-500' : 'bg-white/10'
+                  (['email', 'code', 'success'].indexOf(step) > i) ? 'bg-indigo-500' : 'bg-border'
                 }`} />}
               </div>
             ))}
@@ -205,7 +200,7 @@ export default function ForgotPasswordPage() {
               >
                 <div className="mb-8">
                   <h2 className="text-3xl font-bold tracking-tight mb-2">Reset Password</h2>
-                  <p className="text-zinc-500">Enter your email and we'll send you a verification code</p>
+                  <p className="text-muted-foreground">Enter your email and we'll send you a verification code</p>
                 </div>
 
                 {error && (
@@ -220,16 +215,16 @@ export default function ForgotPasswordPage() {
 
                 <form onSubmit={handleSendCode} className="space-y-5">
                   <div>
-                    <label className="text-xs font-medium text-zinc-400 uppercase tracking-wider block mb-2">Email Address</label>
+                    <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider block mb-2">Email Address</label>
                     <div className="relative">
-                      <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+                      <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                       <input
                         type="email"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         placeholder="you@example.com"
                         required
-                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3.5 pl-11 text-white placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/30 transition-all"
+                        className="w-full bg-card border border-border rounded-xl px-4 py-3.5 pl-11 text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/30 transition-all"
                       />
                     </div>
                   </div>
@@ -239,11 +234,11 @@ export default function ForgotPasswordPage() {
                     disabled={loading}
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
-                    className="w-full bg-white text-black font-bold py-4 rounded-xl transition-all flex items-center justify-center gap-2 hover:bg-zinc-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-white/5"
+                    className="w-full bg-foreground text-background font-bold py-4 rounded-xl transition-all flex items-center justify-center gap-2 hover:bg-foreground/90 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-foreground/5"
                   >
                     {loading ? (
                       <div className="flex items-center gap-2">
-                        <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }} className="w-4 h-4 border-2 border-black/20 border-t-black rounded-full" />
+                        <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }} className="w-4 h-4 border-2 border-background/20 border-t-background rounded-full" />
                         Sending Code...
                       </div>
                     ) : (
@@ -268,8 +263,8 @@ export default function ForgotPasswordPage() {
               >
                 <div className="mb-8">
                   <h2 className="text-3xl font-bold tracking-tight mb-2">Enter Code</h2>
-                  <p className="text-zinc-500">
-                    We sent a code to <span className="text-white font-medium">{email}</span>
+                  <p className="text-muted-foreground">
+                    We sent a code to <span className="text-foreground font-medium">{email}</span>
                   </p>
                 </div>
 
@@ -295,9 +290,9 @@ export default function ForgotPasswordPage() {
 
                 <form onSubmit={handleResetPassword} className="space-y-5">
                   <div>
-                    <label className="text-xs font-medium text-zinc-400 uppercase tracking-wider block mb-2">Verification Code</label>
+                    <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider block mb-2">Verification Code</label>
                     <div className="relative">
-                      <KeyRound className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+                      <KeyRound className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                       <input
                         type="text"
                         value={code}
@@ -305,27 +300,27 @@ export default function ForgotPasswordPage() {
                         placeholder="123456"
                         required
                         maxLength={6}
-                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3.5 pl-11 text-white placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/30 transition-all tracking-[0.3em] text-center text-lg font-mono"
+                        className="w-full bg-card border border-border rounded-xl px-4 py-3.5 pl-11 text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/30 transition-all tracking-[0.3em] text-center text-lg font-mono"
                       />
                     </div>
                   </div>
 
                   <div>
-                    <label className="text-xs font-medium text-zinc-400 uppercase tracking-wider block mb-2">New Password</label>
+                    <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider block mb-2">New Password</label>
                     <div className="relative">
-                      <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+                      <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                       <input
                         type={showPassword ? 'text' : 'password'}
                         value={newPassword}
                         onChange={(e) => setNewPassword(e.target.value)}
                         placeholder="Enter new password"
                         required
-                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3.5 pl-11 pr-11 text-white placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/30 transition-all"
+                        className="w-full bg-card border border-border rounded-xl px-4 py-3.5 pl-11 pr-11 text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/30 transition-all"
                       />
                       <button
                         type="button"
                         onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-white transition-colors"
+                        className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                       >
                         {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                       </button>
@@ -352,21 +347,21 @@ export default function ForgotPasswordPage() {
                   </div>
 
                   <div>
-                    <label className="text-xs font-medium text-zinc-400 uppercase tracking-wider block mb-2">Confirm Password</label>
+                    <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider block mb-2">Confirm Password</label>
                     <div className="relative">
-                      <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+                      <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                       <input
                         type={showPassword ? 'text' : 'password'}
                         value={confirmPassword}
                         onChange={(e) => setConfirmPassword(e.target.value)}
                         placeholder="Confirm new password"
                         required
-                        className={`w-full bg-white/5 border rounded-xl px-4 py-3.5 pl-11 text-white placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all ${
+                        className={`w-full bg-card border rounded-xl px-4 py-3.5 pl-11 text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all ${
                           confirmPassword && confirmPassword !== newPassword
                             ? 'border-red-500/50'
                             : confirmPassword && confirmPassword === newPassword
                             ? 'border-emerald-500/50'
-                            : 'border-white/10'
+                            : 'border-border'
                         }`}
                       />
                       {confirmPassword && confirmPassword === newPassword && (
@@ -380,11 +375,11 @@ export default function ForgotPasswordPage() {
                     disabled={loading || !code || !newPassword || !confirmPassword}
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
-                    className="w-full bg-white text-black font-bold py-4 rounded-xl transition-all flex items-center justify-center gap-2 hover:bg-zinc-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-white/5"
+                    className="w-full bg-foreground text-background font-bold py-4 rounded-xl transition-all flex items-center justify-center gap-2 hover:bg-foreground/90 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-foreground/5"
                   >
                     {loading ? (
                       <div className="flex items-center gap-2">
-                        <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }} className="w-4 h-4 border-2 border-black/20 border-t-black rounded-full" />
+                        <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }} className="w-4 h-4 border-2 border-background/20 border-t-background rounded-full" />
                         Resetting Password...
                       </div>
                     ) : (
@@ -398,7 +393,7 @@ export default function ForgotPasswordPage() {
                   <button
                     type="button"
                     onClick={() => { setStep('email'); setError(''); setSuccess(''); setCode(''); }}
-                    className="w-full text-center text-sm text-zinc-500 hover:text-white transition-colors mt-2"
+                    className="w-full text-center text-sm text-muted-foreground hover:text-foreground transition-colors mt-2"
                   >
                     Didn't receive the code? Go back and try again
                   </button>
@@ -425,7 +420,7 @@ export default function ForgotPasswordPage() {
                 </motion.div>
 
                 <h2 className="text-3xl font-bold tracking-tight mb-3">Password Reset!</h2>
-                <p className="text-zinc-400 mb-8 max-w-sm mx-auto">
+                <p className="text-muted-foreground mb-8 max-w-sm mx-auto">
                   Your password has been successfully reset. You can now sign in with your new password.
                 </p>
 
@@ -433,7 +428,7 @@ export default function ForgotPasswordPage() {
                   onClick={() => router.push('/login')}
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
-                  className="w-full bg-white text-black font-bold py-4 rounded-xl transition-all flex items-center justify-center gap-2 hover:bg-zinc-200 shadow-lg shadow-white/5"
+                  className="w-full bg-foreground text-background font-bold py-4 rounded-xl transition-all flex items-center justify-center gap-2 hover:bg-foreground/90 shadow-lg shadow-foreground/5"
                 >
                   Go to Login
                   <ArrowRight className="w-4 h-4" />
@@ -442,14 +437,15 @@ export default function ForgotPasswordPage() {
             )}
           </AnimatePresence>
 
-          <div className="mt-8 text-center text-sm text-zinc-500">
+          <div className="mt-8 text-center text-sm text-muted-foreground">
             Remember your password?{' '}
-            <Link href="/login" className="text-white font-medium hover:text-indigo-400 transition-colors">
+            <Link href="/login" className="text-foreground font-medium hover:text-indigo-400 transition-colors">
               Sign In
             </Link>
           </div>
         </motion.div>
       </div>
     </div>
+    </GuestOnly>
   );
 }

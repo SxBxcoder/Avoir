@@ -57,6 +57,8 @@ The system is split into two independently deployable halves: a **Next.js 14 fro
 | `authority_defender.py` | Social listening engine. Handles Meta webhook verification, comment sentiment analysis, and AI-drafted brand replies via Gemini. |
 | `agency_bridge.py` | B2B multi-tenant module. Manages agency clients, white-labeled share links, and public campaign approval routes. |
 | `signal_decay_monitor.py` | Tracks real-time campaign momentum, pushing updates via SSE. |
+| `alpha_brief_generator.py` | **Daily Alpha Brief generator.** Uses Gemini to produce a daily trend anomaly + campaign hook, cached in Upstash Redis (HTTP REST). |
+| `aws_lambda_daily_cron.py` | EventBridge cron Lambda that pre-warms the daily alpha brief in Redis at midnight. |
 
 ### Frontend — Next.js App (`/avoir-ai/src/`)
 

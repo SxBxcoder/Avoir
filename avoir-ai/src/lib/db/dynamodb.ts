@@ -25,6 +25,13 @@ export const TABLES = {
   PERFORMANCE: process.env.DYNAMODB_PERFORMANCE_TABLE || 'avoir-performance',
   INTELLIGENCE: process.env.DYNAMODB_INTELLIGENCE_TABLE || 'avoir-intelligence',
   COMPETITORS: process.env.DYNAMODB_COMPETITORS_TABLE || 'avoir-competitors',
+  ALIASES: process.env.DYNAMODB_ALIASES_TABLE || 'avoir-user-aliases',
+  AD_ACCOUNTS: process.env.DYNAMODB_AD_ACCOUNTS_TABLE || 'avoir-ad-accounts',
+  SHADOW_CLONES: process.env.DYNAMODB_SHADOW_CLONES_TABLE || 'avoir-shadow-clones',
+  TEAMS: process.env.DYNAMODB_TEAMS_TABLE || 'avoir-teams',
+  TEAM_MEMBERS: process.env.DYNAMODB_TEAM_MEMBERS_TABLE || 'avoir-team-members',
+  INVITATIONS: process.env.DYNAMODB_INVITATIONS_TABLE || 'avoir-invitations',
+  PUSH_SUBSCRIPTIONS: process.env.DYNAMODB_PUSH_SUBSCRIPTIONS_TABLE || 'avoir-push-subscriptions',
 } as const;
 
 // ============================================================================

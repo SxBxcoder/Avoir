@@ -1,12 +1,16 @@
 /**
  * Avoir — Intelligence API
  * 
- * GET /api/intelligence?userId=...
+ * GET /api/intelligence
+ * 
+ * Identity comes from the verified Cognito JWT (Authorization header).
  */
 
 import { NextResponse } from 'next/server';
 import { getIntelligenceBrief } from '@/lib/db/intelligence';
 import { isDemoMode, MOCK_INTELLIGENCE } from '@/lib/mockShield';
+import { requireUser, authErrorResponse } from '@/lib/auth/requireUser';
+import { logger } from '@/lib/logger';
 
 export async function GET(req: Request) {
   // Demo Mock Shield
@@ -15,15 +19,8 @@ export async function GET(req: Request) {
   }
 
   try {
-    const { searchParams } = new URL(req.url);
-    const userId = searchParams.get('userId');
-
-    if (!userId) {
-      return NextResponse.json(
-        { error: 'Missing required parameter: userId' },
-        { status: 400 }
-      );
-    }
+    // Identity comes from the verified Cognito JWT, not the query string.
+    const { userId } = await requireUser(req);
 
     const brief = await getIntelligenceBrief(userId);
 
@@ -39,10 +36,13 @@ export async function GET(req: Request) {
         lastUpdated: new Date().toISOString(),
       }
     });
-  } catch (error: any) {
-    console.error('[Intelligence API] GET error:', error);
+  } catch (error: unknown) {
+    const authErr = authErrorResponse(error);
+    if (authErr) return authErr;
+    // Never leak internal error text (DynamoDB/AWS SDK messages) to the client.
+    logger.error('intelligence', 'GET failed', { err: error });
     return NextResponse.json(
-      { error: error.message || 'Failed to fetch intelligence brief' },
+      { error: 'Failed to fetch intelligence brief' },
       { status: 500 }
     );
   }

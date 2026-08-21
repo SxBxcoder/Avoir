@@ -4,7 +4,9 @@ import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Target, MessageSquare, Briefcase, Zap, Shield, Link as LinkIcon, ArrowRight, Loader2, Check } from 'lucide-react';
-import { getCurrentUser } from 'aws-amplify/auth';
+import { useAuth } from '@/lib/auth/provider';
+import { RequireAuth } from '@/components/auth/guards';
+import { clientLog } from '@/lib/logClient';
 
 const QUESTIONS = [
   { id: 'brandName', title: "What's the name of your brand?", icon: Zap, placeholder: "e.g., Nexus Athletics" },
@@ -18,30 +20,22 @@ const QUESTIONS = [
 
 export default function OnboardingPage() {
   const router = useRouter();
+  const { email, accessToken } = useAuth();
   const [currentStep, setCurrentStep] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [inputValue, setInputValue] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    async function checkAuth() {
-      try {
-        const user = await getCurrentUser();
-        setUserEmail(user.signInDetails?.loginId || user.username);
-      } catch (err) {
-        // Not logged in? Either redirect to login or check if there's a bypass
-        const isDemo = new URLSearchParams(window.location.search).get('demo');
-        if (isDemo) {
-          setUserEmail('demo@avoir.ai');
-        } else {
-          router.push('/login');
-        }
-      }
+    // Auth state comes from the provider. In demo mode (?demo=true) the
+    // provider bootstraps a real mock session, so the email is always real.
+    if (email) {
+      setUserEmail(email);
     }
-    checkAuth();
-  }, [router]);
+  }, [email]);
 
   useEffect(() => {
     if (inputRef.current) {
@@ -66,15 +60,25 @@ export default function OnboardingPage() {
 
   const submitBrandDNA = async (finalAnswers: Record<string, string>) => {
     setIsSubmitting(true);
+    setSubmitError(null);
     try {
+      // Fail fast when the session token isn't ready yet (e.g. mid-refresh):
+      // omitting the header would send an unauthenticated request that the
+      // server rejects with 401 and the user would never know why.
+      if (!accessToken) {
+        throw new Error('Your session is still loading. Please try again.');
+      }
+
       const payload = {
-        userId: userEmail,
         ...finalAnswers
       };
 
       const res = await fetch('/api/brand-dna', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`,
+        },
         body: JSON.stringify(payload),
       });
 
@@ -82,25 +86,29 @@ export default function OnboardingPage() {
       
       // Redirect to dashboard
       const isDemo = new URLSearchParams(window.location.search).get('demo');
-      router.push(isDemo ? '/?demo=true' : '/');
+      router.push(isDemo ? '/dashboard?demo=true' : '/dashboard');
     } catch (err) {
-      console.error(err);
+      clientLog.error(err);
+      setSubmitError(err instanceof Error ? err.message : 'Failed to save your brand profile. Please try again.');
       setIsSubmitting(false);
     }
   };
 
   if (!userEmail) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
-        <Loader2 className="w-8 h-8 text-indigo-500 animate-spin" />
-      </div>
+      <RequireAuth>
+        <div className="min-h-screen bg-background flex items-center justify-center">
+          <Loader2 className="w-8 h-8 text-indigo-500 animate-spin" />
+        </div>
+      </RequireAuth>
     );
   }
 
   const CurrentIcon = QUESTIONS[currentStep].icon;
 
   return (
-    <div className="min-h-screen bg-black text-white flex flex-col font-sans selection:bg-indigo-500/30 overflow-hidden relative">
+    <RequireAuth>
+    <div className="min-h-screen bg-background text-foreground flex flex-col font-sans selection:bg-indigo-500/30 overflow-hidden relative">
       {/* Background Elements */}
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-indigo-900/20 via-black to-black" />
       <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.03] mix-blend-overlay" />
@@ -179,10 +187,15 @@ export default function OnboardingPage() {
               {QUESTIONS[currentStep].optional && (
                 <p className="text-xs text-zinc-500">Press Enter to skip</p>
               )}
+
+              {submitError && (
+                <p className="text-sm text-red-400" role="alert">{submitError}</p>
+              )}
             </motion.div>
           </AnimatePresence>
         </div>
       </div>
     </div>
+    </RequireAuth>
   );
 }

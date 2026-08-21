@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Avoir — Enterprise User Repository
  * 
  * DynamoDB-backed user subscription management.
@@ -18,6 +18,11 @@
 import { GetCommand, PutCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb';
 import { getDynamoClient, TABLES } from './dynamodb';
 import { DEFAULT_SUBSCRIPTION, type UserSubscription, type PlanTier } from '@/lib/stripe';
+import { logger } from '@/lib/logger';
+
+function isConditionalCheckFailed(err: unknown): boolean {
+  return err instanceof Error && err.name === 'ConditionalCheckFailedException';
+}
 
 // ============================================================================
 // READ
@@ -38,9 +43,9 @@ export async function getSubscription(userId: string): Promise<UserSubscription>
       const sub = result.Item as UserSubscription;
       return sub;
     }
-  } catch (err: any) {
+  } catch (err: unknown) {
     // If DynamoDB is unreachable (local dev without AWS), fall through to default
-    console.warn(`[DB] DynamoDB read failed for ${userId}: ${err.message}. Using in-memory fallback.`);
+    logger.warn('db.users', 'DynamoDB read failed, using default subscription', { userId, err });
   }
 
   // New user — create default free tier entry
@@ -61,10 +66,10 @@ export async function getSubscription(userId: string): Promise<UserSubscription>
         ConditionExpression: 'attribute_not_exists(userId)', // Don't overwrite existing
       })
     );
-  } catch (err: any) {
+  } catch (err: unknown) {
     // ConditionalCheckFailedException is fine — means user already exists
-    if (err.name !== 'ConditionalCheckFailedException') {
-      console.warn(`[DB] DynamoDB write failed for ${userId}: ${err.message}`);
+    if (!isConditionalCheckFailed(err)) {
+      logger.warn('db.users', 'DynamoDB write failed', { userId, err });
     }
   }
 
@@ -118,18 +123,18 @@ export async function upsertSubscription(
     );
 
     return result.Attributes as UserSubscription;
-  } catch (err: any) {
-    console.error(`[DB] DynamoDB upsert failed for ${userId}: ${err.message}`);
+  } catch (err: unknown) {
+    logger.error('db.users', 'DynamoDB upsert failed', { userId, err });
     // Fallback: return current state
     return getSubscription(userId);
   }
 }
 
 // ============================================================================
-// DEDUCT CREDITS (Atomic)
+// ADD CREDITS (Atomic) — used to refund a reservation when generation fails
 // ============================================================================
 
-export async function deductCredits(userId: string, amount: number): Promise<UserSubscription> {
+export async function addCredits(userId: string, amount: number): Promise<UserSubscription> {
   const client = getDynamoClient();
 
   try {
@@ -138,7 +143,7 @@ export async function deductCredits(userId: string, amount: number): Promise<Use
         TableName: TABLES.USERS,
         Key: { userId },
         UpdateExpression:
-          'SET #credits = if_not_exists(#credits, :zero) - :amount, #updated = :now',
+          'SET #credits = if_not_exists(#credits, :zero) + :amount, #updated = :now',
         ExpressionAttributeNames: {
           '#credits': 'credits',
           '#updated': 'updatedAt',
@@ -153,9 +158,78 @@ export async function deductCredits(userId: string, amount: number): Promise<Use
     );
 
     return result.Attributes as UserSubscription;
-  } catch (err: any) {
-    console.error(`[DB] DynamoDB deduct failed for ${userId}: ${err.message}`);
-    // Fallback: return current state
+  } catch (err: unknown) {
+    // Non-fatal: the caller falls back to the current balance on failure.
+    logger.error('db.users', 'Credit refund failed', { userId, err });
     return getSubscription(userId);
   }
 }
+
+// ============================================================================
+// DEDUCT CREDITS (Atomic + Conditional)
+// ============================================================================
+
+export interface CreditDeductionResult {
+  /** Whether the balance had `amount` credits available and the decrement ran. */
+  success: boolean;
+  /** The subscription state after the attempt (unchanged when `success` is false). */
+  subscription: UserSubscription;
+}
+
+export async function deductCredits(userId: string, amount: number): Promise<CreditDeductionResult> {
+  return deductCreditsOnce(userId, amount, false);
+}
+
+async function deductCreditsOnce(
+  userId: string,
+  amount: number,
+  retried: boolean
+): Promise<CreditDeductionResult> {
+  const client = getDynamoClient();
+
+  try {
+    const result = await client.send(
+      new UpdateCommand({
+        TableName: TABLES.USERS,
+        Key: { userId },
+        // The ConditionExpression makes the decrement atomic: a concurrent
+        // spend can never drive the balance below zero, and callers learn
+        // whether the balance was actually available instead of blindly going
+        // negative (previously any caller could overdraw and keep spending).
+        UpdateExpression: 'SET #credits = #credits - :amount, #updated = :now',
+        ConditionExpression: '#credits >= :amount',
+        ExpressionAttributeNames: {
+          '#credits': 'credits',
+          '#updated': 'updatedAt',
+        },
+        ExpressionAttributeValues: {
+          ':amount': amount,
+          ':now': new Date().toISOString(),
+        },
+        ReturnValues: 'ALL_NEW',
+      })
+    );
+
+    return {
+      success: true,
+      subscription: result.Attributes as UserSubscription,
+    };
+  } catch (err: unknown) {
+    // ConditionalCheckFailedException is the expected "balance too low" outcome.
+    if (isConditionalCheckFailed(err)) {
+      const subscription = await getSubscription(userId);
+      // A brand-new user has no DynamoDB row yet, so their first conditional
+      // decrement fails and getSubscription just bootstrapped the default row
+      // with the full free-tier balance. Retry the deduction once now that the
+      // row exists; a genuinely insufficient balance still fails.
+      if (!retried && subscription.credits >= amount) {
+        return deductCreditsOnce(userId, amount, true);
+      }
+      return { success: false, subscription };
+    }
+    logger.error('db.users', 'DynamoDB deduct failed', { userId, err });
+    // Fail closed: when we cannot prove the deduction, do not grant the spend.
+    return { success: false, subscription: await getSubscription(userId) };
+  }
+}
+

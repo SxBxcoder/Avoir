@@ -39,6 +39,10 @@ from urllib.error import URLError, HTTPError
 import boto3
 from botocore.exceptions import ClientError
 
+from language_config import is_supported, detect_language_from_text, DEFAULT_LANGUAGE
+from prompts import build_system_prompt, build_trend_prompt
+from localized_mocks import get_localized_mock
+
 
 # ============================================================================
 # LOGGING CONFIGURATION
@@ -80,46 +84,6 @@ OPENROUTER_API_KEY = os.environ.get('OPENROUTER_API_KEY', '')
 
 logger.info(f"Environment configuration loaded: DynamoDB={DYNAMODB_TABLE}, S3={S3_BUCKET}")
 logger.info(f"API Keys configured: Gemini1={'✓' if GEMINI_API_KEY else '✗'}, Gemini2={'✓' if GEMINI_API_KEY_2 else '✗'}, Groq={'✓' if GROQ_API_KEY else '✗'}, OpenRouter={'✓' if OPENROUTER_API_KEY else '✗'}")
-
-
-# ============================================================================
-# SYSTEM PERSONA - THE CREATIVE DIRECTOR
-# ============================================================================
-
-SYSTEM_PROMPT = """You are the Avoir Lead Creative Director. You dominate global digital marketing.
-
-TONE: Aggressive, elite, high-energy. Never be "mid" (mediocre).
-LANGUAGE: Global Viral English (modern, high-converting, punchy).
-POWER WORDS (MUST USE): Viral, Aesthetic, Main Character Energy, Level Up.
-EMOJIS: 🔥, 💯, ✨, 🎉, 🚀
-
-OUTPUT FORMAT: You MUST return valid JSON with this exact structure:
-{
-  "hook": "Attention-grabbing opening (English, 50-80 chars)",
-  "offer": "Value proposition (English, 80-120 chars)",
-  "cta": "Clear action with urgency (English, 30-50 chars)",
-  "captions": ["Caption 1 (150-200 chars)", "Caption 2 (150-200 chars)", "Caption 3 (150-200 chars)"],
-  "image_prompt": "A highly detailed, visual description of a photorealistic image for this campaign (English, 100-150 chars)"
-}
-
-CRITICAL: The image_prompt must be in English, highly detailed, and describe a photorealistic scene that captures the campaign's energy."""
-
-
-TREND_SNIPER_PROMPT = """You are the Avoir God-Tier Trend Sniper. Your job is to hijack a viral internet trend and mutate it into a massive campaign for the user.
-
-TONE: Aggressive, hyper-relevant, algorithm-optimizing.
-LANGUAGE: Global Viral English.
-POWER WORDS (MUST USE): Viral, Algorithm, Attention, Hack.
-
-The user will provide a specific TREND. You must create a campaign that RIDES THIS TREND perfectly.
-OUTPUT FORMAT: You MUST return valid JSON with this exact structure:
-{
-  "hook": "Attention-grabbing opening optimized for this specific trend (50-80 chars)",
-  "offer": "Value proposition disguised as entertainment (80-120 chars)",
-  "cta": "Clear action (30-50 chars)",
-  "captions": ["Caption 1 matching the trend vibe", "Caption 2 for high engagement", "Caption 3 alternative angle"],
-  "image_prompt": "A highly detailed, visual description of a photorealistic image matching the trend's aesthetic"
-}"""
 
 
 # ============================================================================
@@ -209,53 +173,35 @@ MOCK_CAMPAIGNS = {
 }
 
 
-def get_mock_campaign(goal: str) -> Dict[str, Any]:
+def get_mock_campaign(goal: str, language: str = DEFAULT_LANGUAGE) -> Dict[str, Any]:
     """
-    Get high-quality mock campaign based on goal keywords.
-    
-    Args:
-        goal: User's campaign goal
-    
-    Returns:
-        Mock campaign with hook, offer, cta, captions, and image_prompt
+    Get high-quality mock campaign based on goal keywords and language.
+    Uses localized_mocks for non-English languages.
     """
-    goal_lower = goal.lower()
-    
-    if any(word in goal_lower for word in ['tech', 'hackathon', 'coding', 'ai', 'ml']):
-        return MOCK_CAMPAIGNS['tech']
-    elif any(word in goal_lower for word in ['fest', 'festival', 'celebration', 'party', 'event']):
-        return MOCK_CAMPAIGNS['fest']
-    elif any(word in goal_lower for word in ['workshop', 'training', 'course', 'learn', 'skill']):
-        return MOCK_CAMPAIGNS['workshop']
-    else:
-        return MOCK_CAMPAIGNS['default']
+    return get_localized_mock(goal, language)
 
 
 # ============================================================================
 # 6-TIER DIAMOND RESILIENCE CASCADE - Pure Stateless with Live AI Images
 # ============================================================================
 
-def generate_campaign_with_cascade(goal: str, messages: List[Dict[str, str]] = None, brand_context: str = "") -> Dict[str, Any]:
+def generate_campaign_with_cascade(goal: str, messages: List[Dict[str, str]] = None, brand_context: str = "", language: str = DEFAULT_LANGUAGE) -> Dict[str, Any]:
     """
-    4-Tier Diamond Resilience Cascade for Campaign Generation with Stateful Memory.
+    6-Tier Diamond Resilience Cascade for Campaign Generation with language support.
     
     Uses ONLY Python standard library (urllib) to call external APIs.
-    
-    Tier 1: Google Gemini 3 Flash Preview (Primary - Advanced Reasoning)
-    Tier 2: Groq GPT-OSS 120B (Secondary - Powerhouse)
-    Tier 3: OpenRouter Arcee Trinity Large (Tertiary - 400B Creative King)
-    Tier 4: OpenRouter Llama 3.3 70B (The Shield - Ultra Reliable)
     
     Args:
         goal: User's campaign goal
         messages: Optional conversation history for stateful interactions
         brand_context: Optional brand guidelines
+        language: Language code (en, hi, hi-en, es, pt, fr, ta, bn)
     
     Returns:
-        Dict with keys: hook, offer, cta, captions (list of 3 strings), messages (conversation history)
+        Dict with keys: hook, offer, cta, captions (list of 3 strings), messages, language
     """
     logger.info("🔷 DIAMOND CASCADE INITIATED - PURE STATELESS MODE")
-    logger.info(f"Goal: {goal}")
+    logger.info(f"Goal: {goal} | Language: {language}")
     
     # ========================================================================
     # PURE STATELESS GENERATION - No Message History Processing
@@ -265,10 +211,10 @@ def generate_campaign_with_cascade(goal: str, messages: List[Dict[str, str]] = N
     
     logger.info("Using pure stateless generation with live AI image generation")
 
-    active_system_prompt = SYSTEM_PROMPT
+    active_system_prompt = build_system_prompt(language)
     if "[TREND SNIPE]" in goal:
         logger.info("🎯 TREND SNIPE DETECTED. Engaging Trend Sniper Persona.")
-        active_system_prompt = TREND_SNIPER_PROMPT
+        active_system_prompt = build_trend_prompt(language)
 
     # ========================================================================
     # TIER 1: GOOGLE GEMINI 3 FLASH PREVIEW (Primary Key 1)
@@ -282,7 +228,7 @@ def generate_campaign_with_cascade(goal: str, messages: List[Dict[str, str]] = N
         if not gemini_api_key:
             raise Exception("GEMINI_API_KEY not configured")
         
-        gemini_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key={gemini_api_key}"
+        gemini_url = GEMINI_ENDPOINT
         
         # Pure stateless prompt for Gemini
         gemini_contents = [{
@@ -304,7 +250,7 @@ def generate_campaign_with_cascade(goal: str, messages: List[Dict[str, str]] = N
         gemini_request = Request(
             gemini_url,
             data=json.dumps(gemini_payload).encode('utf-8'),
-            headers={'Content-Type': 'application/json'},
+            headers={'Content-Type': 'application/json', 'x-goog-api-key': gemini_api_key},
             method='POST'
         )
         
@@ -347,13 +293,13 @@ def generate_campaign_with_cascade(goal: str, messages: List[Dict[str, str]] = N
         if not gemini_api_key_2:
             raise Exception("GEMINI_API_KEY_2 not configured")
         
-        gemini_url_2 = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key={gemini_api_key_2}"
+        gemini_url_2 = GEMINI_ENDPOINT
         
         # Pure stateless prompt for Gemini (Key 2)
         gemini_contents_2 = [{
             "role": "user",
             "parts": [{
-                "text": SYSTEM_PROMPT + f"\n\nTask: Create a viral global social media campaign for the following goal: {goal}\n\nReturn ONLY valid JSON with keys: hook, offer, cta, captions (array of 3), image_prompt."
+                "text": active_system_prompt + f"\n\nTask: Create a viral global social media campaign for the following goal: {goal}\n\nReturn ONLY valid JSON with keys: hook, offer, cta, captions (array of 3), image_prompt."
             }]
         }]
         
@@ -369,7 +315,7 @@ def generate_campaign_with_cascade(goal: str, messages: List[Dict[str, str]] = N
         gemini_request_2 = Request(
             gemini_url_2,
             data=json.dumps(gemini_payload_2).encode('utf-8'),
-            headers={'Content-Type': 'application/json'},
+            headers={'Content-Type': 'application/json', 'x-goog-api-key': gemini_api_key_2},
             method='POST'
         )
         
@@ -600,7 +546,7 @@ def generate_campaign_with_cascade(goal: str, messages: List[Dict[str, str]] = N
     logger.info("🛡️ TIER 6: TITANIUM SHIELD MOCK DATA ACTIVATED")
     
     # Get intelligent mock data based on goal keywords
-    mock_response = get_mock_campaign(goal)
+    mock_response = get_mock_campaign(goal, language)
     
     # Pass messages through without mutation
     mock_response['messages'] = messages if messages else []
@@ -712,15 +658,34 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             goal = 'College Fest Campaign'  # Default goal for testing
         
         # Extract optional fields
-        user_id = payload.get('user_id', 'anonymous')
+        # SECURITY: Never trust client-provided user_id. Only accept it from
+        # verified Cognito JWT claims (via get_user_context below). The body
+        # user_id is ignored — if no JWT is present, we use 'anonymous'.
         brand_context = payload.get('brand_context', '')
         messages = payload.get('messages', [])  # Extract conversation history
         
-        # Extract user context from Cognito if available
+        # Extract language (optional, defaults to English)
+        language = payload.get('language', DEFAULT_LANGUAGE)
+        if not is_supported(language):
+            logger.warning(f"Unsupported language '{language}', falling back to English")
+            language = DEFAULT_LANGUAGE
+        # Auto-detect language from goal if not explicitly set
+        if language == DEFAULT_LANGUAGE and payload.get('language') is None:
+            detected = detect_language_from_text(goal)
+            if detected != DEFAULT_LANGUAGE:
+                language = detected
+                logger.info(f"Auto-detected language: {language}")
+        
+        # Extract user context from Cognito JWT (required for team operations)
         user_context = get_user_context(event)
         if user_context and user_context.get('user_id'):
             user_id = user_context['user_id']
             logger.info(f"User authenticated via Cognito: {user_id}")
+        else:
+            # No verified identity — use anonymous. Team operations will
+            # reject this since they require authenticated membership.
+            user_id = 'anonymous'
+            logger.warning("No Cognito identity in request — using anonymous")
         
         logger.info(f"Processing campaign request - User: {user_id}, Goal: {goal}")
         
@@ -737,7 +702,7 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             logger.info(f"Conversation history: {len(messages)} messages")
             
             # Get campaign data from cascade
-            campaign_data = generate_campaign_with_cascade(goal, messages, brand_context)
+            campaign_data = generate_campaign_with_cascade(goal, messages, brand_context, language)
             
             logger.info("Campaign data generated successfully")
             
@@ -772,7 +737,7 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             logger.warning(f"⚠️ Cascade execution failed: {str(cascade_error)}")
             logger.info("📡 [SAFETY NET] Returning high-quality mock campaign")
             
-            mock_campaign = get_mock_campaign(goal)
+            mock_campaign = get_mock_campaign(goal, language)
             hook = mock_campaign.get('hook', '')
             offer = mock_campaign.get('offer', '')
             cta = mock_campaign.get('cta', '')
@@ -796,6 +761,7 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             'campaignId': campaign_id,
             'userId': user_id,
             'goal': goal,
+            'language': language,
             'plan': {
                 'hook': hook,
                 'offer': offer,
@@ -860,7 +826,7 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             user_id = 'anonymous'
         
         # Get high-quality mock campaign
-        mock_data = get_mock_campaign(goal)
+        mock_data = get_mock_campaign(goal, language)
         
         # Create complete campaign record with mock data
         campaign_id = str(uuid.uuid4())

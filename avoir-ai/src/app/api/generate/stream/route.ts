@@ -18,8 +18,7 @@
  *   - done       → Stream complete
  */
 
-import { getSubscription, deductCredits } from '@/lib/services/subscription';
-import { canGenerateCampaign, PLANS } from '@/lib/stripe';
+import { addCredits, deductCredits, getSubscription } from '@/lib/services/subscription';
 import { createCampaign } from '@/lib/db/campaigns';
 import { checkRateLimit } from '@/lib/db/cache';
 import { generateGenomeVariants } from '@/lib/bedrock';
@@ -28,20 +27,67 @@ import { getPerformanceInsights, formatInsightsForPrompt } from '@/lib/db/perfor
 import { getIntelligenceBrief, updateIntelligenceBrief, formatIntelligenceForPrompt } from '@/lib/db/intelligence';
 import { fetchCompetitorIntel, formatCompetitorContext } from '@/lib/db/competitors';
 import { fetchIndustryTrends, synthesizeTrendContext } from '@/lib/trends';
+import { parseCampaignRequest } from '@/lib/generation';
+import { requireUser, authErrorResponse } from '@/lib/auth/requireUser';
+import { logger } from '@/lib/logger';
+import { z } from 'zod';
+
+const streamSchema = z.object({
+  business: z.string().optional(),
+  topic: z.string().optional(),
+  goal: z.string().optional(),
+  messages: z.array(z.unknown()).optional(),
+  genome_mode: z.boolean().optional(),
+  pastWinningContext: z.string().optional(),
+  language: z.string().optional(),
+});
 
 // Status messages that stream to the UI for the "AI is Cooking" experience
-const COOKING_MESSAGES = [
-  { delay: 0, text: '🔥 Initializing Diamond Cascade Engine...' },
-  { delay: 800, text: '⚡ Scanning global Gen-Z trend database...' },
-  { delay: 1600, text: '🎯 Calibrating Authority Engine for maximum impact...' },
-  { delay: 2400, text: '🧠 Tier 1: Gemini Flash — Generating raw strategy...' },
-  { delay: 3200, text: '✍️ Crafting high-converting viral hooks...' },
-  { delay: 4000, text: '🎨 Composing visual assets with AI Director...' },
-  { delay: 5000, text: '⚔️ Running final quality cascade checks...' },
-];
+const COOKING_MESSAGES: Record<string, { delay: number; text: string }[]> = {
+  en: [
+    { delay: 0, text: '🔥 Initializing Diamond Cascade Engine...' },
+    { delay: 800, text: '⚡ Scanning global Gen-Z trend database...' },
+    { delay: 1600, text: '🎯 Calibrating Authority Engine for maximum impact...' },
+    { delay: 2400, text: '🧠 Tier 1: Gemini Flash — Generating raw strategy...' },
+    { delay: 3200, text: '✍️ Crafting high-converting viral hooks...' },
+    { delay: 4000, text: '🎨 Composing visual assets with AI Director...' },
+    { delay: 5000, text: '⚔️ Running final quality cascade checks...' },
+  ],
+  hi: [
+    { delay: 0, text: '🔥 डायमंड कैस्केड इंजन शुरू हो रहा है...' },
+    { delay: 800, text: '⚡ ग्लोबल ट्रेंड डेटाबेस स्कैन हो रहा है...' },
+    { delay: 1600, text: '🎯 अधिकतम इम्पैक्ट के लिए कैलिब्रेट हो रहा है...' },
+    { delay: 2400, text: '🧠 Tier 1: Gemini Flash — रणनीति बन रही है...' },
+    { delay: 3200, text: '✍️ वायरल हुक क्राफ्ट हो रहे हैं...' },
+    { delay: 4000, text: '🎨 विज़ुअल एसेट्स बन रहे हैं...' },
+    { delay: 5000, text: '⚔️ फाइनल क्वालिटी चेक चल रहा है...' },
+  ],
+  'hi-en': [
+    { delay: 0, text: '🔥 Diamond Cascade Engine start ho raha hai...' },
+    { delay: 800, text: '⚡ Global trend database scan ho raha hai...' },
+    { delay: 1600, text: '🎯 Maximum impact ke liye calibrate ho raha hai...' },
+    { delay: 2400, text: '🧠 Tier 1: Gemini Flash — Strategy ban rahi hai...' },
+    { delay: 3200, text: '✍️ Viral hooks craft ho rahe hain...' },
+    { delay: 4000, text: '🎨 Visual assets ban rahe hain...' },
+    { delay: 5000, text: '⚔️ Final quality check chal raha hai...' },
+  ],
+  es: [
+    { delay: 0, text: '🔥 Inicializando Diamond Cascade Engine...' },
+    { delay: 800, text: '⚡ Escaneando base de datos de tendencias...' },
+    { delay: 1600, text: '🎯 Calibrando para máximo impacto...' },
+    { delay: 2400, text: '🧠 Tier 1: Gemini Flash — Generando estrategia...' },
+    { delay: 3200, text: '✍️ Creando hooks virales...' },
+    { delay: 4000, text: '🎨 Componiendo assets visuales...' },
+    { delay: 5000, text: '⚔️ Verificación final de calidad...' },
+  ],
+};
+
+function getCookingMessages(language: string) {
+  return COOKING_MESSAGES[language] || COOKING_MESSAGES['en'];
+}
 
 function createSSEStream(
-  statusMessages: typeof COOKING_MESSAGES,
+  statusMessages: { delay: number; text: string }[],
   runner: (send: (event: string, data: any) => void) => Promise<any>,
   userId: string,
   campaignGoal: string,
@@ -58,22 +104,46 @@ function createSSEStream(
         );
       };
 
+      // Cost depends on the generation mode — reserved up-front and refunded
+      // if generation fails, so a user only ever pays for a real campaign.
+      const cost = genomeMode ? 2 : 1;
+      let reserved = false;
+      let committed = false;
+      let msgInterval: ReturnType<typeof setInterval> | null = null;
+
       try {
+        // Atomic reserve BEFORE any paid AI work. The conditional decrement
+        // (users.ts deductCredits) means concurrent streams can never overdraw:
+        // once the balance is exhausted, further reservations fail cleanly and
+        // generation never starts for them.
+        const deduction = await deductCredits(userId, cost);
+        if (!deduction.success) {
+          send('error', {
+            error: 'Insufficient credits',
+            message: `This operation costs ${cost} credit${cost > 1 ? 's' : ''}. Your balance is ${deduction.subscription.credits}.`,
+            upgradeRequired: true,
+            currentCredits: deduction.subscription.credits,
+            cost,
+          });
+          send('done', { success: false });
+          return;
+        }
+        reserved = true;
+
         // Stream cooking status messages
         let messageIdx = 0;
-        const msgInterval = setInterval(() => {
+        msgInterval = setInterval(() => {
           if (messageIdx < statusMessages.length) {
             send('status', { message: statusMessages[messageIdx].text, timestamp: Date.now() });
             messageIdx++;
           } else {
-            clearInterval(msgInterval);
+            clearInterval(msgInterval ?? undefined);
           }
         }, 800);
 
         // Run the dynamic generation workflow
         const data = await runner(send);
         clearInterval(msgInterval);
-
         // Parse Lambda response
         let parsedData = data;
         if (data.body && typeof data.body === 'string') {
@@ -101,12 +171,10 @@ function createSSEStream(
           campaignId = campaign.campaignId;
         }
 
-        // Deduct credits and update intelligence brief
-        const cost = genomeMode ? 2 : 1;
-        const deductionSuccess = await deductCredits(userId, cost);
-        if (!deductionSuccess) {
-            console.error(`[STREAM API] Failed to deduct ${cost} credits for user ${userId}`);
-        }
+        // The deliverable now exists (a persisted campaign row, or completed
+        // genome variants). Failures from here on must NOT refund — a transport
+        // error after commit must not hand the user the campaign AND the credit.
+        committed = true;
         await updateIntelligenceBrief(userId, { totalCampaignsGenerated: genomeMode ? 3 : 1 });
 
         send('status', { message: '✅ Campaign compiled. Deploying assets...', timestamp: Date.now() });
@@ -147,9 +215,19 @@ function createSSEStream(
 
         send('done', { success: true });
       } catch (error: any) {
+        // Refund only when we actually reserved the credits AND the work was
+        // not already committed. A refund after commit (e.g. a client
+        // disconnect once the campaign row exists) would hand out free
+        // campaigns. Refund is best-effort; addCredits never throws.
+        if (reserved && !committed) {
+          await addCredits(userId, cost).catch(() => {});
+        }
         send('error', { message: error.message || 'Generation failed' });
         send('done', { success: false });
       } finally {
+        // The status timer must stop on every path (success, failure, and
+        // stream abort) or it leaks and keeps the process alive.
+        if (msgInterval) clearInterval(msgInterval);
         controller.close();
       }
     },
@@ -162,12 +240,15 @@ import { isDemoMode, createMockSSEStream } from '@/lib/mockShield';
 
 export async function POST(req: Request) {
   try {
-    const body = await req.json();
-    
+    // Identity comes from the verified Cognito JWT — never trust client input.
+    const { userId } = await requireUser(req);
+
+    const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;
+
     // Demo Mock Shield
     if (isDemoMode()) {
-      const isGenomeMode = body.genome_mode === true;
-      console.log(`[Stream] 🛡️ DEMO SHIELD ACTIVE. Returning curated SSE mock stream. GenomeMode: ${isGenomeMode}`);
+      const isGenomeMode = (body as Record<string, unknown>).genome_mode === true;
+      logger.info('stream', 'Demo shield active, returning mock SSE stream', { genomeMode: isGenomeMode });
       const stream = createMockSSEStream(isGenomeMode);
       return new Response(stream, {
         headers: {
@@ -179,11 +260,27 @@ export async function POST(req: Request) {
       });
     }
 
-    const { business, topic, goal, messages, genome_mode, pastWinningContext } = body;
-    const campaignGoal = goal || `Create a campaign for a ${business} focusing on ${topic}`;
-    const conversationMessages = messages || [];
+    const parsed = streamSchema.safeParse(body);
+    if (!parsed.success) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid request body', issues: parsed.error.issues.map((issue) => issue.message) }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Validate BEFORE any paid work: an empty/malformed body must never reach
+    // the credit reservation or the generation pipeline.
+    const parsedRequest = parseCampaignRequest(parsed.data);
+    if (!parsedRequest) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid request: provide a goal, or both business and topic' }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+    const { goal: campaignGoal, messages: conversationMessages } = parsedRequest;
+    const { genome_mode, pastWinningContext } = parsed.data;
+    const campaignLanguage = parsed.data.language || 'en';
     const authHeader = req.headers.get('Authorization');
-    const userId = body.userId || body.user_id || 'anonymous';
     const isGenomeMode = genome_mode === true;
 
     // Rate limiting
@@ -195,21 +292,23 @@ export async function POST(req: Request) {
       );
     }
 
-    // Quota enforcement
+    // Quota pre-check (fast UX gate for all tiers). This is only an early
+    // exit — the authoritative, race-safe reservation happens atomically
+    // inside the stream (createSSEStream) before any paid AI work starts, so
+    // this read can never be raced into an overdraw.
     const sub = await getSubscription(userId);
     const requiredCredits = isGenomeMode ? 2 : 1;
-    
-    if (sub.tier === 'free' && sub.credits < requiredCredits) {
-      const plan = PLANS[sub.tier];
+
+    if (sub.credits < requiredCredits) {
       return new Response(
         JSON.stringify({
           error: 'Insufficient credits',
-          message: isGenomeMode 
-            ? `Genome mode requires 2 credits. You have ${sub.credits}. Upgrade to Pro.`
-            : `You've used all your free campaigns. Upgrade to Pro.`,
+          message: `This operation requires ${requiredCredits} credits. You have ${sub.credits}. Upgrade to Pro or Enterprise for more.`,
           upgradeRequired: true,
+          currentCredits: sub.credits,
+          cost: requiredCredits,
         }),
-        { status: 429, headers: { 'Content-Type': 'application/json' } }
+        { status: 402, headers: { 'Content-Type': 'application/json' } }
       );
     }
 
@@ -230,7 +329,8 @@ export async function POST(req: Request) {
       performanceContext += '\n\n' + formatIntelligenceForPrompt(intelBrief);
     }
     // Fetch Cultural Trends & Competitor Intel
-    const industry = business || dna?.industry || 'general';
+    const industryHint = typeof body.business === 'string' ? body.business.trim() : '';
+    const industry = industryHint || dna?.industry || 'general';
     const [trends, compIntel] = await Promise.all([
       fetchIndustryTrends(industry),
       fetchCompetitorIntel(industry)
@@ -269,6 +369,7 @@ export async function POST(req: Request) {
           messages: conversationMessages,
           user_id: userId,
           brand_context: brandContext,
+          language: campaignLanguage,
         }),
       });
       if (!res.ok) throw new Error(`Lambda Error: ${res.status}`);
@@ -306,10 +407,9 @@ export async function POST(req: Request) {
       return draft;
     };
 
-    console.log(`[Stream] 🚀 SSE stream started for ${userId} (${sub.tier}), GenomeMode: ${isGenomeMode}`);
-
+    logger.info('stream', 'SSE stream started', { tier: sub.tier, genomeMode: isGenomeMode });
     // Create the SSE stream
-    const stream = createSSEStream(COOKING_MESSAGES, runner, userId, campaignGoal, isGenomeMode);
+    const stream = createSSEStream(getCookingMessages(campaignLanguage), runner, userId, campaignGoal, isGenomeMode);
 
     return new Response(stream, {
       headers: {
@@ -320,7 +420,9 @@ export async function POST(req: Request) {
       },
     });
   } catch (error: any) {
-    console.error('[Stream] Error:', error);
+    const authErr = authErrorResponse(error);
+    if (authErr) return authErr;
+    logger.error('stream', 'Stream failed', { err: error });
     return new Response(
       JSON.stringify({ error: error.message || 'Stream failed' }),
       { status: 500, headers: { 'Content-Type': 'application/json' } }

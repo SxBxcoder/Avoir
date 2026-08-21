@@ -1,5 +1,5 @@
-﻿/**
- * Avoir ΓÇö Server-side identity guard.
+/**
+ * Avoir — Server-side identity guard.
  *
  * Every API route must derive the acting user from the verified Cognito JWT,
  * never from a client-supplied `userId` in the body or query string. Trusting
@@ -41,7 +41,7 @@ export function authErrorResponse(error: unknown): NextResponse | null {
 }
 
 // NOTE: NEXT_PUBLIC_COGNITO_* values are Cognito *public identifiers* (user
-// pool id / app client id), not secrets ΓÇö they are already shipped to the
+// pool id / app client id), not secrets — they are already shipped to the
 // browser by the Amplify SDK. They are read here on the server simply because
 // the repo has no server-only env file. Prefer COGNITO_USER_POOL_ID /
 // COGNITO_CLIENT_ID if you add one.
@@ -162,7 +162,7 @@ export async function requireUser(req: Request): Promise<AuthenticatedUser> {
   try {
     const payload = await verifier.verify(token);
     // NOTE: Cognito access tokens only carry `email` if the app client has it
-    // configured in "Access token" claims ΓÇö by default `email` lives only in
+    // configured in "Access token" claims — by default `email` lives only in
     // the ID token. `payload.email` is therefore usually undefined, and any
     // route that needs an email (checkout) falls back to a client value. If
     // you want the JWT email to be authoritative, add an `email` custom

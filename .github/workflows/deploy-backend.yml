@@ -1,0 +1,54 @@
+name: Deploy Backend (AWS Lambda)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'backend/**'
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Deploy to AWS Lambda
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Bundle code and dependencies
+        working-directory: backend
+        run: |
+          mkdir -p package
+          pip install -r requirements-lambda.txt -t package/
+          cp ./*.py package/
+          rm -rf package/test_*.py package/check_env.py package/check_keys.py package/clean_file.py package/find_unmatched_quotes.py package/__pycache__ package/*/__pycache__
+          cd package
+          zip -rq ../backend-deploy.zip .
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Upload to Lambda
+        working-directory: backend
+        run: |
+          aws lambda update-function-code \
+            --function-name ${{ secrets.LAMBDA_FN_NAME }} \
+            --zip-file fileb://backend-deploy.zip
+
+      - name: Publish version
+        working-directory: backend
+        run: |
+          sleep 15
+          aws lambda publish-version \
+            --function-name ${{ secrets.LAMBDA_FN_NAME }}

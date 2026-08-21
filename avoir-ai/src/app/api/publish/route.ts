@@ -1,8 +1,17 @@
 import { NextResponse } from 'next/server';
 import { deductCredits } from '@/lib/db/users';
 import { isDemoMode } from '@/lib/mockShield';
+import { requireUser, authErrorResponse } from '@/lib/auth/requireUser';
+import { logger } from '@/lib/logger';
+import { z } from 'zod';
+import { parseJsonBody } from '@/lib/validate';
 
 const PUBLISH_COST = 5;
+
+const publishSchema = z.object({
+  campaign_id: z.string().min(1),
+  platforms: z.array(z.string().min(1)).min(1),
+});
 
 export async function POST(request: Request) {
   // Demo Mock Shield
@@ -15,20 +24,20 @@ export async function POST(request: Request) {
   }
 
   try {
-    const { userId, campaign_id, platforms } = await request.json();
+    // Identity comes from the verified Cognito JWT, not the request body.
+    const { userId } = await requireUser(request);
 
-    if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const parsed = await parseJsonBody(request, publishSchema);
+    if (!parsed.ok) {
+      return NextResponse.json({ error: 'Invalid request body', issues: parsed.issues }, { status: 400 });
     }
+    const { campaign_id, platforms: platformList } = parsed.data;
 
-    if (!platforms || platforms.length === 0) {
-        return NextResponse.json({ error: 'No platforms selected' }, { status: 400 });
-    }
+    logger.info('publish', 'Attempting to publish campaign', { campaignId: campaign_id, platforms: platformList });
 
-    console.log(`[AutoPublish] Attempting to publish campaign ${campaign_id} to ${platforms.join(', ')} for user ${userId}`);
-
-    // Deduct credits for publishing
-    const success = await deductCredits(userId, PUBLISH_COST);
+    // Deduct credits for publishing (atomic + conditional: only succeeds when
+    // the balance covers the cost)
+    const { success } = await deductCredits(userId, PUBLISH_COST);
     
     if (!success) {
       return NextResponse.json({ 
@@ -44,7 +53,7 @@ export async function POST(request: Request) {
     // Simulate slight delay for "Network"
     await new Promise(resolve => setTimeout(resolve, 1500));
 
-    console.log(`[AutoPublish] ✅ Successfully published! Deducted ${PUBLISH_COST} credits.`);
+    logger.info('publish', 'Campaign published', { creditsDeducted: PUBLISH_COST });
 
     return NextResponse.json({ 
         status: 'success', 
@@ -52,8 +61,11 @@ export async function POST(request: Request) {
         cost: PUBLISH_COST
     });
 
-  } catch (error: any) {
-    console.error('Publishing error:', error);
-    return NextResponse.json({ error: error.message || 'Internal Server Error' }, { status: 500 });
+  } catch (error: unknown) {
+    const authErr = authErrorResponse(error);
+    if (authErr) return authErr;
+    logger.error('publish', 'Publishing failed', { err: error });
+    const message = error instanceof Error ? error.message : 'Internal Server Error';
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

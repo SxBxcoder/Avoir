@@ -11,6 +11,7 @@
 
 import { PutCommand, QueryCommand, GetCommand } from '@aws-sdk/lib-dynamodb';
 import { getDynamoClient, TABLES } from './dynamodb';
+import { logger } from '@/lib/logger';
 
 // ============================================================================
 // TYPES
@@ -43,6 +44,8 @@ export interface PerformanceRecord {
   campaignSnapshot: CampaignSnapshot;
   reportedAt: string;
   tags: string[];
+  /** Whether this record was auto-synced from a webhook or manually entered. */
+  source?: 'manual' | 'webhook';
 }
 
 export interface PerformanceInsights {
@@ -64,7 +67,8 @@ export async function reportPerformance(
   platform: Platform,
   metrics: PerformanceMetrics,
   snapshot: CampaignSnapshot,
-  tags: string[] = []
+  tags: string[] = [],
+  source: 'manual' | 'webhook' = 'manual'
 ): Promise<PerformanceRecord> {
   const client = getDynamoClient();
   const now = new Date().toISOString();
@@ -87,6 +91,7 @@ export async function reportPerformance(
     campaignSnapshot: snapshot,
     reportedAt: now,
     tags,
+    source,
   };
 
   try {
@@ -97,7 +102,7 @@ export async function reportPerformance(
       })
     );
   } catch (err: any) {
-    console.error(`[DB] Performance report failed: ${err.message}`);
+    logger.error('db.performance', 'Report failed', { err });
   }
 
   return record;
@@ -127,7 +132,7 @@ export async function getPerformanceHistory(
 
     return (result.Items as PerformanceRecord[]) || [];
   } catch (err: any) {
-    console.error(`[DB] Performance history fetch failed: ${err.message}`);
+    logger.error('db.performance', 'History fetch failed', { err });
     return [];
   }
 }

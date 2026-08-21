@@ -12,6 +12,8 @@ from fastapi.responses import StreamingResponse, PlainTextResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import json
+import os
+import secrets
 import uvicorn
 
 # Import the Lambda handler from agent.py
@@ -21,6 +23,7 @@ from shadow_clone import clone_engine
 from authority_defender import defender
 from agency_bridge import agency_bridge
 from signal_decay_monitor import decay_monitor
+from alpha_brief_generator import AlphaBriefGenerator
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -28,6 +31,9 @@ app = FastAPI(
     description="AI Creative Director for Modern Brands",
     version="1.0.0"
 )
+
+# Daily Alpha Brief generator (Redis-cached, see alpha_brief_generator.py)
+alpha_brief_generator = AlphaBriefGenerator()
 
 # Configure CORS for Next.js frontend
 app.add_middleware(
@@ -93,7 +99,7 @@ async def health_check():
 
 # Main campaign generation endpoint
 @app.post("/api/generate", response_model=CampaignResponse)
-async def generate_campaign(request: CampaignRequest):
+def generate_campaign(request: CampaignRequest):
     """
     Generate a complete social media campaign using the Creative Director Agent.
     
@@ -203,19 +209,60 @@ async def get_campaigns(user_id: str):
     }
 
 
-# Sprint 3: Trend Sniper Endpoint
+# Sprint 3: Trend Sniper Endpoint (SerpAPI → YouTube → Gemini → Mock)
 @app.get("/api/trends")
-async def get_trends():
+async def get_trends(industry: str = "general"):
     """
-    Scrapes the internet for current viral trends using the TrendSniper module.
+    Returns real-time IndustryTrends for any arbitrary industry string.
+    Cascade: SerpAPI Google Trends → YouTube → Gemini AI → Mock fallback.
+    Response shape matches the frontend IndustryTrends interface:
+    { industry, topTrends: [...], viralHooks: [...], lastUpdated }
     """
     try:
-        trends = sniper.get_current_trends()
-        return {"status": "success", "trends": trends}
+        result = sniper.get_trends_for_industry(industry)
+        return {"status": "success", "trends": result}
     except Exception as e:
         raise HTTPException(
             status_code=500,
-            detail=f"Failed to snipe trends: {str(e)}"
+            detail=f"Failed to snipe trends for '{industry}': {str(e)}"
+        )
+
+
+# Daily Alpha Brief Endpoint (Redis-cached daily trend anomaly + campaign hook)
+# Synchronous route: generation performs blocking urllib calls to Gemini/Redis,
+# so it runs in Starlette's threadpool instead of blocking the event loop.
+@app.get("/api/alpha-brief")
+def get_alpha_brief(force: bool = False, request: Request = None):
+    """
+    Returns today's Daily Alpha Brief.
+
+    First call of the day generates it via Gemini and caches it in Redis;
+    subsequent calls serve the cached copy until midnight.
+
+    Args:
+        force: bypass the cache and regenerate (used only by the daily cron,
+            which must present a valid X-Admin-Token header).
+        request: the incoming request, used to verify the admin token.
+
+    Returns:
+        Alpha brief dict matching the DailyAlphaBrief.tsx contract.
+    """
+    if force:
+        expected_token = os.getenv('ALPHA_BRIEF_ADMIN_TOKEN', '')
+        supplied_token = (request.headers.get('X-Admin-Token', '') if request else '')
+        if not expected_token or not secrets.compare_digest(supplied_token, expected_token):
+            raise HTTPException(
+                status_code=403,
+                detail="Forbidden: force refresh requires a valid X-Admin-Token header",
+            )
+
+    try:
+        brief = alpha_brief_generator.get_daily_brief(force_refresh=force)
+        return brief
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to generate alpha brief: {str(e)}"
         )
 
 
@@ -236,6 +283,15 @@ async def publish_campaign(request: PublishRequest):
         "message": f"Successfully published campaign {request.campaign_id} to {', '.join(request.platforms)}!",
         "metrics_url": "/dashboard/analytics"
     }
+
+
+# Multi-Language Campaign Support
+from language_config import get_all_languages, is_supported
+
+@app.get("/api/languages")
+async def get_languages():
+    """Returns all supported languages for campaign generation."""
+    return {"languages": get_all_languages()}
 
 
 # Sprint 4: Shadow Clone Engine
@@ -390,7 +446,7 @@ async def revise_campaign(request: ReviseRequest):
         new_offer = f"Revised offer based on: {request.client_comment}"
     else:
         # Call Gemini via REST
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}"
+        url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent"
         prompt = f"""
         You are Avoir, an elite AI media buyer and copywriter.
         The current campaign is:
@@ -404,7 +460,7 @@ async def revise_campaign(request: ReviseRequest):
         Return ONLY a JSON object with keys: "hook", "offer", "cta", "captions" (list of 3 strings).
         """
         payload = json.dumps({"contents": [{"parts": [{"text": prompt}]}]}).encode('utf-8')
-        req = Request(url, data=payload, headers={'Content-Type': 'application/json'})
+        req = Request(url, data=payload, headers={'Content-Type': 'application/json', 'x-goog-api-key': api_key})
         try:
             with urlopen(req) as response:
                 result = json.loads(response.read())

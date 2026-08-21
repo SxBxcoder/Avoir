@@ -142,9 +142,8 @@ export default function TechGeometryCanvas() {
     };
 
     const animate = () => {
-      // Clear with sharp opacity for clean tech look (no trailing blurry mess)
-      ctx.fillStyle = 'rgba(0, 0, 0, 1)';
-      ctx.fillRect(0, 0, width, height);
+      // Clear canvas so the CSS background (light/dark mode) shows through
+      ctx.clearRect(0, 0, width, height);
 
       timeRotation += 0.002;
 

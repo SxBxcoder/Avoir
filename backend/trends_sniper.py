@@ -1,166 +1,225 @@
 import os
+import logging
 import requests
 import time
-import random
 import json
-from typing import List, Dict, Any
+from typing import Dict, Any
 
-GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', '')
+logger = logging.getLogger("trend_sniper")
+
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
+
+_TREND_CACHE: Dict[str, tuple] = {}
+_CACHE_TTL_SECONDS = 300
+
 
 class TrendSniper:
     def __init__(self):
-        # We check for keys but default to None if not present
         self.youtube_api_key = os.environ.get("YOUTUBE_API_KEY")
-        self.apify_api_token = os.environ.get("APIFY_API_TOKEN")
+        self.serpapi_key = os.environ.get("SERPAPI_KEY")
 
-    def get_current_trends(self) -> List[Dict[str, Any]]:
+    def get_trends_for_industry(self, industry: str) -> Dict[str, Any]:
         """
-        Main entry point to get all trends. It tries real APIs first,
-        and falls back to God-Tier mocks if keys are missing.
+        Returns real-time IndustryTrends for any industry string.
+        Cascade: SerpAPI → YouTube → Gemini → empty (no fake data).
         """
-        trends = []
-        
-        # 1. Try YouTube
+        cache_key = industry.lower().strip()
+
+        if cache_key in _TREND_CACHE:
+            cached_time, cached_data = _TREND_CACHE[cache_key]
+            if time.time() - cached_time < _CACHE_TTL_SECONDS:
+                logger.debug("Cache hit for '%s'", industry)
+                return cached_data
+
+        # Tier 1: SerpAPI Google Trends
+        if self.serpapi_key:
+            try:
+                result = self._fetch_serpapi_trends(industry)
+                if result.get("topTrends"):
+                    _TREND_CACHE[cache_key] = (time.time(), result)
+                    logger.info("SerpAPI returned %d trends for '%s'", len(result["topTrends"]), industry)
+                    return result
+            except Exception as e:
+                logger.warning("SerpAPI failed for '%s': %s", industry, e)
+
+        # Tier 2: YouTube Data API
         if self.youtube_api_key:
             try:
-                trends.extend(self._fetch_youtube_trends())
+                result = self._fetch_youtube_trends(industry)
+                if result.get("topTrends"):
+                    _TREND_CACHE[cache_key] = (time.time(), result)
+                    logger.info("YouTube returned %d trends for '%s'", len(result["topTrends"]), industry)
+                    return result
             except Exception as e:
-                print(f"YouTube Snipe Failed: {e}")
-                
-        # 2. Try TikTok/Insta via Apify
-        if self.apify_api_token:
-            try:
-                trends.extend(self._fetch_apify_tiktok_trends())
-            except Exception as e:
-                print(f"Apify Snipe Failed: {e}")
+                logger.warning("YouTube failed for '%s': %s", industry, e)
 
-        # 3. Fallback to Gemini AI if we got nothing (Keys missing or failed)
-        if not trends:
-            trends = self._generate_ai_trends()
-            
-        # If Gemini also fails (no API key), use the Titanium Shield Mock
-        if not trends:
-            trends = self._get_smart_mock_trends()
-            
-        # Shuffle slightly to make it feel dynamic
-        random.shuffle(trends)
-        return trends[:5] # Return top 5 trends
+        # Tier 3: Gemini AI
+        result = self._generate_ai_trends(industry)
+        if result.get("topTrends"):
+            _TREND_CACHE[cache_key] = (time.time(), result)
+            logger.info("Gemini generated %d trends for '%s'", len(result["topTrends"]), industry)
+            return result
 
-    def _fetch_youtube_trends(self) -> List[Dict[str, Any]]:
-        """Hits the real YouTube Data API v3 for trending shorts/videos."""
+        # No keys configured — return empty, not fake data
+        logger.warning("No trend sources available for '%s'. Set SERPAPI_KEY, YOUTUBE_API_KEY, or GEMINI_API_KEY.", industry)
+        return {
+            "industry": industry,
+            "topTrends": [],
+            "viralHooks": [],
+            "lastUpdated": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+            "source": "none",
+            "error": "No API keys configured. Set SERPAPI_KEY in backend/.env for real trend data.",
+        }
+
+    def get_current_trends(self) -> list:
+        """Backward-compat wrapper for legacy callers."""
+        result = self.get_trends_for_industry("general")
+        return result.get("topTrends", [])
+
+    # ── SerpAPI Google Trends ───────────────────────────────────────────────
+
+    def _fetch_serpapi_trends(self, industry: str) -> Dict[str, Any]:
+        url = "https://serpapi.com/search"
+        params = {
+            "engine": "google_trends",
+            "q": industry,
+            "geo": "US",
+            "hl": "en",
+            "data_type": "RELATED_QUERIES",
+            "api_key": self.serpapi_key,
+        }
+
+        resp = requests.get(url, params=params, timeout=15)
+        resp.raise_for_status()
+        data = resp.json()
+
+        top_trends = []
+        related = data.get("related_queries", {})
+
+        for item in related.get("rising", [])[:5]:
+            value_str = str(item.get("value", "Breakout"))
+            top_trends.append({
+                "keyword": item.get("query", ""),
+                "momentum": "rising",
+                "searchVolume": value_str,
+                "sentiment": "neutral",
+                "context": f"Rising Google search in {industry}",
+            })
+
+        for item in related.get("top", [])[:3]:
+            if len(top_trends) >= 6:
+                break
+            top_trends.append({
+                "keyword": item.get("query", ""),
+                "momentum": "peaking",
+                "searchVolume": str(item.get("value", "0")),
+                "sentiment": "neutral",
+                "context": f"Top Google search related to {industry}",
+            })
+
+        viral_hooks = []
+        for trend in top_trends[:3]:
+            keyword = trend["keyword"]
+            if keyword:
+                viral_hooks.append(f"Why everyone is searching for '{keyword}'...")
+
+        return {
+            "industry": industry,
+            "topTrends": top_trends,
+            "viralHooks": viral_hooks,
+            "lastUpdated": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+            "source": "serpapi",
+        }
+
+    # ── YouTube Data API v3 ─────────────────────────────────────────────────
+
+    def _fetch_youtube_trends(self, industry: str) -> Dict[str, Any]:
         url = "https://youtube.googleapis.com/youtube/v3/videos"
         params = {
             "part": "snippet,statistics",
             "chart": "mostPopular",
-            "regionCode": "US", # or "IN" based on global pivot
-            "videoCategoryId": "20", # Gaming/Entertainment
-            "maxResults": 3,
-            "key": self.youtube_api_key
+            "regionCode": "US",
+            "maxResults": 5,
+            "key": self.youtube_api_key,
         }
-        resp = requests.get(url, params=params)
+
+        resp = requests.get(url, params=params, timeout=15)
         resp.raise_for_status()
         data = resp.json()
-        
-        real_trends = []
+
+        top_trends = []
+        viral_hooks = []
+
         for item in data.get("items", []):
-            real_trends.append({
-                "id": f"yt_{item['id']}",
-                "platform": "YouTube",
-                "trend_name": item["snippet"]["title"],
-                "description": item["snippet"]["description"][:150] + "...",
-                "velocity": "High",
-                "virality_score": min(99, int(item["statistics"].get("viewCount", 0)) // 100000),
-                "audio_url": None,
-                "suggested_hook": f"Secret to {item['snippet']['title']}..."
+            title = item["snippet"]["title"]
+            desc = item["snippet"]["description"][:200]
+            views = int(item["statistics"].get("viewCount", 0))
+
+            if views >= 10_000_000:
+                vol = f"{views // 1_000_000}M views"
+            elif views >= 1_000_000:
+                vol = f"{views / 1_000_000:.1f}M views"
+            else:
+                vol = f"{views // 1_000}K views"
+
+            top_trends.append({
+                "keyword": title,
+                "momentum": "peaking" if views >= 10_000_000 else "rising",
+                "searchVolume": vol,
+                "sentiment": "positive",
+                "context": desc if len(desc) > 50 else title,
             })
-        return real_trends
+            viral_hooks.append(f"Secret to {title}...")
 
-    def _fetch_apify_tiktok_trends(self) -> List[Dict[str, Any]]:
-        """Skeleton for Apify TikTok/Insta Scraper."""
-        # This requires setting up an Actor on Apify (e.g., clockworks/tiktok-scraper)
-        # Using a mock return for now, but wired for real integration.
-        return []
+        return {
+            "industry": industry,
+            "topTrends": top_trends,
+            "viralHooks": viral_hooks[:3],
+            "lastUpdated": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+            "source": "youtube",
+        }
 
-    def _generate_ai_trends(self) -> List[Dict[str, Any]]:
-        """
-        Dynamically generates real-time looking trends using Gemini.
-        This represents the 'Proactive Autonomous' upgrade.
-        """
+    # ── Gemini AI ───────────────────────────────────────────────────────────
+
+    def _generate_ai_trends(self, industry: str) -> Dict[str, Any]:
         if not GEMINI_API_KEY:
-            return []
+            return {}
 
-        print("[TrendSniper] 🎯 Firing Gemini AI for dynamic trend detection...")
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
-        
-        system_prompt = """You are an elite Social Media Trend Analyst. Return 3 highly viral, currently trending social media content formats.
-Return valid JSON only. Format:
-[
-  {
-    "id": "unique_id",
-    "platform": "TikTok/Reels" | "YouTube Shorts",
-    "trend_name": "Name of the trend",
-    "description": "Why it works and what the visual format is",
-    "velocity": "Spiking/Breaking/Sustained",
-    "virality_score": 90-99,
-    "suggested_hook": "A viral hook for this trend",
-    "mutator_tags": ["tag1", "tag2", "tag3"]
-  }
-]"""
+        url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent"
+        system_prompt = (
+            f"You are a Social Media Trend Analyst for the {industry} industry.\n"
+            "Return valid JSON only:\n"
+            '{"topTrends":[{"keyword":"...","momentum":"rising|peaking|falling",'
+            '"searchVolume":"...","sentiment":"positive|neutral|mixed","context":"..."}],'
+            '"viralHooks":["...","...","..."]}\n'
+            "Return exactly 4 topTrends and 3 viralHooks."
+        )
+
         try:
             payload = {
-                "contents": [{"parts": [{"text": "Analyze the current global social media landscape and return 3 viral trends."}]}],
+                "contents": [{"parts": [{"text": f"Current {industry} industry trends."}]}],
                 "systemInstruction": {"parts": [{"text": system_prompt}]},
-                "generationConfig": {
-                    "temperature": 0.9,
-                    "responseMimeType": "application/json"
-                }
+                "generationConfig": {"temperature": 0.9, "responseMimeType": "application/json"},
             }
-            resp = requests.post(url, json=payload, timeout=15)
+            resp = requests.post(
+                url, json=payload,
+                headers={"x-goog-api-key": GEMINI_API_KEY},
+                timeout=20,
+            )
             resp.raise_for_status()
-            data = resp.json()
-            raw_text = data['candidates'][0]['content']['parts'][0]['text']
-            
-            trends = json.loads(raw_text)
-            
-            # Ensure they have required fields
-            for t in trends:
-                if 'audio_url' not in t:
-                    t['audio_url'] = None
-            
-            print(f"[TrendSniper] ✅ Gemini generated {len(trends)} dynamic trends.")
-            return trends
-        except Exception as e:
-            print(f"[TrendSniper] ⚠️ AI Trend Generation failed: {e}")
-            return []
+            raw = resp.json()["candidates"][0]["content"]["parts"][0]["text"]
+            parsed = json.loads(raw)
 
-    def _get_smart_mock_trends(self) -> List[Dict[str, Any]]:
-        """
-        Titanium Shield: Ultimate fallback if even AI keys are missing.
-        """
-        return [
-            {
-                "id": f"trend_{int(time.time())}_1",
-                "platform": "TikTok/Reels",
-                "trend_name": "POV: Main Character Energy Transition",
-                "description": "Fast-paced camera whip transition with heavily bass-boosted phonk music.",
-                "velocity": "Spiking (+400% in 12h)",
-                "virality_score": 98,
-                "audio_url": None,
-                "suggested_hook": "POV: You finally stopped playing it safe...",
-                "mutator_tags": ["aesthetic", "fast-cut", "phonk"]
-            },
-            {
-                "id": f"trend_{int(time.time())}_2",
-                "platform": "YouTube Shorts",
-                "trend_name": "The 'Hormozi Pattern Interrupt' Explainer",
-                "description": "Talking head format starting with an aggressive contrarian statement.",
-                "velocity": "Sustained (+120% in 48h)",
-                "virality_score": 92,
-                "audio_url": None,
-                "suggested_hook": "99% of people are doing [X] completely wrong.",
-                "mutator_tags": ["talking-head", "educational", "retention"]
+            return {
+                "industry": industry,
+                "topTrends": parsed.get("topTrends", []),
+                "viralHooks": parsed.get("viralHooks", []),
+                "lastUpdated": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+                "source": "gemini",
             }
-        ]
+        except Exception as e:
+            logger.warning("Gemini failed for '%s': %s", industry, e)
+            return {}
 
-# Instantiate singleton
+
 sniper = TrendSniper()
