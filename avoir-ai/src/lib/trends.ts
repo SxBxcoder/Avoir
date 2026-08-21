@@ -19,6 +19,8 @@ export interface IndustryTrends {
   topTrends: TrendTopic[];
   viralHooks: string[];
   lastUpdated: string;
+  /** Which cascade tier produced this data (serpapi|youtube|apify|gemini). */
+  source?: string;
 }
 
 export async function fetchIndustryTrends(industry: string): Promise<IndustryTrends | null> {

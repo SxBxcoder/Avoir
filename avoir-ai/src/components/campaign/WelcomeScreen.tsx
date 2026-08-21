@@ -12,7 +12,13 @@ const quickActions = [
   { icon: <Flame className="w-4 h-4" />, label: 'Viral Content', prompt: 'Generate viral meme-worthy captions for my streetwear brand', color: 'from-orange-500/20 to-red-500/20', border: 'border-orange-500/20', iconColor: 'text-orange-400' },
 ];
 
-export function WelcomeScreen({ onQuickAction }: { onQuickAction: (text: string) => void }) {
+export function WelcomeScreen({
+  onQuickAction,
+  children,
+}: {
+  onQuickAction: (text: string) => void;
+  children?: React.ReactNode;
+}) {
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -87,6 +93,8 @@ export function WelcomeScreen({ onQuickAction }: { onQuickAction: (text: string)
             </motion.button>
           ))}
         </motion.div>
+
+        {children}
       </div>
     </motion.div>
   );

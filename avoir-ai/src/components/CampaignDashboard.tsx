@@ -493,6 +493,7 @@ export default function CampaignDashboard({ accessToken, userEmail, onLogout, em
               genomeVariants={genomeVariants}
               simulationPhase={simulationPhase}
               simulationData={simulationData}
+              industry={systemStatus.dbSync === 'SYNCED' ? 'fashion' : 'general_commerce'}
               onQuickAction={(prompt) => { setInputValue(prompt); handleGenerate(prompt); }}
             >
               {genomeVariants && (
