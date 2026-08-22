@@ -145,8 +145,8 @@ if aws lambda get-function --function-name "$FUNCTION_NAME" --region "$REGION" >
                UPSTASH_REDIS_REST_TOKEN="${UPSTASH_REDIS_REST_TOKEN:-}" \
                GEMINI_API_KEY="${GEMINI_API_KEY:-}" \
                GEMINI_API_KEY_2="${GEMINI_API_KEY_2:-}" \
-               python3 -c 'import json,os; print(json.dumps({k:v for k,v in os.environ.items() if k.startswith(("UPSTASH","GEMINI")) and v}))')"
-    ENV_ARGS=(--environment "Variables=${ENV_JSON}")
+               python3 -c 'import json,os; print(json.dumps({"Variables": {k:v for k,v in os.environ.items() if k.startswith(("UPSTASH","GEMINI")) and v}}))')"
+    ENV_ARGS=(--environment "${ENV_JSON}")
   fi
   run aws lambda update-function-configuration --function-name "$FUNCTION_NAME" \
       --handler aws_lambda_daily_cron.lambda_handler --runtime python3.12 \
@@ -162,8 +162,8 @@ else
                UPSTASH_REDIS_REST_TOKEN="${UPSTASH_REDIS_REST_TOKEN:-}" \
                GEMINI_API_KEY="${GEMINI_API_KEY:-}" \
                GEMINI_API_KEY_2="${GEMINI_API_KEY_2:-}" \
-               python3 -c 'import json,os; print(json.dumps({k:v for k,v in os.environ.items() if k.startswith(("UPSTASH","GEMINI")) and v}))')"
-    CREATE_ENV_ARGS=(--environment "Variables=${ENV_JSON}")
+               python3 -c 'import json,os; print(json.dumps({"Variables": {k:v for k,v in os.environ.items() if k.startswith(("UPSTASH","GEMINI")) and v}}))')"
+    CREATE_ENV_ARGS=(--environment "${ENV_JSON}")
   fi
   run aws lambda create-function --function-name "$FUNCTION_NAME" \
       --runtime python3.12 --handler aws_lambda_daily_cron.lambda_handler \
