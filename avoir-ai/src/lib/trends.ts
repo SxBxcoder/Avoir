@@ -3,7 +3,8 @@
  *
  * Orchestrates trend data from multiple sources with cascading fallback:
  *   1. Check DynamoDB cache (avoir-trends, 48h TTL)
- *   2. If cache miss → fetch from Python backend (SerpAPI / pytrends / Reddit)
+ *   2. If cache miss → fetch from Python backend cascade
+ *      (SerpAPI Google Trends → YouTube → Apify TikTok → Gemini)
  *   3. If Python backend down → enhanced mock data
  *   4. Cache the result for next time
  *
@@ -48,11 +49,13 @@ export interface TrendFetchOptions {
 // PYTHON BACKEND CLIENT
 // ============================================================================
 
-const PYTHON_BACKEND_URL = process.env.TRENDS_BACKEND_URL || 'http://localhost:8001';
+// Points at the main FastAPI backend (backend/server.py) which exposes
+// GET /api/trends backed by the SerpAPI → YouTube → Apify → Gemini cascade.
+const PYTHON_BACKEND_URL = process.env.TRENDS_BACKEND_URL || 'http://localhost:8000';
 const BACKEND_TIMEOUT = parseInt(process.env.TRENDS_BACKEND_TIMEOUT || '12000', 10);
 
 /**
- * Fetch trend data from the Python trends_sniper backend.
+ * Fetch trend data from the Python backend trend cascade.
  * Returns null if backend is unreachable or returns an error.
  */
 async function fetchFromBackend(
@@ -61,16 +64,17 @@ async function fetchFromBackend(
   fresh: boolean = false
 ): Promise<IndustryTrends | null> {
   try {
-    const params = new URLSearchParams({ country });
+    const params = new URLSearchParams({ industry, country });
     if (fresh) params.set('fresh', 'true');
 
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), BACKEND_TIMEOUT);
 
-    const response = await fetch(`${PYTHON_BACKEND_URL}/trends/${encodeURIComponent(industry)}?${params}`, {
+    const response = await fetch(`${PYTHON_BACKEND_URL}/api/trends?${params}`, {
       method: 'GET',
       headers: { 'Content-Type': 'application/json' },
       signal: controller.signal,
+      cache: 'no-store',
     });
 
     clearTimeout(timeoutId);
@@ -81,22 +85,23 @@ async function fetchFromBackend(
     }
 
     const data = await response.json();
-    if (!data?.trends) return null;
+    // Backend shape: { status: "success", trends: { industry, topTrends, ... } }
+    const raw = data?.trends;
+    if (!raw || !Array.isArray(raw.topTrends)) return null;
 
     // Normalize the Python backend response to our TypeScript interface
-    const raw = data.trends;
     return {
       industry: raw.industry || industry,
-      topTrends: (raw.topTrends || []).map((t: Record<string, string>) => ({
-        keyword: t.keyword || t.keyword,
-        momentum: t.momentum || 'peaking',
+      topTrends: (raw.topTrends as Record<string, string>[]).map((t) => ({
+        keyword: t.keyword || '',
+        momentum: (t.momentum || 'peaking') as TrendTopic['momentum'],
         searchVolume: t.searchVolume || t.search_volume || 'N/A',
-        sentiment: t.sentiment || 'neutral',
+        sentiment: (t.sentiment || 'neutral') as TrendTopic['sentiment'],
         context: t.context || '',
       })),
       viralHooks: raw.viralHooks || [],
       lastUpdated: raw.lastUpdated || new Date().toISOString(),
-      source: raw.source || 'pytrends',
+      source: raw.source || 'serpapi',
       cachedUntil: raw.cachedUntil,
     };
   } catch (error) {
@@ -202,7 +207,9 @@ export async function fetchIndustryTrends(
 
   // 2. Fetch from Python backend
   const backendData = await fetchFromBackend(normalized, country, options.fresh);
-  if (backendData) {
+  // Ignore empty cascade results (e.g. backend running without API keys,
+  // source: "none") — never cache them, fall through to mock instead.
+  if (backendData && backendData.topTrends.length > 0) {
     // Cache the result
     await saveTrendData(
       normalized,
