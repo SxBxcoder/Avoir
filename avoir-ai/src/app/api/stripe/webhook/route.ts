@@ -242,7 +242,13 @@ export async function POST(req: Request) {
     return NextResponse.json({ received: true });
   } catch (err: any) {
     logger.error('webhook', 'Error processing event', { type: event.type, err });
-    // Return 200 anyway to prevent Stripe from retrying (we logged the error)
-    return NextResponse.json({ received: true, error: err.message });
+    // Return 5xx so Stripe schedules an exponential-backoff retry. A transient
+    // failure (Stripe API timeout, DynamoDB throttle) must never be acked as
+    // delivered — that would strand a paying user without their credits. All
+    // our writes are hard SETs, so replaying an event is idempotent.
+    return NextResponse.json(
+      { error: err.message || 'Webhook processing failed' },
+      { status: 500 }
+    );
   }
 }

@@ -149,4 +149,22 @@ describe('POST /api/stripe/webhook — audit trail', () => {
     expect(res.status).toBe(400);
     expect(logAuditEvent).not.toHaveBeenCalled();
   });
+
+  it('returns 500 so Stripe retries when a write fails mid-processing', async () => {
+    subscriptionsRetrieve.mockResolvedValue(proSubscription);
+    upsertSubscription.mockRejectedValue(new Error('ProvisionedThroughputExceeded'));
+
+    const res = await postEvent(
+      stripeEvent('checkout.session.completed', {
+        metadata: { userId: 'user-1' },
+        customer: 'cus_123',
+        subscription: 'sub_123',
+      })
+    );
+
+    // Acking with 200 here would strand a paying user without credits —
+    // Stripe must see the failure and schedule its backoff retry.
+    expect(res.status).toBe(500);
+    expect(logAuditEvent).not.toHaveBeenCalled();
+  });
 });
