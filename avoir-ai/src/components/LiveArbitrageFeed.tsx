@@ -50,6 +50,25 @@ const MOCK_OPPORTUNITIES: ArbitrageOpportunity[] = [
 
 const REFRESH_INTERVAL_MS = 5 * 60 * 1000;
 
+/**
+ * Reads the session JWT for the Authorization header. `access_token` is the
+ * production key; `avoir_auth` is the demo-auth fallback used by
+ * CompetitorIntelPanel. Without this header /api/arbitrage 401s and the feed
+ * silently falls back to mock data.
+ */
+function getStoredAccessToken(): string | null {
+  try {
+    const token = localStorage.getItem('access_token');
+    if (token) return token;
+    const raw = localStorage.getItem('avoir_auth');
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    return parsed?.accessToken ?? parsed?.token ?? null;
+  } catch {
+    return null;
+  }
+}
+
 export function LiveArbitrageFeed({
   onDeploy,
   industry = 'general',
@@ -70,7 +89,10 @@ export function LiveArbitrageFeed({
     async function load() {
       const seq = ++fetchSeq.current;
       try {
-        const res = await fetch(`/api/arbitrage?industry=${encodeURIComponent(industry)}`);
+        const token = getStoredAccessToken();
+        const res = await fetch(`/api/arbitrage?industry=${encodeURIComponent(industry)}`, {
+          headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+        });
         if (!res.ok) throw new Error(`API responded ${res.status}`);
         const data = await res.json();
         if (cancelled || seq !== fetchSeq.current) return;
