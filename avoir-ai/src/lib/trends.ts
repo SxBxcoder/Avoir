@@ -31,8 +31,8 @@ export interface IndustryTrends {
   topTrends: TrendTopic[];
   viralHooks: string[];
   lastUpdated: string;
-  /** Where the data came from */
-  source: 'serpapi' | 'pytrends' | 'reddit' | 'cache' | 'mock';
+  /** Which cascade tier produced this data (serpapi|youtube|apify|gemini) or cache/mock fallback. */
+  source: 'serpapi' | 'pytrends' | 'reddit' | 'youtube' | 'apify' | 'gemini' | 'cache' | 'mock';
   /** When the cache expires (if cached) */
   cachedUntil?: string;
 }
@@ -241,6 +241,9 @@ export function synthesizeTrendContext(trends: IndustryTrends): string {
     serpapi: '[LIVE · SerpAPI]',
     pytrends: '[LIVE · Google Trends]',
     reddit: '[LIVE · Reddit]',
+    youtube: '[LIVE · YouTube]',
+    apify: '[LIVE · TikTok/Apify]',
+    gemini: '[AI · Gemini]',
     cache: '[CACHED]',
     mock: '[DEMO]',
   }[trends.source] || '[UNKNOWN]';

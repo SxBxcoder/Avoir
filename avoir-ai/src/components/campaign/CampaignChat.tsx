@@ -6,6 +6,7 @@ import { Activity } from 'lucide-react';
 import { type Message, type CampaignData, type GenomeVariant } from './types';
 import { CookingStatus } from './CookingStatus';
 import { WelcomeScreen } from './WelcomeScreen';
+import { LiveArbitrageFeed } from '../LiveArbitrageFeed';
 import { springConfig } from './configs';
 
 interface CampaignChatProps {
@@ -20,6 +21,8 @@ interface CampaignChatProps {
     predicted_score: number;
   } | null;
   onQuickAction: (prompt: string) => void;
+  /** Industry used for the live arbitrage feed shown on the empty state. */
+  industry?: string;
   children?: React.ReactNode;
 }
 
@@ -30,6 +33,7 @@ export function CampaignChat({
   simulationPhase,
   simulationData,
   onQuickAction,
+  industry = 'general',
   children,
 }: CampaignChatProps) {
   const chatEndRef = useRef<HTMLDivElement>(null);
@@ -43,7 +47,9 @@ export function CampaignChat({
   return (
     <div className="flex-1 overflow-y-auto relative flex flex-col">
       {isEmpty ? (
-        <WelcomeScreen onQuickAction={onQuickAction} />
+        <WelcomeScreen onQuickAction={onQuickAction}>
+          <LiveArbitrageFeed onDeploy={onQuickAction} industry={industry} />
+        </WelcomeScreen>
       ) : (
         <div className="p-4 lg:p-8 space-y-4">
           <motion.div
