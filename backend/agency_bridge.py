@@ -143,17 +143,18 @@ class AgencyBridge:
                     KeyConditionExpression=Key("pk").eq("CLIENT"),
                     FilterExpression=Key("agency_id").eq(agency_id),
                 )
-                items = resp.get("Items", [])
-                if items:
-                    return [
-                        {
-                            "id": item["sk"],
-                            "name": item.get("name"),
-                            "industry": item.get("industry"),
-                            "logo": item.get("logo"),
-                        }
-                        for item in items
-                    ]
+                # Return even when the list is empty — zero clients is valid
+                # state (new agency / all deleted). Falling through here would
+                # resurrect the demo clients into a live agency dashboard.
+                return [
+                    {
+                        "id": item["sk"],
+                        "name": item.get("name"),
+                        "industry": item.get("industry"),
+                        "logo": item.get("logo"),
+                    }
+                    for item in resp.get("Items", [])
+                ]
             except Exception as e:
                 print(f"[agency_bridge] get_clients query failed: {e}")
         return self.clients
@@ -200,14 +201,19 @@ class AgencyBridge:
         return self.shared_campaigns.get(link_id)
 
     def _persist_campaign(self, link_id: str, campaign: Dict[str, Any]):
-        """Write a campaign back to whichever store it came from."""
+        """Write a campaign back to whichever store it came from.
+
+        A mid-request DynamoDB write failure must raise (→ HTTP 500) instead
+        of silently falling back to the local file: read-modify-write flows
+        (add_feedback, update_campaign_variant) would otherwise report success
+        while the next DynamoDB-first read returns the stale item, silently
+        dropping the write. The file fallback remains only for instances where
+        DynamoDB was never reachable at all (_get_table() → None).
+        """
         table = self._get_table()
         if table is not None:
-            try:
-                table.put_item(Item={"pk": "CAMPAIGN", "sk": link_id, **campaign})
-                return
-            except Exception as e:
-                print(f"[agency_bridge] DynamoDB put failed, using fallback: {e}")
+            table.put_item(Item={"pk": "CAMPAIGN", "sk": link_id, **campaign})
+            return
         self.shared_campaigns[link_id] = campaign
         self._save_data()
 
