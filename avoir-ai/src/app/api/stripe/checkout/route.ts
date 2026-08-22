@@ -73,6 +73,12 @@ export async function POST(req: Request) {
 
     if (existingCustomers.data.length > 0) {
       customerId = existingCustomers.data[0].id;
+      // Backfill metadata: customers created before cognitoUserId was recorded
+      // (beta users, pre-metadata records) would otherwise be untraceable in
+      // the webhook, silently skipping every recurring-invoice credit refill.
+      await stripe.customers.update(customerId, {
+        metadata: { cognitoUserId: userId },
+      });
       logger.debug('checkout', 'Reusing existing Stripe customer', { customerId });
     } else {
       const newCustomer = await stripe.customers.create({

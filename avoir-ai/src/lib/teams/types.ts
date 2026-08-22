@@ -51,7 +51,8 @@ export interface Invitation {
 }
 
 export interface AuditEntry {
-  teamId: string;
+  /** Present on team-scoped events; omitted for user-scoped ones (billing, cascade). */
+  teamId?: string;
   logId: string; // UUID
   userId: string;
   action: AuditAction;
@@ -76,7 +77,15 @@ export type AuditAction =
   | 'invitation.revoked'
   | 'campaign.created'
   | 'campaign.deleted'
-  | 'brand_dna.updated';
+  | 'brand_dna.updated'
+  // Billing lifecycle (Stripe webhook). User-scoped — teamId is null.
+  | 'billing.checkout_completed'
+  | 'billing.payment_succeeded'
+  | 'billing.payment_failed'
+  | 'billing.subscription_updated'
+  | 'billing.subscription_deleted'
+  // LLM cascade visibility. User-scoped — teamId is null.
+  | 'cascade.tier_transition';
 
 // ============================================================================
 // PERMISSION TYPES

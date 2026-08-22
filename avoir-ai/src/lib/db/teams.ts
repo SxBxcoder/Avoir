@@ -447,7 +447,7 @@ export async function validateInvitationToken(token: string): Promise<Invitation
 // ============================================================================
 
 export async function logAuditEvent(
-  teamId: string,
+  teamId: string | null,
   userId: string,
   action: AuditAction,
   details: Record<string, unknown> = {}
@@ -456,8 +456,10 @@ export async function logAuditEvent(
   const now = new Date();
   const ttl = Math.floor(now.getTime() / 1000) + 90 * 24 * 60 * 60; // 90 days
 
+  // User-scoped events (billing, cascade) pass teamId=null; the attribute is
+  // omitted so they never surface in the team-scoped GSI query.
   const entry: AuditEntry = {
-    teamId,
+    ...(teamId ? { teamId } : {}),
     logId: uuid(),
     userId,
     action,

@@ -125,8 +125,10 @@ export async function upsertSubscription(
     return result.Attributes as UserSubscription;
   } catch (err: unknown) {
     logger.error('db.users', 'DynamoDB upsert failed', { userId, err });
-    // Fallback: return current state
-    return getSubscription(userId);
+    // Never swallow billing writes: the Stripe webhook relies on this call
+    // throwing so it returns 5xx and Stripe retries. Returning stale state
+    // here would ack a failed credit refill as delivered.
+    throw err;
   }
 }
 

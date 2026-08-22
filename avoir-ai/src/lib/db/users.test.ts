@@ -1,6 +1,6 @@
 import { describe, expect, it, beforeEach, vi } from 'vitest';
 import { GetCommand, PutCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb';
-import { getSubscription, deductCredits, addCredits } from './users';
+import { getSubscription, deductCredits, addCredits, upsertSubscription } from './users';
 import { DEFAULT_SUBSCRIPTION, type UserSubscription } from '@/lib/stripe';
 
 // The DynamoDB client is the only I/O boundary — command classes are inert
@@ -140,5 +140,31 @@ describe('addCredits', () => {
     const updated = await addCredits('user-1', 5);
 
     expect(updated.credits).toBe(5);
+  });
+});
+
+describe('upsertSubscription', () => {
+  it('throws when the write fails instead of returning stale state', async () => {
+    sendMock.mockRejectedValueOnce(new Error('ProvisionedThroughputExceeded'));
+
+    // Billing callers (Stripe webhook) rely on this rejection to return 5xx
+    // so Stripe retries — swallowing it would ack a failed credit refill.
+    await expect(upsertSubscription('user-1', { credits: 1000 })).rejects.toThrow(
+      'ProvisionedThroughputExceeded'
+    );
+  });
+
+  it('returns the written attributes on success', async () => {
+    store.set('user-1', sub({ credits: 10 }));
+    sendMock.mockImplementationOnce(async (command: unknown) => {
+      const input = (command as { input?: any }).input;
+      const updated = { ...store.get('user-1')!, credits: input.ExpressionAttributeValues[':credits'] };
+      store.set('user-1', updated);
+      return { Attributes: updated };
+    });
+
+    const result = await upsertSubscription('user-1', { credits: 1000 });
+
+    expect(result.credits).toBe(1000);
   });
 });
