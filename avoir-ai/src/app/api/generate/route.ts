@@ -165,21 +165,29 @@ export async function POST(req: Request) {
 
     // ========================================================================
     // PERSIST CAMPAIGN TO DYNAMODB
+    // A persistence failure must refund the reservation — the user should
+    // not pay for a campaign that was never saved.
     // ========================================================================
-    const campaign = await createCampaign(userId, {
-      goal: campaignGoal,
-      language: campaignLanguage,
-      plan: {
-        hook: parsedData.plan?.hook || parsedData.hook || '',
-        offer: parsedData.plan?.offer || parsedData.offer || '',
-        cta: parsedData.plan?.cta || parsedData.cta || '',
-      },
-      captions: parsedData.captions || [],
-      imageUrl: parsedData.image_url || parsedData.imageUrl || '',
-      messages: conversationMessages,
-      tier: parsedData.tier || 'TIER_1_GEMINI',
-      status: parsedData.status || 'completed',
-    });
+    let campaign;
+    try {
+      campaign = await createCampaign(userId, {
+        goal: campaignGoal,
+        language: campaignLanguage,
+        plan: {
+          hook: parsedData.plan?.hook || parsedData.hook || '',
+          offer: parsedData.plan?.offer || parsedData.offer || '',
+          cta: parsedData.plan?.cta || parsedData.cta || '',
+        },
+        captions: parsedData.captions || [],
+        imageUrl: parsedData.image_url || parsedData.imageUrl || '',
+        messages: conversationMessages,
+        tier: parsedData.tier || 'TIER_1_GEMINI',
+        status: parsedData.status || 'completed',
+      });
+    } catch (error) {
+      await addCredits(userId, 1);
+      throw error;
+    }
 
     // Cascade visibility: the primary tier (Gemini key 1) is the happy path;
     // anything else means the Diamond Cascade transitioned (key rotation,
