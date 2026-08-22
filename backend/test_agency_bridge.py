@@ -159,6 +159,12 @@ class DynamoModeTests(unittest.TestCase):
         self.table.query.assert_called_once()
         self.assertIn("KeyConditionExpression", self.table.query.call_args.kwargs)
 
+    def test_get_clients_returns_empty_list_for_agency_with_zero_clients(self):
+        self.bridge._get_table()
+        self.table.query.return_value = {"Items": []}
+        clients = self.bridge.get_clients("brand_new_agency")
+        self.assertEqual(clients, [])  # NOT the demo clients
+
     def test_add_feedback_read_modify_write_via_dynamo(self):
         self.bridge._get_table()
         self.table.get_item.return_value = {
@@ -173,7 +179,9 @@ class DynamoModeTests(unittest.TestCase):
 
 
 class DegradationTests(unittest.TestCase):
-    """Storage errors must degrade to fallback, never raise to endpoints."""
+    """Total DynamoDB unavailability degrades to the local fallback, but
+    mid-request write failures against a live table must raise (→ HTTP 500)
+    so read-modify-write flows never fake success."""
 
     def setUp(self):
         self.tmpdir = tempfile.mkdtemp()
@@ -203,6 +211,26 @@ class DegradationTests(unittest.TestCase):
         link_id = link.rsplit("/", 1)[-1]
         self.assertIn(link_id, bridge.shared_campaigns)
         self.assertIsNotNone(bridge.get_shared_campaign(link_id))
+
+    def test_persist_failure_raises_instead_of_silent_local_write(self):
+        """add_feedback must not fake success when DynamoDB write fails —
+        a silent local fallback would lose the feedback on the next
+        DynamoDB-first read (split-brain)."""
+        table = make_mock_table()
+        resource = MagicMock()
+        resource.Table.return_value = table
+        bridge = AgencyBridge(dynamo_resource=resource)
+        bridge._get_table()
+
+        table.get_item.return_value = {
+            "Item": {"pk": "CAMPAIGN", "sk": "link9", "hook": "h", "thread": []}
+        }
+        table.put_item.side_effect = Exception("ProvisionedThroughputExceeded")
+
+        with self.assertRaisesRegex(Exception, "ProvisionedThroughputExceeded"):
+            bridge.add_feedback("link9", "keep this feedback", "client")
+        # Nothing was written behind the API's back either.
+        self.assertNotIn("link9", bridge.shared_campaigns)
 
     def test_seed_failure_does_not_break_connect(self):
         table = make_mock_table()
