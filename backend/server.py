@@ -209,9 +209,12 @@ async def get_campaigns(user_id: str):
     }
 
 
-# Sprint 3: Trend Sniper Endpoint (SerpAPI → YouTube → Gemini → Mock)
+# Sprint 3: Trend Sniper Endpoint (SerpAPI → YouTube → Apify → Gemini → Mock)
+# Synchronous route: the cascade performs blocking requests calls (Apify can
+# take up to 90s), so it runs in Starlette's threadpool instead of blocking
+# the event loop.
 @app.get("/api/trends")
-async def get_trends(industry: str = "general"):
+def get_trends(industry: str = "general"):
     """
     Returns real-time IndustryTrends for any arbitrary industry string.
     Cascade: SerpAPI Google Trends → YouTube → Gemini AI → Mock fallback.
