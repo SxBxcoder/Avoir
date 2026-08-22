@@ -18,7 +18,7 @@ class TrendSniper:
         self.youtube_api_key = os.environ.get("YOUTUBE_API_KEY")
         self.serpapi_key = os.environ.get("SERPAPI_KEY")
         self.apify_api_token = os.environ.get("APIFY_API_TOKEN")
-        self.apify_actor = os.environ.get("APIFY_TIKTOK_ACTOR", "clockworks/tiktok-scraper")
+        self.apify_actor = os.environ.get("APIFY_TIKTOK_ACTOR", "clockworks~tiktok-scraper")
 
     def get_trends_for_industry(self, industry: str) -> Dict[str, Any]:
         """
@@ -211,7 +211,10 @@ class TrendSniper:
         Uses the run-sync-get-dataset-items endpoint: one HTTP call that
         starts the actor, waits for it to finish, and returns dataset items.
         """
-        url = f"https://api.apify.com/v2/acts/{self.apify_actor}/run-sync-get-dataset-items"
+        # Apify requires '~' between username and actor name; sanitize in case
+        # someone configured the actor with a '/' (which 404s on the API).
+        actor_id = self.apify_actor.replace("/", "~")
+        url = f"https://api.apify.com/v2/actors/{actor_id}/run-sync-get-dataset-items"
         params = {"token": self.apify_api_token}
         payload = {
             "hashtags": [self._industry_to_hashtag(industry)],
