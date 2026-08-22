@@ -56,10 +56,23 @@ describe('mapTrendsToOpportunities', () => {
 
   it('derives metrics deterministically from momentum', () => {
     const [first] = mapTrendsToOpportunities(makeTrends(), 'fitness');
-    // rising = 70 → competition 30, roas 2 + 70/25 = 4.8
+    // rising = 70 → competition 70 (saturation maps directly), roas 2 + 70/25 = 4.8
     expect(first.momentum).toBe(70);
-    expect(first.competition).toBe(30);
+    expect(first.competition).toBe(70);
     expect(first.predictedRoas).toBe(4.8);
+  });
+
+  it('ranks peaking trends as more saturated than rising ones', () => {
+    const trends = makeTrends({
+      topTrends: [
+        { keyword: 'Old news', momentum: 'peaking', searchVolume: '1M', sentiment: 'neutral', context: '' },
+        { keyword: 'Fresh spike', momentum: 'rising', searchVolume: '+300%', sentiment: 'positive', context: '' },
+      ],
+    });
+    const [peaking, rising] = mapTrendsToOpportunities(trends, 'fitness');
+    expect(peaking.competition).toBe(90);
+    expect(rising.competition).toBe(70);
+    expect(peaking.competition).toBeGreaterThan(rising.competition);
   });
 
   it('keeps competition and roas within sane bounds for all scores', () => {

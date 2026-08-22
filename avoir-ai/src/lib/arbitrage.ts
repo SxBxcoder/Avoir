@@ -77,9 +77,10 @@ export function mapTrendsToOpportunities(
     const mScore = momentumScore(trend.momentum);
     const topic = truncate(String(trend.keyword ?? '').trim() || 'Untitled trend', 60);
 
-    // Heuristics (documented in PR): early trends have room to enter;
-    // projected ROAS scales linearly with momentum within a sane band.
-    const competition = Math.max(5, Math.min(95, 100 - mScore));
+    // Heuristics (documented in PR): competition maps directly from momentum
+    // saturation — a peaking trend is crowded (90), an early rising one still
+    // has room to enter (70); projected ROAS scales linearly with momentum.
+    const competition = Math.max(5, Math.min(95, mScore));
     const predictedRoas = Math.round((2 + mScore / 25) * 10) / 10;
 
     return {

@@ -70,7 +70,7 @@ describe('GET /api/arbitrage', () => {
     expect(body.opportunities[0]).toMatchObject({
       topic: '12-3-30 workout',
       momentum: 70,
-      competition: 30,
+      competition: 70,
       predictedRoas: 4.8,
     });
   });
