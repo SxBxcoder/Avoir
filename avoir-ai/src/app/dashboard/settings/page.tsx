@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
+import { useTheme } from 'next-themes';
 import { motion } from 'framer-motion';
 import {
   User,
@@ -624,7 +625,7 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array {
 // ============================================================================
 function PreferencesTab() {
   const [language, setLanguage] = useState('en');
-  const [theme, setTheme] = useState('dark');
+  const { theme, setTheme } = useTheme();
   const [languages, setLanguages] = useState([
     { code: 'en', label: 'English' },
     { code: 'hi', label: 'Hindi' },
@@ -669,8 +670,8 @@ function PreferencesTab() {
   };
 
   const themes = [
-    { id: 'dark', label: 'Dark', color: 'bg-card' },
-    { id: 'midnight', label: 'Midnight', color: 'bg-black' },
+    { id: 'light', label: 'Light', color: 'bg-white border-zinc-200' },
+    { id: 'dark', label: 'Dark', color: 'bg-black border-zinc-800' },
   ];
 
   return (
