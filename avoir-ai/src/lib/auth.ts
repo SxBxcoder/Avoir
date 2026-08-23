@@ -2,6 +2,8 @@
 // This is like your passport.js config in MERN, but for AWS Cognito
 
 import { Amplify } from 'aws-amplify';
+import { cognitoUserPoolsTokenProvider } from 'aws-amplify/auth/cognito';
+import { CookieStorage } from 'aws-amplify/utils';
 
 // Configure Amplify with your Cognito User Pool
 // You'll get these values after creating a Cognito User Pool in AWS Console
@@ -36,4 +38,10 @@ export function configureAuth() {
       },
     },
   });
+
+  cognitoUserPoolsTokenProvider.setKeyValueStorage(new CookieStorage({
+    secure: process.env.NODE_ENV === 'production',
+    path: '/',
+    sameSite: 'lax',
+  }));
 }
