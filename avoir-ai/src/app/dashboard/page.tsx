@@ -406,7 +406,7 @@ export default function DashboardPage() {
               {capabilities.map((cap) => (
                 <GlowCard
                   key={cap.title}
-                  glowColor={cap.glow || 'rgba(99, 102, 241, 0.1)'}
+                  glowColor="rgba(99, 102, 241, 0.1)"
                   className={`rounded-xl border ${cap.borderColor} ${cap.bgAccent} backdrop-blur-sm p-5 group`}
                 >
                   <div className="flex items-start gap-4">
