@@ -69,24 +69,24 @@
 }
 
 .dark {
-  /* DARK MODE (Original Hacker Terminal Style) */
-  --bg-primary: #000000;
-  --bg-secondary: #0a0a0f;
-  --bg-card: #111118;
-  --bg-elevated: #161622;
-  --text-primary: #e4e4e7;
+  /* DARK MODE (Obsidian / AI Hedge Fund Vibe) */
+  --bg-primary: #030305;
+  --bg-secondary: #08080C;
+  --bg-card: #0A0A0F;
+  --bg-elevated: #111118;
+  --text-primary: #F4F4F5;
   
   --terminal-bg: #000000;
-  --terminal-surface: #0D0D0D;
-  --terminal-border: #2A2A2A;
-  --terminal-border-bright: #3A3A3A;
+  --terminal-surface: #050508;
+  --terminal-border: #1A1A24;
+  --terminal-border-bright: #2A2A38;
 
   /* Semantic UI Colors */
-  --muted: #27272a;
-  --muted-foreground: #a1a1aa;
-  --border: #27272a;
-  --card: #09090b;
-  --card-foreground: #fafafa;
+  --muted: #181822;
+  --muted-foreground: #A1A1AA;
+  --border: #0F0F16;
+  --card: #0B0B11;
+  --card-foreground: #FAFAFA;
 
   /* Dynamic Semantic Accents (RGB tuples) */
   --color-success: 52 211 153; /* emerald-400 */
@@ -97,20 +97,20 @@
   --color-cyan: 34 211 238;    /* cyan-400 */
 
   /* Accent gradients */
-  --accent-cyan: #06b6d4;
-  --accent-indigo: #6366f1;
-  --accent-purple: #a855f7;
-  --accent-pink: #ec4899;
-  --accent-green: #22c55e;
-  --accent-amber: #f59e0b;
+  --accent-cyan: #00F0FF;
+  --accent-indigo: #6366F1;
+  --accent-purple: #B5179E;
+  --accent-pink: #F72585;
+  --accent-green: #39FF14;
+  --accent-amber: #FFB703;
 
   /* Glassmorphism Colors */
-  --glass-bg: rgba(17, 17, 24, 0.6);
-  --glass-bg-hover: rgba(17, 17, 24, 0.8);
-  --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  --glass-bg: rgba(10, 10, 15, 0.65);
+  --glass-bg-hover: rgba(15, 15, 22, 0.85);
+  --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.05);
   
   /* Grid & UI Accents */
-  --grid-color: rgba(255,255,255,0.015);
+  --grid-color: rgba(99, 102, 241, 0.04);
 }
 
 :root {
@@ -221,22 +221,22 @@ body {
 
 .glass-card {
   background: var(--glass-bg);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(99, 102, 241, 0.1);
+  backdrop-filter: blur(24px) saturate(150%);
+  -webkit-backdrop-filter: blur(24px) saturate(150%);
+  border: 1px solid rgba(255, 255, 255, 0.04);
   border-radius: 16px;
   box-shadow: var(--glass-shadow);
-  transition: all 0.4s var(--ease-smooth);
+  transition: all 0.4s var(--ease-spring);
 }
 
 .glass-card:hover {
   border-color: rgba(99, 102, 241, 0.3);
   background: var(--glass-bg-hover);
   box-shadow: 
-    0 0 0 1px rgba(99, 102, 241, 0.2),
-    0 8px 32px rgba(99, 102, 241, 0.08),
-    inset 0 1px 0 rgba(255, 255, 255, 0.05);
-  transform: translateY(-2px);
+    0 0 0 1px rgba(99, 102, 241, 0.15),
+    0 12px 40px rgba(99, 102, 241, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  transform: translateY(-3px) scale(1.01);
 }
 
 /* Premium glow card */
@@ -316,9 +316,10 @@ body {
 
 /* Primary CTA button */
 .btn-primary {
-  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  background: linear-gradient(135deg, #6366f1, #B5179E);
   color: white;
-  box-shadow: 0 4px 16px rgba(99, 102, 241, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 4px 16px rgba(99, 102, 241, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
 
 .btn-primary:hover {
@@ -601,6 +602,23 @@ body {
     background-clip: text;
     -webkit-text-fill-color: transparent;
   }
+}
+
+/* ============================================================================
+   PREMIUM NOISE OVERLAY
+   ============================================================================ */
+.noise-overlay {
+  position: relative;
+}
+.noise-overlay::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 50;
+  pointer-events: none;
+  background-image: url('https://grainy-gradients.vercel.app/noise.svg');
+  opacity: 0.15;
+  mix-blend-mode: overlay;
 }
 
 /* ============================================================================

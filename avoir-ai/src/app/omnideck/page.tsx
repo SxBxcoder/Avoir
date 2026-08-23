@@ -14,7 +14,7 @@ import TerminalCLI from '@/components/TerminalCLI';
 import TerminalChart from '@/components/TerminalChart';
 import DailyAlphaBrief from '@/components/DailyAlphaBrief';
 import { CapitalDeploymentSimulator } from '@/components/CapitalDeploymentSimulator';
-import { ThemeToggle } from '@/components/ThemeToggle';
+
 
 const AGENCY_CLIENTS = [
   { name: 'Nexus Brands', spend: '$42K/mo', roas: 3.2, status: 'ACTIVE' },
@@ -221,6 +221,22 @@ export default function OmniDeckPage() {
   }, [activePositions, totalAum, now, showAlphaBrief, agencyMode, addExternalLog]);
 
   useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        if (agencyMode) {
+          setAgencyMode(false);
+        } else if (selectedCampaignForSim) {
+          setSelectedCampaignForSim(null);
+        } else {
+          router.push('/dashboard');
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [router, agencyMode, selectedCampaignForSim]);
+
+  useEffect(() => {
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
     const eventSource = new EventSource(`${apiUrl}/api/engagement/stream`);
 
@@ -277,7 +293,6 @@ export default function OmniDeckPage() {
               <span className="text-[10px] text-neon-green tracking-widest hidden sm:inline">NOMINAL</span>
             </div>
             <span className="text-[9px] text-zinc-500 hidden md:inline">v2.4.1</span>
-            <ThemeToggle />
           </div>
         </div>
       </header>

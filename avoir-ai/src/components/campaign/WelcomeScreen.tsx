@@ -24,7 +24,7 @@ export function WelcomeScreen({
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.6 }}
-      className="absolute inset-0 flex flex-col items-center justify-center px-4 sm:px-6 overflow-auto"
+      className="flex-1 w-full h-full flex flex-col items-center justify-center px-4 sm:px-6 overflow-auto relative"
     >
       <NeuralNetworkCanvas />
 

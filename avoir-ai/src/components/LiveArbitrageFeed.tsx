@@ -143,7 +143,7 @@ export function LiveArbitrageFeed({
   const hasData = opportunities.length > 0;
 
   return (
-    <div className="w-full max-w-5xl mx-auto p-4 lg:p-8 flex flex-col items-center justify-center min-h-[70vh]">
+    <div className="w-full max-w-5xl mx-auto p-4 lg:p-8 flex flex-col items-center justify-center py-12">
 
       {/* Header */}
       <div className="text-center mb-10">

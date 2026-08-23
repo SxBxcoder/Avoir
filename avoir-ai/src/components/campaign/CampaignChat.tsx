@@ -45,7 +45,7 @@ export function CampaignChat({
   const isEmpty = messages.length === 0 && cookingMessages.length === 0;
 
   return (
-    <div className="flex-1 overflow-y-auto relative flex flex-col">
+    <div className="flex-1 overflow-y-auto relative flex flex-col min-h-0">
       {isEmpty ? (
         <WelcomeScreen onQuickAction={onQuickAction}>
           <LiveArbitrageFeed onDeploy={onQuickAction} industry={industry} />

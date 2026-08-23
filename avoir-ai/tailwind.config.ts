@@ -41,6 +41,21 @@ const config: Config = {
       fontFamily: {
         mono: ["'JetBrains Mono'", "'Fira Code'", "monospace"],
       },
+      keyframes: {
+        "gradient-x": {
+          "0%, 100%": {
+            "background-size": "200% 200%",
+            "background-position": "left center",
+          },
+          "50%": {
+            "background-size": "200% 200%",
+            "background-position": "right center",
+          },
+        },
+      },
+      animation: {
+        "gradient-x": "gradient-x 4s ease infinite",
+      },
     },
   },
   plugins: [],
