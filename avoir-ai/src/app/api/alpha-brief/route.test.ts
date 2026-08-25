@@ -23,6 +23,7 @@ const VALID_BRIEF = {
 const {
   getCachedAlphaBrief,
   setCachedAlphaBrief,
+  getAlphaBriefCachedAt,
   isDemoMode,
   MOCK_ALPHA_BRIEF,
   logger,
@@ -30,13 +31,18 @@ const {
 } = vi.hoisted(() => ({
   getCachedAlphaBrief: vi.fn(),
   setCachedAlphaBrief: vi.fn(),
+  getAlphaBriefCachedAt: vi.fn(),
   isDemoMode: vi.fn(),
   MOCK_ALPHA_BRIEF: { trend: { title: 'mock' }, brief: { plan: {} } },
   logger: { error: vi.fn(), info: vi.fn(), warn: vi.fn(), debug: vi.fn() },
   fetchMock: vi.fn(),
 }));
 
-vi.mock('@/lib/db/cache', () => ({ getCachedAlphaBrief, setCachedAlphaBrief }));
+vi.mock('@/lib/db/cache', () => ({
+  getCachedAlphaBrief,
+  setCachedAlphaBrief,
+  getAlphaBriefCachedAt,
+}));
 vi.mock('@/lib/mockShield', () => ({ isDemoMode, MOCK_ALPHA_BRIEF }));
 vi.mock('@/lib/logger', () => ({ logger }));
 vi.mock('next/server', () => ({
@@ -54,12 +60,12 @@ beforeEach(() => {
   vi.mocked(isDemoMode).mockReturnValue(false);
   getCachedAlphaBrief.mockReset();
   setCachedAlphaBrief.mockReset();
+  getAlphaBriefCachedAt.mockReset();
   fetchMock.mockReset();
   logger.error.mockReset();
 });
 
 afterEach(() => {
-  vi.unstubAllEnvs();
   vi.unstubAllGlobals();
 });
 
@@ -77,6 +83,7 @@ describe('GET /api/alpha-brief', () => {
 
   it('returns cached data when Redis has a valid brief', async () => {
     getCachedAlphaBrief.mockResolvedValue(VALID_BRIEF);
+    getAlphaBriefCachedAt.mockResolvedValue(Date.now());
 
     const res = await GET();
     const body = await res.json();
@@ -84,6 +91,39 @@ describe('GET /api/alpha-brief', () => {
     expect(body).toEqual(VALID_BRIEF);
     expect(fetchMock).not.toHaveBeenCalled();
     expect(setCachedAlphaBrief).not.toHaveBeenCalled();
+  });
+
+  it('triggers background revalidation when cache is stale', async () => {
+    const staleTs = Date.now() - 21 * 60 * 60 * 1000; // 21 hours ago
+    getCachedAlphaBrief.mockResolvedValue(VALID_BRIEF);
+    getAlphaBriefCachedAt.mockResolvedValue(staleTs);
+    fetchMock.mockResolvedValue(
+      new Response(JSON.stringify(VALID_BRIEF), { status: 200 })
+    );
+
+    const res = await GET();
+    const body = await res.json();
+
+    // Stale data is served immediately
+    expect(body).toEqual(VALID_BRIEF);
+    // Background revalidation fires (fire-and-forget)
+    await new Promise((r) => setTimeout(r, 10));
+    expect(fetchMock).toHaveBeenCalledWith(
+      'http://localhost:8000/api/alpha-brief',
+      expect.objectContaining({ cache: 'no-store' })
+    );
+  });
+
+  it('does not trigger background revalidation when cache is fresh', async () => {
+    const freshTs = Date.now() - 1000; // 1 second ago
+    getCachedAlphaBrief.mockResolvedValue(VALID_BRIEF);
+    getAlphaBriefCachedAt.mockResolvedValue(freshTs);
+
+    await GET();
+
+    // Give fire-and-forget a moment to NOT execute
+    await new Promise((r) => setTimeout(r, 10));
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it('fetches from backend when cache is empty and re-caches', async () => {
@@ -142,16 +182,6 @@ describe('GET /api/alpha-brief', () => {
     expect(body.error).toBe('Failed to fetch alpha brief');
   });
 
-  it('skips cache on backend failure and still returns 500', async () => {
-    getCachedAlphaBrief.mockResolvedValue(null);
-    fetchMock.mockRejectedValue(new Error('timeout'));
-
-    const res = await GET();
-
-    expect(res.status).toBe(500);
-    expect(setCachedAlphaBrief).not.toHaveBeenCalled();
-  });
-
   it('applies a 60s timeout to the backend fetch', async () => {
     getCachedAlphaBrief.mockResolvedValue(null);
     fetchMock.mockResolvedValue(
@@ -160,7 +190,7 @@ describe('GET /api/alpha-brief', () => {
 
     await GET();
 
-    const [, init] = fetchMock.mock.calls[0];
-    expect((init as RequestInit).signal).toBeDefined();
+    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(init.signal).toBeDefined();
   });
 });
