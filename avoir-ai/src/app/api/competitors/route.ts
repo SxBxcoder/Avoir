@@ -11,6 +11,7 @@
  */
 
 import { NextResponse } from 'next/server';
+import { z } from 'zod';
 import { fetchCompetitorIntel } from '@/lib/db/competitors';
 import { checkRateLimit } from '@/lib/db/cache';
 import { isDemoMode, MOCK_COMPETITOR_INTEL } from '@/lib/mockShield';
@@ -18,6 +19,33 @@ import { requireUser, authErrorResponse } from '@/lib/auth/requireUser';
 import { logger } from '@/lib/logger';
 
 export const dynamic = 'force-dynamic';
+
+// ============================================================================
+// ZOD VALIDATION
+// ============================================================================
+
+const competitorsQuerySchema = z.object({
+  industry: z.string().min(1, 'Industry is required').max(100),
+  country: z
+    .string()
+    .default('ALL')
+    .refine((val) => val === 'ALL' || /^[A-Z]{2}$/.test(val), {
+      message: 'Invalid country code. Use ISO 3166-1 alpha-2 (e.g., "US", "GB") or "ALL".',
+    }),
+  pageIds: z.string().optional().refine(
+    (val) => {
+      if (!val) return true;
+      const ids = val.split(',').map((id) => id.trim()).filter(Boolean);
+      return ids.length <= 10 && ids.every((id) => /^\d+$/.test(id));
+    },
+    { message: 'pageIds must be comma-separated numeric Facebook page IDs (max 10).' }
+  ),
+  fresh: z.enum(['true', 'false']).default('false'),
+});
+
+// ============================================================================
+// HANDLER
+// ============================================================================
 
 export async function GET(req: Request) {
   // Demo Mock Shield
@@ -28,40 +56,39 @@ export async function GET(req: Request) {
     });
   }
 
+  const startTime = Date.now();
+
   try {
     // Identity comes from the verified Cognito JWT — never trust client input.
     const { userId } = await requireUser(req);
 
     const { searchParams } = new URL(req.url);
-    const industry = searchParams.get('industry');
-    const country = searchParams.get('country') || 'ALL';
-    const pageIdsRaw = searchParams.get('pageIds');
-    const fresh = searchParams.get('fresh') === 'true';
 
-    if (!industry) {
+    // Validate with Zod — replaces manual regex checks
+    const parsed = competitorsQuerySchema.safeParse({
+      industry: searchParams.get('industry'),
+      country: searchParams.get('country') || 'ALL',
+      pageIds: searchParams.get('pageIds') || undefined,
+      fresh: searchParams.get('fresh') || 'false',
+    });
+
+    if (!parsed.success) {
+      const firstError = parsed.error.issues[0];
       return NextResponse.json(
-        { error: 'Missing required parameter: industry' },
+        { error: firstError.message },
         { status: 400 }
       );
     }
 
-    // Validate country (ISO 3166-1 alpha-2 or ALL)
-    if (country !== 'ALL' && !/^[A-Z]{2}$/.test(country)) {
-      return NextResponse.json(
-        { error: 'Invalid country code. Use ISO 3166-1 alpha-2 (e.g., "US", "GB") or "ALL".' },
-        { status: 400 }
-      );
-    }
+    const { industry, country, pageIds: pageIdsRaw, fresh: freshRaw } = parsed.data;
+    const fresh = freshRaw === 'true';
 
     const pageIds = pageIdsRaw
-      ? pageIdsRaw.split(',').map((id) => id.trim()).filter(Boolean).slice(0, 10)
+      ? pageIdsRaw.split(',').map((id) => id.trim()).filter(Boolean)
       : undefined;
 
-    // Rate limit BEFORE any external Facebook Ad Library call. `fresh=true` and
-    // `pageIds` bypass the DynamoDB cache, so without this cap a single
-    // authenticated user could hammer Meta's API in a loop and exhaust our app
-    // review limits (or get the Avoir app banned for abuse).
-    const rateLimit = await checkRateLimit(userId, 10, 60); // 10 requests per minute
+    // Rate limit BEFORE any external Facebook Ad Library call.
+    const rateLimit = await checkRateLimit(userId, 10, 60);
     if (!rateLimit.allowed) {
       logger.warn('competitors', 'Rate limited', { resetInSeconds: rateLimit.resetIn, userId });
       return NextResponse.json(
@@ -80,19 +107,41 @@ export async function GET(req: Request) {
       );
     }
 
+    // Structured log: request received
+    logger.info('competitors', 'Request received', {
+      userId,
+      industry,
+      country,
+      pageIds: pageIds?.length ?? 0,
+      fresh,
+    });
+
     const intel = await fetchCompetitorIntel(industry, {
       country,
       pageIds,
       fresh,
     });
 
+    const durationMs = Date.now() - startTime;
+
     if (!intel) {
+      logger.info('competitors', 'No data found', { industry, country, durationMs });
       return NextResponse.json({
         intel: null,
         source: 'none',
         message: 'No competitor data found for this industry.',
       });
     }
+
+    // Structured log: request completed
+    logger.info('competitors', 'Request completed', {
+      industry,
+      country,
+      source: intel.source,
+      adCount: intel.topAds.length,
+      gapCount: intel.marketGaps.length,
+      durationMs,
+    });
 
     return NextResponse.json({
       intel,
@@ -102,7 +151,10 @@ export async function GET(req: Request) {
   } catch (error: unknown) {
     const authErr = authErrorResponse(error);
     if (authErr) return authErr;
-    logger.error('competitors', 'GET failed', { error: error as Error });
+    logger.error('competitors', 'GET failed', {
+      error: error as Error,
+      durationMs: Date.now() - startTime,
+    });
     return NextResponse.json(
       { error: 'Failed to fetch competitor intel' },
       { status: 500 }

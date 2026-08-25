@@ -82,6 +82,54 @@ export async function searchAdsByPageIds(
   );
 }
 
+/**
+ * Search with automatic pagination — follows paging.next up to maxPages.
+ * Returns all collected ads in a single merged response.
+ */
+export async function searchAdsPaginated(
+  params: AdLibrarySearchParams,
+  options: AdLibraryClientOptions = {}
+): Promise<FacebookAdArchiveResponse | null> {
+  const maxPages = Math.min(options.maxPages ?? 3, 5);
+  const allAds: FacebookAd[] = [];
+  let cursor: string | undefined = params.after;
+  let paging: FacebookAdArchiveResponse['paging'];
+  let pageCount = 0;
+
+  while (pageCount < maxPages) {
+    const pageParams: AdLibrarySearchParams = {
+      ...params,
+      after: cursor,
+      limit: 200,
+    };
+
+    const response = await searchAds(pageParams, options);
+    if (!response?.data || response.data.length === 0) break;
+
+    allAds.push(...response.data);
+    paging = response.paging;
+
+    if (!response.paging?.next) break;
+
+    // Extract cursor from the next URL
+    try {
+      const nextUrl = new URL(response.paging.next);
+      cursor = nextUrl.searchParams.get('after') || undefined;
+    } catch {
+      break;
+    }
+
+    pageCount++;
+  }
+
+  if (allAds.length === 0) return null;
+
+  return {
+    data: allAds,
+    paging,
+  };
+}
+
 // ============================================================================
 // URL BUILDER
 // ============================================================================
@@ -126,6 +174,10 @@ function buildUrl(accessToken: string, params: AdLibrarySearchParams): string {
       'publisher_platforms',
       'ad_creative_link_title',
       'ad_creative_link_caption',
+      'ad_creative_link_description',
+      'ad_creative_link_call_to_action',
+      'languages',
+      'page_profile_picture_url',
     ].join(',')
   );
 
