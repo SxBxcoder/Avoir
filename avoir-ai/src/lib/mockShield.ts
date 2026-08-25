@@ -213,27 +213,22 @@ export const MOCK_BRAND_DNA = {
 
 export const MOCK_COMPETITOR_INTEL = {
   industry: 'AI Marketing',
-  competitors: [
-    {
-      name: 'Jasper AI',
-      strategy: 'High-volume content generation, SEO-focused',
-      weaknesses: ['Generic output', 'No campaign strategy layer', 'No performance feedback loop'],
-      estimatedSpend: '$2.4M/mo on paid acquisition',
-    },
-    {
-      name: 'Copy.ai',
-      strategy: 'Freemium funnel, template-based workflows',
-      weaknesses: ['Template fatigue', 'No multi-platform optimization', 'No synthetic testing'],
-      estimatedSpend: '$1.8M/mo on paid acquisition',
-    },
-    {
-      name: 'AdCreative.ai',
-      strategy: 'Visual-first ad creative generation',
-      weaknesses: ['No copy strategy engine', 'No campaign memory', 'Limited to display ads'],
-      estimatedSpend: '$950K/mo on paid acquisition',
-    },
+  topAds: [
+    { id: 'mock-jasper-1', brand: 'Jasper AI', hook: 'Create content 10x faster with AI that learns your brand voice.', engagement: 'Very High', runTime: '30+ days', detectedFormat: 'Long-Form Copy', platforms: ['FACEBOOK', 'INSTAGRAM'], cta: 'Try Free', engagementScore: 88 },
+    { id: 'mock-jasper-2', brand: 'Jasper AI', hook: 'Stop staring at a blank page. Let AI write your first draft in seconds.', engagement: 'High', runTime: '14 days', detectedFormat: 'Video', platforms: ['INSTAGRAM'], cta: 'Get Started', engagementScore: 72 },
+    { id: 'mock-copy-1', brand: 'Copy.ai', hook: 'Free AI copywriting tool — generate marketing copy in 10 seconds.', engagement: 'High', runTime: '21 days', detectedFormat: 'Short Punch', platforms: ['FACEBOOK'], cta: 'Sign Up Free', engagementScore: 78 },
+    { id: 'mock-copy-2', brand: 'Copy.ai', hook: 'Why pay an agency $15K/mo when AI can do it in 60 seconds?', engagement: 'Medium', runTime: '7 days', detectedFormat: 'Question Hook', platforms: ['FACEBOOK', 'INSTAGRAM'], cta: 'Start Free', engagementScore: 55 },
+    { id: 'mock-adcreative-1', brand: 'AdCreative.ai', hook: 'AI-generated ad creatives that convert 14x better than human-made.', engagement: 'Very High', runTime: '45 days', detectedFormat: 'Image + Text', platforms: ['FACEBOOK'], cta: 'Generate Now', engagementScore: 92 },
+    { id: 'mock-adcreative-2', brand: 'AdCreative.ai', hook: 'Your competitors are using AI to outperform you. Fight back.', engagement: 'High', runTime: '10 days', detectedFormat: 'Urgency', platforms: ['INSTAGRAM', 'FACEBOOK'], cta: 'Try Now', engagementScore: 65 },
+  ],
+  marketGaps: [
+    'Try UGC Video format — competitors aren\'t using it',
+    'Go long-form with detailed storytelling — market only has short hooks',
+    'Lead with social proof — no competitor shows traction numbers',
+    'Test a free trial or freemium hook — gap in the market',
   ],
   lastUpdated: new Date().toISOString(),
+  source: 'mock' as const,
 };
 
 // ============================================================================

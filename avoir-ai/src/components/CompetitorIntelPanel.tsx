@@ -4,26 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { Shield, Eye, Flame, AlertTriangle, Target, Activity, Loader2, X, Globe, RefreshCw } from 'lucide-react';
 import { clientLog } from '@/lib/logClient';
-
-interface CompetitorAd {
-  id: string;
-  brand: string;
-  hook: string;
-  engagement: string;
-  runTime: string;
-  detectedFormat: string;
-  platforms?: string[];
-  snapshotUrl?: string;
-}
-
-interface CompetitorIntel {
-  industry: string;
-  topAds: CompetitorAd[];
-  marketGaps: string[];
-  lastUpdated: string;
-  source: 'facebook' | 'cache' | 'mock';
-  cachedUntil?: string;
-}
+import type { CompetitorAd, CompetitorIntel } from '@/lib/db/competitors';
 
 interface CompetitorIntelPanelProps {
   industry: string;
@@ -184,17 +165,29 @@ export default function CompetitorIntelPanel({ industry, onClose, onInjectGap }:
                   {intel.topAds.map((ad) => (
                     <div key={ad.id} className="p-4 rounded-xl border border-border/80 bg-card/30">
                       <div className="flex items-center justify-between mb-3">
-                        <span className="text-sm font-bold text-foreground bg-muted px-2 py-1 rounded-md">{ad.brand}</span>
+                        <div className="flex items-center gap-2">
+                          {ad.brandLogo ? (
+                            <img src={ad.brandLogo} alt={ad.brand} className="w-6 h-6 rounded-full object-cover" />
+                          ) : null}
+                          <span className="text-sm font-bold text-foreground bg-muted px-2 py-1 rounded-md">{ad.brand}</span>
+                        </div>
                         <div className="flex items-center gap-2 text-[10px] font-mono">
+                          {ad.engagementScore != null && (
+                            <span className="flex items-center gap-1 bg-orange-500/10 text-orange-400 px-2 py-1 rounded">
+                              Score {ad.engagementScore}/100
+                            </span>
+                          )}
                           <span className="flex items-center gap-1 text-success bg-success/10 px-2 py-1 rounded">
-                            <Activity className="w-3 h-3" /> {ad.engagement} Engagement
+                            <Activity className="w-3 h-3" /> {ad.engagement}
                           </span>
                           <span className="text-muted-foreground bg-muted/50 px-2 py-1 rounded">Run Time: {ad.runTime}</span>
                         </div>
                       </div>
+                      {ad.title && <p className="text-xs font-semibold text-foreground mb-1">{ad.title}</p>}
                       <p className="text-sm text-muted-foreground italic border-l-2 border-orange-500/30 pl-3 py-1">&ldquo;{ad.hook}&rdquo;</p>
                       <div className="mt-3 text-xs text-muted-foreground flex items-center gap-3">
                         <span>Format: {ad.detectedFormat}</span>
+                        {ad.cta && <span className="text-orange-400 font-mono">CTA: {ad.cta}</span>}
                         {ad.platforms && ad.platforms.length > 0 && (
                           <span className="flex items-center gap-1">
                             {ad.platforms.map((p) => (
