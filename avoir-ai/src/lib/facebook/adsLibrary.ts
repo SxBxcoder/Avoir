@@ -11,6 +11,7 @@
 
 import type {
   FacebookAdArchiveResponse,
+  FacebookAd,
   AdLibrarySearchParams,
   AdLibraryClientOptions,
 } from './types';
