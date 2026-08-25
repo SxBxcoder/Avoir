@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Sparkles, Zap, Loader2, ArrowRight } from 'lucide-react';
+import { Sparkles, Zap, Loader2, ArrowRight, Bot } from 'lucide-react';
 import { MOCK_ALPHA_BRIEF } from '@/lib/mockShield';
 import type { AlphaBrief } from '@/lib/alphaBrief';
 import { clientLog } from '@/lib/logClient';
@@ -56,6 +56,12 @@ export default function DailyAlphaBrief() {
               </span>
               <h3 className="text-[13px] font-bold text-foreground leading-tight">{data?.trend.title}</h3>
               <p className="text-[11px] text-muted-foreground leading-relaxed">{data?.trend.description}</p>
+              {data?.generated_by && (
+                <div className="flex items-center gap-1.5 pt-1">
+                  <Bot className="w-3 h-3 text-zinc-600" />
+                  <span className="text-[9px] text-zinc-600 tracking-wide">SOURCE: {data.generated_by.toUpperCase()}</span>
+                </div>
+              )}
             </div>
           )}
         </div>
