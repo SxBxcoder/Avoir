@@ -19,7 +19,7 @@
     "@google/generative-ai": "^0.24.1",
     "@stripe/stripe-js": "^9.8.0",
     "@types/web-push": "^3.6.4",
-    "@upstash/redis": "^1.38.0",
+    "@upstash/redis": "^1.38.2",
     "aws-amplify": "^6.0.0",
     "aws-jwt-verify": "^5.2.1",
     "dotenv": "^17.2.4",
