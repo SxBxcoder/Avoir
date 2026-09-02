@@ -29,6 +29,7 @@ function makeRequest(query = ''): Request {
 }
 
 beforeEach(() => {
+  vi.clearAllMocks();
   isDemoMode.mockReturnValue(false);
   requireUser.mockResolvedValue({ userId: 'user-1' });
   authErrorResponse.mockReturnValue(null);

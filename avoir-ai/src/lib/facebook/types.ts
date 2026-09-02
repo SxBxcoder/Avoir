@@ -45,6 +45,16 @@ export interface FacebookAd {
   ad_creative_link_title?: string;
   /** The ad's link caption */
   ad_creative_link_caption?: string;
+  /** The ad's link description (below the title) */
+  ad_creative_link_description?: string;
+  /** The ad's call-to-action button label */
+  ad_creative_link_call_to_action?: string;
+  /** Languages the ad was delivered in */
+  languages?: string[];
+  /** URL to the page's profile picture */
+  page_profile_picture_url?: string;
+  /** Special ad category (e.g. EMPLOYMENT, HOUSING, CREDIT) */
+  ad_saved_workflow_id?: string;
 }
 
 // ============================================================================
@@ -81,6 +91,8 @@ export interface AdLibraryClientOptions {
   timeoutMs?: number;
   /** Max retries on rate limit (default 3) */
   maxRetries?: number;
+  /** Max pages to fetch for paginated requests (default 3, max 5) */
+  maxPages?: number;
 }
 
 // ============================================================================

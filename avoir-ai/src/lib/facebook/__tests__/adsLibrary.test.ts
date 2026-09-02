@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { searchAds, searchAdsByPageIds, AdLibraryError } from '@/lib/facebook/adsLibrary';
+import { searchAds, searchAdsByPageIds, searchAdsPaginated, AdLibraryError } from '@/lib/facebook/adsLibrary';
 
 const mockFetch = vi.fn();
 vi.stubGlobal('fetch', mockFetch);
@@ -155,5 +155,87 @@ describe('TestAdLibraryClient', () => {
     expect(url.searchParams.get('ad_active_status')).toBe('ACTIVE');
     expect(url.searchParams.get('media_type')).toBe('VIDEO');
     expect(url.searchParams.get('limit')).toBe('100');
+  });
+});
+
+describe('TestSearchAdsPaginated', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    process.env.FACEBOOK_ACCESS_TOKEN = 'test-token';
+  });
+
+  it('collects ads from multiple pages', async () => {
+    mockFetch
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          data: [{ id: '1' }, { id: '2' }],
+          paging: { next: 'https://graph.facebook.com/v21.0/ads_archive?after=cursor1' },
+        }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          data: [{ id: '3' }, { id: '4' }],
+          paging: {},
+        }),
+      });
+
+    const result = await searchAdsPaginated(
+      { search_terms: 'fashion', ad_reached_countries: ['US'] },
+      { maxPages: 3 }
+    );
+
+    expect(result?.data).toHaveLength(4);
+    expect(mockFetch).toHaveBeenCalledTimes(2);
+  });
+
+  it('stops when no more pages', async () => {
+    mockFetch.mockResolvedValue({
+      ok: true,
+      json: async () => ({ data: [{ id: '1' }] }),
+    });
+
+    const result = await searchAdsPaginated(
+      { search_terms: 'tech', ad_reached_countries: ['ALL'] },
+      { maxPages: 5 }
+    );
+
+    expect(result?.data).toHaveLength(1);
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('respects maxPages limit', async () => {
+    // Each page has a next link — should stop at maxPages
+    const nextUrl = 'https://graph.facebook.com/v21.0/ads_archive?after=cursor';
+    mockFetch.mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        data: [{ id: '1' }],
+        paging: { next: nextUrl },
+      }),
+    });
+
+    const result = await searchAdsPaginated(
+      { search_terms: 'saas', ad_reached_countries: ['GB'] },
+      { maxPages: 2 }
+    );
+
+    expect(result?.data).toHaveLength(2);
+    expect(mockFetch).toHaveBeenCalledTimes(2);
+  });
+
+  it('returns null when first page is empty', async () => {
+    mockFetch.mockResolvedValue({
+      ok: true,
+      json: async () => ({ data: [] }),
+    });
+
+    const result = await searchAdsPaginated(
+      { search_terms: 'nonexistent', ad_reached_countries: ['US'] },
+      { maxPages: 3 }
+    );
+
+    expect(result).toBeNull();
   });
 });
