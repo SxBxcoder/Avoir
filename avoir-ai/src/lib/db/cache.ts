@@ -194,8 +194,26 @@ export async function setCachedAlphaBrief(data: AlphaBrief): Promise<void> {
 
   try {
     const today = new Date().toISOString().slice(0, 10);
-    await redis.set(`${ALPHA_BRIEF_PREFIX}${today}`, data, { ex: secondsUntilUtcMidnight() });
+    const ttl = secondsUntilUtcMidnight();
+    await Promise.all([
+      redis.set(`${ALPHA_BRIEF_PREFIX}${today}`, data, { ex: ttl }),
+      redis.set(`${ALPHA_BRIEF_PREFIX}${today}:ts`, Date.now(), { ex: ttl }),
+    ]);
   } catch (err: unknown) {
     logger.warn('db.cache', 'Alpha brief write failed', { err });
+  }
+}
+
+export async function getAlphaBriefCachedAt(): Promise<number | null> {
+  const redis = getRedis();
+  if (!redis) return null;
+
+  try {
+    const today = new Date().toISOString().slice(0, 10);
+    const ts = await redis.get<number>(`${ALPHA_BRIEF_PREFIX}${today}:ts`);
+    return typeof ts === 'number' ? ts : null;
+  } catch (err: unknown) {
+    logger.warn('db.cache', 'Alpha brief ts read failed', { err });
+    return null;
   }
 }
